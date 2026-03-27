@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.core.app.ApplicationProvider
+import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.database.store.ConnectionPreferences
 import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
 import kotlinx.coroutines.flow.first
@@ -35,6 +36,10 @@ class ConnectionPreferencesStoreTest {
             store.updateOnboardingCompleted(true)
             store.updateStreamEnabled(false)
             store.updateAutoScroll(false)
+            store.updateThemeMode(ThemeMode.DARK)
+            store.updateDynamicColorEnabled(false)
+            store.updateOledEnabled(true)
+            store.updateLanguageTag("zh-CN")
 
             val preferences = store.preferences.first()
 
@@ -44,6 +49,10 @@ class ConnectionPreferencesStoreTest {
             assertTrue(preferences.onboardingCompleted)
             assertFalse(preferences.streamEnabled)
             assertFalse(preferences.autoScroll)
+            assertEquals(ThemeMode.DARK, preferences.themeMode)
+            assertFalse(preferences.dynamicColorEnabled)
+            assertTrue(preferences.oledEnabled)
+            assertEquals("zh-CN", preferences.languageTag)
         }
 
     @Test

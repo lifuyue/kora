@@ -23,7 +23,7 @@ class SseStreamClientTest {
             SseStreamClient(
                 okHttpClient =
                     NetworkFactory.createOkHttpClient(
-                        apiKeyProvider = { "fastgpt-secret" },
+                        apiKeyProvider = StaticApiKeyProvider("fastgpt-secret"),
                     ),
                 baseUrlProvider = StaticBaseUrlProvider(server.url("/").toString()),
             )

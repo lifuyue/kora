@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.lifuyue.kora.core.common.ThemeMode
 
 private val LightColorScheme: ColorScheme =
     lightColorScheme(
@@ -29,18 +30,37 @@ private val DarkColorScheme: ColorScheme =
         surface = mdThemeDarkSurface,
     )
 
+private val OledDarkColorScheme: ColorScheme =
+    darkColorScheme(
+        primary = mdThemeDarkPrimary,
+        onPrimary = mdThemeDarkOnPrimary,
+        secondary = mdThemeDarkSecondary,
+        background = androidx.compose.ui.graphics.Color.Black,
+        surface = androidx.compose.ui.graphics.Color.Black,
+    )
+
 @Composable
 fun KoraTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = true,
+    oledEnabled: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    val darkTheme =
+        when (themeMode) {
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
+            ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            ThemeMode.OLED_DARK -> true
+        }
+
     val colorScheme =
         when {
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 val context = LocalContext.current
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
+            oledEnabled || themeMode == ThemeMode.OLED_DARK -> OledDarkColorScheme
             darkTheme -> DarkColorScheme
             else -> LightColorScheme
         }

@@ -20,21 +20,38 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideBaseUrlProvider(): BaseUrlProvider = StaticBaseUrlProvider("https://localhost/")
+    fun provideApiFactory(json: Json): FastGptApiFactory = FastGptApiFactory(json)
 
     @Provides
     @Singleton
-    fun provideAuthInterceptor(): AuthInterceptor = AuthInterceptor { null }
+    fun provideMutableConnectionProvider(): MutableConnectionProvider = MutableConnectionProvider()
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+    fun provideBaseUrlProvider(connectionProvider: MutableConnectionProvider): BaseUrlProvider = connectionProvider
+
+    @Provides
+    @Singleton
+    fun provideApiKeyProvider(connectionProvider: MutableConnectionProvider): ApiKeyProvider = connectionProvider
+
+    @Provides
+    @Singleton
+    fun provideAuthInterceptor(apiKeyProvider: ApiKeyProvider): AuthInterceptor = AuthInterceptor(apiKeyProvider)
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        baseUrlProvider: BaseUrlProvider,
+    ): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor(BaseUrlRewriteInterceptor(baseUrlProvider))
             .addInterceptor(authInterceptor)
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
+                    redactHeader("Authorization")
                     level = HttpLoggingInterceptor.Level.NONE
                 },
             )
@@ -45,9 +62,8 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(
         okHttpClient: OkHttpClient,
-        baseUrlProvider: BaseUrlProvider,
         json: Json,
-    ): Retrofit = createRetrofit(baseUrlProvider.getBaseUrl(), okHttpClient, json)
+    ): Retrofit = createRetrofit(RETROFIT_PLACEHOLDER_BASE_URL, okHttpClient, json)
 
     @Provides
     @Singleton

@@ -5,64 +5,255 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.lifuyue.kora.R
+import com.lifuyue.kora.core.common.ConnectionSnapshot
+import com.lifuyue.kora.feature.chat.ChatRoutes
+import com.lifuyue.kora.feature.chat.chatGraph
+import com.lifuyue.kora.feature.settings.SettingsRoutes
+import com.lifuyue.kora.feature.settings.settingsGraph
+import kotlinx.coroutines.launch
 
+private const val ROUTE_BOOTSTRAP = "bootstrap"
 private const val ROUTE_ONBOARDING = "onboarding"
+private const val ROUTE_CONNECTION = "connection"
+private const val ROUTE_SHELL = "shell"
+private const val ROUTE_KNOWLEDGE = "knowledge"
 
 @Composable
-fun KoraNavGraph() {
+fun KoraNavGraph(
+    snapshot: ConnectionSnapshot,
+    modifier: Modifier = Modifier,
+    onOnboardingCompleted: () -> Unit = {},
+    connectionRoute: @Composable ((() -> Unit) -> Unit) = { onConnectionSaved ->
+        com.lifuyue.kora.feature.settings.ConnectionConfigRoute(onConnectionSaved = onConnectionSaved)
+    },
+    shellRoute: @Composable ((ConnectionSnapshot) -> Unit) = { shellSnapshot ->
+        KoraShell(snapshot = shellSnapshot)
+    },
+) {
     val navController = rememberNavController()
 
     NavHost(
         navController = navController,
-        startDestination = ROUTE_ONBOARDING,
+        startDestination = ROUTE_BOOTSTRAP,
+        modifier = modifier,
     ) {
+        composable(ROUTE_BOOTSTRAP) {
+            BootstrapRoute(snapshot = snapshot, navController = navController)
+        }
         composable(ROUTE_ONBOARDING) {
-            OnboardingScreen(
-                onContinue = {
-                    // M1 只提供入口骨架，后续阶段再接入真实路由跳转。
+            OnboardingRoute(
+                onCompleted = onOnboardingCompleted,
+                onContinueToConnection = {
+                    navController.navigate(ROUTE_CONNECTION) {
+                        popUpTo(ROUTE_ONBOARDING) { inclusive = true }
+                    }
                 },
             )
+        }
+        composable(ROUTE_CONNECTION) {
+            connectionRoute {
+                navController.navigate(ROUTE_SHELL) {
+                    popUpTo(ROUTE_CONNECTION) { inclusive = true }
+                }
+            }
+        }
+        composable(ROUTE_SHELL) {
+            shellRoute(snapshot)
         }
     }
 }
 
 @Composable
-private fun OnboardingScreen(onContinue: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(24.dp),
-        ) {
-            Text(
-                text = stringResource(id = R.string.onboarding_title),
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = stringResource(id = R.string.onboarding_body),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
-            Button(onClick = onContinue) {
-                Text(text = stringResource(id = R.string.onboarding_continue))
+private fun BootstrapRoute(
+    snapshot: ConnectionSnapshot,
+    navController: NavHostController,
+) {
+    LaunchedEffect(snapshot.onboardingCompleted, snapshot.hasValidConnection, snapshot.selectedAppId) {
+        when {
+            !snapshot.onboardingCompleted -> {
+                navController.navigate(ROUTE_ONBOARDING) {
+                    popUpTo(ROUTE_BOOTSTRAP) { inclusive = true }
+                }
+            }
+            !snapshot.hasValidConnection || snapshot.selectedAppId.isNullOrBlank() -> {
+                navController.navigate(ROUTE_CONNECTION) {
+                    popUpTo(ROUTE_BOOTSTRAP) { inclusive = true }
+                }
+            }
+            else -> {
+                navController.navigate(ROUTE_SHELL) {
+                    popUpTo(ROUTE_BOOTSTRAP) { inclusive = true }
+                }
             }
         }
+    }
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("正在恢复 Kora", style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
+private fun OnboardingRoute(
+    onCompleted: () -> Unit,
+    onContinueToConnection: () -> Unit,
+) {
+    val pages =
+        listOf(
+            "欢迎使用 Kora" to "在手机上配置 FastGPT 连接，进入流式聊天与会话管理。",
+            "核心体验" to "M3 提供引导、设置与主题，M4 打通流式聊天、Markdown 与会话恢复。",
+            "下一步" to "测试连接成功后会自动选中第一个可用 App，并进入主界面。",
+        )
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        Text(
+            text = "${pagerState.currentPage + 1}/${pages.size}",
+            style = MaterialTheme.typography.labelLarge,
+        )
+        HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(pages[page].first, style = MaterialTheme.typography.headlineMedium)
+                    Text(pages[page].second, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+        Button(
+            onClick = {
+                scope.launch {
+                    if (pagerState.currentPage == pages.lastIndex) {
+                        onCompleted()
+                        onContinueToConnection()
+                    } else {
+                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                    }
+                }
+            },
+        ) {
+            Text(if (pagerState.currentPage == pages.lastIndex) "进入连接配置" else "下一步")
+        }
+    }
+}
+
+private enum class ShellDestination(
+    val label: String,
+) {
+    Chat("聊天"),
+    Knowledge("知识库"),
+    Settings("设置"),
+}
+
+@Composable
+private fun KoraShell(
+    snapshot: ConnectionSnapshot,
+) {
+    val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    var selectedTab by rememberSaveable { mutableStateOf(ShellDestination.Chat) }
+    val chatStartRoute =
+        snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.connection
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                ShellDestination.entries.forEach { destination ->
+                    NavigationBarItem(
+                        selected = selectedTab == destination,
+                        onClick = {
+                            selectedTab = destination
+                            val route =
+                                when (destination) {
+                                    ShellDestination.Chat -> chatStartRoute
+                                    ShellDestination.Knowledge -> ROUTE_KNOWLEDGE
+                                    ShellDestination.Settings -> SettingsRoutes.overview
+                                }
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = { Text(destination.label.take(1)) },
+                        label = { Text(destination.label) },
+                    )
+                }
+            }
+        },
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = chatStartRoute,
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            composable(ROUTE_KNOWLEDGE) {
+                KnowledgeGraphPlaceholder()
+            }
+            settingsGraph(
+                navController = navController,
+                onConnectionSaved = {
+                    val selectedAppId = snapshot.selectedAppId
+                    if (!selectedAppId.isNullOrBlank()) {
+                        navController.navigate(ChatRoutes.conversations(selectedAppId)) {
+                            popUpTo(SettingsRoutes.connection) { inclusive = true }
+                        }
+                    }
+                },
+            )
+            if (!snapshot.selectedAppId.isNullOrBlank()) {
+                chatGraph(navController = navController)
+            }
+        }
+
+        LaunchedEffect(currentRoute) {
+            selectedTab =
+                when {
+                    currentRoute == ROUTE_KNOWLEDGE -> ShellDestination.Knowledge
+                    currentRoute?.startsWith("settings") == true -> ShellDestination.Settings
+                    else -> ShellDestination.Chat
+                }
+        }
+    }
+}
+
+@Composable
+private fun KnowledgeGraphPlaceholder() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("知识库将在 M5 接入。", style = MaterialTheme.typography.titleMedium)
     }
 }

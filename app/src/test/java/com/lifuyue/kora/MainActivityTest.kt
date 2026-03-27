@@ -19,8 +19,8 @@ class MainActivityTest {
     fun launchShowsOnboardingScreen() {
         composeRule.onNodeWithText("欢迎使用 Kora").assertIsDisplayed()
         composeRule.onNodeWithText(
-            "这是 M1 阶段的 Compose + Hilt 应用入口壳，后续会接入设置、聊天与知识库模块。",
+            "在手机上配置 FastGPT 连接，进入流式聊天与会话管理。",
         ).assertIsDisplayed()
-        composeRule.onNodeWithText("继续").assertIsDisplayed()
+        composeRule.onNodeWithText("下一步").assertIsDisplayed()
     }
 }

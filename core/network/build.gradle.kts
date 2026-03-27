@@ -14,6 +14,10 @@ android {
         minSdk = 26
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -29,7 +33,7 @@ dependencies {
 
     implementation(libs.coroutines.android)
     implementation(libs.coroutines.core)
-    implementation(libs.kotlinx.serialization.json)
+    api(libs.kotlinx.serialization.json)
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp)
@@ -37,8 +41,10 @@ dependencies {
     implementation(libs.hilt.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.kotlinx.serialization.json)
+    testImplementation(project(":core:testing"))
 
     kapt(libs.hilt.compiler)
 }

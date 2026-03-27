@@ -9,8 +9,11 @@ import androidx.room.Room
 import com.lifuyue.kora.core.database.dao.CachedDatasetDao
 import com.lifuyue.kora.core.database.dao.ConversationDao
 import com.lifuyue.kora.core.database.dao.MessageDao
+import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
 import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
+import com.lifuyue.kora.core.network.FastGptApiFactory
+import com.lifuyue.kora.core.network.MutableConnectionProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,7 +32,9 @@ object DatabaseModule {
     fun provideDatabase(
         @ApplicationContext context: Context,
     ): KoraDatabase {
-        return Room.databaseBuilder(context, KoraDatabase::class.java, "kora.db").build()
+        return Room.databaseBuilder(context, KoraDatabase::class.java, "kora.db")
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
@@ -62,4 +67,19 @@ object DatabaseModule {
     fun provideApiKeySecureStore(
         @ApplicationContext context: Context,
     ): ApiKeySecureStore = ApiKeySecureStore(context)
+
+    @Provides
+    @Singleton
+    fun provideConnectionRepository(
+        connectionPreferencesStore: ConnectionPreferencesStore,
+        apiKeySecureStore: ApiKeySecureStore,
+        connectionProvider: MutableConnectionProvider,
+        apiFactory: FastGptApiFactory,
+    ): ConnectionRepository =
+        ConnectionRepository(
+            preferencesStore = connectionPreferencesStore,
+            apiKeySecureStore = apiKeySecureStore,
+            connectionProvider = connectionProvider,
+            apiFactory = apiFactory,
+        )
 }

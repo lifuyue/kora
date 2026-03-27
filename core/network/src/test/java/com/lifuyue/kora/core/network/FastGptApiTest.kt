@@ -20,7 +20,7 @@ class FastGptApiTest {
         api =
             NetworkFactory.createApi(
                 baseUrl = server.url("/").toString(),
-                apiKeyProvider = { "fastgpt-secret" },
+                apiKeyProvider = StaticApiKeyProvider("fastgpt-secret"),
             )
     }
 
@@ -113,5 +113,38 @@ class FastGptApiTest {
             assertEquals("/api/v1/chat/completions", request.path)
             assertEquals(true, request.body.readUtf8().replace(" ", "").contains(""""detail":true"""))
             assertEquals("done", response.data!!.choices.first().message.content)
+        }
+
+    @Test
+    fun updateHistoryUsesPutAndDeleteEndpointsUseRuntimeBaseUrl() =
+        runBlocking {
+            server.enqueue(
+                MockResponse()
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("""{"code":200,"statusText":"","message":"","data":{}}"""),
+            )
+            server.enqueue(
+                MockResponse()
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("""{"code":200,"statusText":"","message":"","data":{}}"""),
+            )
+
+            api.updateHistory(
+                UpdateHistoryRequest(
+                    appId = "app-1",
+                    chatId = "chat-1",
+                    title = "Renamed",
+                    top = true,
+                ),
+            )
+            api.deleteHistory(appId = "app-1", chatId = "chat-1")
+
+            val updateRequest = server.takeRequest()
+            val deleteRequest = server.takeRequest()
+
+            assertEquals("PUT", updateRequest.method)
+            assertEquals("/api/core/chat/updateHistory", updateRequest.path)
+            assertEquals("DELETE", deleteRequest.method)
+            assertEquals("/api/core/chat/delHistory?appId=app-1&chatId=chat-1", deleteRequest.path)
         }
 }
