@@ -83,8 +83,10 @@ object ChatRepositoryModule {
         )
 
     @Provides
-    fun provideChatRepository(repository: RoomChatRepository): ChatRepository = repository
+    fun provideChatRepository(repository: RoomChatRepository): ChatRepository =
+        ChatTestOverrides.chatRepository ?: repository
 
     @Provides
-    fun provideConversationRepository(repository: RoomChatRepository): ConversationRepository = repository
+    fun provideConversationRepository(repository: RoomChatRepository): ConversationRepository =
+        ChatTestOverrides.conversationRepository ?: repository
 }

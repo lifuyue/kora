@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -182,7 +183,7 @@ private fun KoraShell(
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    var selectedTab by remember { mutableStateOf(ShellDestination.Chat) }
+    var selectedTab by rememberSaveable { mutableStateOf(ShellDestination.Chat) }
     val chatStartRoute =
         snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.connection
 

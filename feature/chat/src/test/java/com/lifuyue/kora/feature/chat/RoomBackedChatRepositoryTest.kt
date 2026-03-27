@@ -89,6 +89,22 @@ class RoomBackedChatRepositoryTest {
         }
 
     @Test
+    fun sendMessageWithoutChatIdUsesServerInitChatId() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.api.nextInitChatId = "chat-server"
+
+                val chatId = fixture.repository.sendMessage(appId = "app-1", chatId = null, text = "hello")
+                advanceUntilIdle()
+
+                assertEquals("chat-server", chatId)
+                assertEquals(listOf("app-1:null"), fixture.api.initChatCalls)
+                assertEquals("chat-server", fixture.database.conversationDao().getConversationsForApp("app-1", 10, 0).single().chatId)
+                assertEquals("chat-server", fixture.database.messageDao().getMessagesForChat("chat-server").first().chatId)
+            }
+        }
+
+    @Test
     fun observeMessagesRestoresRemoteHistoryForExistingChatWhenCacheEmpty() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             newFixture().use { fixture ->
@@ -241,6 +257,8 @@ private fun RoomBackedChatRepositoryTest.newFixture(): Fixture {
 }
 
 private class FakeFastGptApi : FastGptApi {
+    var nextInitChatId: String? = null
+    val initChatCalls = mutableListOf<String>()
     var histories: List<ChatHistoryItemDto> = emptyList()
     val recordsByChat = linkedMapOf<String, List<ChatRecordItemDto>>()
 
@@ -248,7 +266,17 @@ private class FakeFastGptApi : FastGptApi {
         ResponseEnvelope(code = 200, data = emptyList())
 
     override suspend fun initChat(appId: String, chatId: String?): ResponseEnvelope<ChatInitData> =
-        ResponseEnvelope(code = 200, data = ChatInitData(chatId = chatId, appId = appId))
+        ResponseEnvelope(
+            code = 200,
+            data =
+                ChatInitData(
+                    chatId =
+                        nextInitChatId
+                            ?.also { initChatCalls += "$appId:$chatId" }
+                            ?: chatId.also { initChatCalls += "$appId:$chatId" },
+                    appId = appId,
+                ),
+        )
 
     override suspend fun getHistories(request: ChatHistoriesRequest): ResponseEnvelope<ChatHistoriesResponseData> =
         ResponseEnvelope(code = 200, data = ChatHistoriesResponseData(list = histories, total = histories.size))

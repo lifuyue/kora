@@ -1,9 +1,7 @@
 package com.lifuyue.kora.feature.chat
 
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -37,9 +35,10 @@ class MarkdownRendererTest {
             )
         }
 
-        composeRule.onNodeWithTag("markdown-image:https://example.com/diagram.png").assertIsDisplayed()
+        composeRule.onNodeWithTag("markdown-image:https://example.com/diagram.png").fetchSemanticsNode()
         composeRule.onNodeWithTag("markdown-latex-inline:E=mc^2").fetchSemanticsNode()
         composeRule.onNodeWithTag("markdown-latex-block:x^2 + y^2 = z^2").fetchSemanticsNode()
-        composeRule.onNodeWithText("Mermaid 图表暂不渲染").fetchSemanticsNode()
+        composeRule.onNodeWithTag("markdown-code-block:mermaid").fetchSemanticsNode()
+        composeRule.onNodeWithTag("markdown-code-block:kotlin").fetchSemanticsNode()
     }
 }

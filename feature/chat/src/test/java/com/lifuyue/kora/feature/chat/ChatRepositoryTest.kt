@@ -68,6 +68,11 @@ class ChatRepositoryTest {
     @Test
     fun sendMessageInsertsHumanAndAssistantPlaceholderThenMergesStreamIntoOneAssistantMessage() =
         runBlocking {
+            serverRule.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-1","appId":"app-1","title":"新会话"}}
+                """,
+            )
             serverRule.enqueueSse(
                 """
                 event: answer
@@ -110,7 +115,9 @@ class ChatRepositoryTest {
             assertTrue(database.messageDao().getMessagesForChat(chatId).last().payloadJson.contains("node-1"))
             assertEquals("你好，世界", database.conversationDao().getConversationByChatId(chatId)?.lastMessagePreview)
 
+            val initRequest = serverRule.takeRequest()
             val request = serverRule.takeRequest()
+            assertEquals("/api/core/chat/init?appId=app-1", initRequest.path)
             assertEquals("/api/v1/chat/completions", request.path)
             assertTrue(request.body.readUtf8().contains(assistant.messageId))
         }
@@ -118,6 +125,11 @@ class ChatRepositoryTest {
     @Test
     fun errorEventPreservesPartialAnswerAndMarksAssistantFailed() =
         runBlocking {
+            serverRule.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-2","appId":"app-1"}}
+                """,
+            )
             serverRule.enqueueSse(
                 """
                 event: answer
@@ -144,6 +156,11 @@ class ChatRepositoryTest {
     @Test
     fun stopAndContinueGenerationKeepStoppedMessageAndAppendNewAssistant() =
         runBlocking {
+            serverRule.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-stop","appId":"app-1"}}
+                """,
+            )
             var plannerInvocation = 0
             val stopRepository =
                 RoomBackedChatRepository(
@@ -205,6 +222,11 @@ class ChatRepositoryTest {
     @Test
     fun regenerateDeletesPreviousAssistantThenResendsLastUserMessage() =
         runBlocking {
+            serverRule.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-3","appId":"app-1"}}
+                """,
+            )
             serverRule.enqueueSse(
                 """
                 event: answer
@@ -244,9 +266,11 @@ class ChatRepositoryTest {
             assertNotEquals(firstAssistantId, messages.last().messageId)
             assertEquals("第二次回答", messages.last().markdown)
 
+            val initRequest = serverRule.takeRequest()
             val firstSend = serverRule.takeRequest()
             val deleteRequest = serverRule.takeRequest()
             val secondSend = serverRule.takeRequest()
+            assertEquals("/api/core/chat/init?appId=app-1", initRequest.path)
             assertEquals("/api/v1/chat/completions", firstSend.path)
             assertEquals("/api/core/chat/item/delete", deleteRequest.path)
             assertTrue(deleteRequest.body.readUtf8().contains(firstAssistantId))
@@ -257,6 +281,11 @@ class ChatRepositoryTest {
     @Test
     fun feedbackUpdatesLocalStateAndCallsFeedbackEndpoint() =
         runBlocking {
+            serverRule.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-4","appId":"app-1"}}
+                """,
+            )
             serverRule.enqueueSse(
                 """
                 event: answer
@@ -285,8 +314,10 @@ class ChatRepositoryTest {
             val assistant = repository.observeMessages("app-1", chatId).first().last()
             assertEquals(MessageFeedback.Upvote, assistant.feedback)
 
+            val initRequest = serverRule.takeRequest()
             val chatRequest = serverRule.takeRequest()
             val feedbackRequest = serverRule.takeRequest()
+            assertEquals("/api/core/chat/init?appId=app-1", initRequest.path)
             assertEquals("/api/v1/chat/completions", chatRequest.path)
             assertEquals("/api/core/chat/feedback/updateUserFeedback", feedbackRequest.path)
             assertTrue(feedbackRequest.body.readUtf8().contains(assistantId))

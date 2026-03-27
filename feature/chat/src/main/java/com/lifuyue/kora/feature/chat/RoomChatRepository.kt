@@ -192,7 +192,16 @@ class RoomChatRepository
         val prompt = text.trim()
         require(prompt.isNotEmpty()) { "消息不能为空" }
 
-        val resolvedChatId = chatId ?: nextId("chat")
+        val initData =
+            if (chatId == null) {
+                api.initChat(appId = appId, chatId = null).data
+            } else {
+                null
+            }
+        val resolvedChatId =
+            chatId
+                ?: initData?.chatId?.takeIf { it.isNotBlank() }
+                ?: nextId("chat")
         val createdAt = nextCreatedAt()
         val humanMessage = newMessageEntity(
             dataId = nextId("human"),
@@ -214,7 +223,10 @@ class RoomChatRepository
         upsertConversation(
             appId = appId,
             chatId = resolvedChatId,
-            title = conversationDao.getConversationByChatId(resolvedChatId)?.displayTitle ?: prompt.take(18).ifBlank { "新会话" },
+            title =
+                conversationDao.getConversationByChatId(resolvedChatId)?.displayTitle
+                    ?: initData?.title?.takeIf { it.isNotBlank() }
+                    ?: prompt.take(18).ifBlank { "新会话" },
             preview = prompt,
         )
         messageDao.upsertAll(listOf(humanMessage, assistantMessage))

@@ -476,7 +476,12 @@ private fun CodeFenceCard(
     isMermaidFallback: Boolean,
     onCopyCode: (String) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .testTag("markdown-code-block:${if (language.isBlank()) "code" else language}"),
+    ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(12.dp),

@@ -124,7 +124,12 @@ private fun MessageCard(
     onRegenerate: () -> Unit,
     onFeedback: (MessageFeedback) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .testTag(ChatTestTags.messageCard(message.messageId)),
+    ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(12.dp),
@@ -160,10 +165,14 @@ private fun MessageCard(
                             MessageDeliveryState.Failed -> MaterialTheme.colorScheme.error
                             else -> MaterialTheme.colorScheme.secondary
                         },
+                    modifier = Modifier.testTag(ChatTestTags.messageError(message.messageId)),
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onCopy) {
+                TextButton(
+                    onClick = onCopy,
+                    modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+                ) {
                     Text("复制")
                 }
                 if (message.role == ChatRole.AI) {
@@ -172,7 +181,10 @@ private fun MessageCard(
                             Text("继续生成")
                         }
                     }
-                    TextButton(onClick = onRegenerate) {
+                    TextButton(
+                        onClick = onRegenerate,
+                        modifier = Modifier.testTag(ChatTestTags.messageRegenerateAction(message.messageId)),
+                    ) {
                         Text("重新生成")
                     }
                     TextButton(
@@ -185,6 +197,7 @@ private fun MessageCard(
                                 },
                             )
                         },
+                        modifier = Modifier.testTag(ChatTestTags.messageUpvoteAction(message.messageId)),
                     ) {
                         Text(if (message.feedback == MessageFeedback.Upvote) "取消赞" else "点赞")
                     }
@@ -198,6 +211,7 @@ private fun MessageCard(
                                 },
                             )
                         },
+                        modifier = Modifier.testTag(ChatTestTags.messageDownvoteAction(message.messageId)),
                     ) {
                         Text(if (message.feedback == MessageFeedback.Downvote) "取消踩" else "点踩")
                     }

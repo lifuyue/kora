@@ -11,4 +11,16 @@ object ChatTestTags {
     const val renameConversationInput = "rename_conversation_input"
     const val conversationItemPrefix = "conversation_item_"
     const val chatInput = "chat_input"
+
+    fun messageCard(messageId: String): String = "message_card_$messageId"
+
+    fun messageCopyAction(messageId: String): String = "message_copy_$messageId"
+
+    fun messageRegenerateAction(messageId: String): String = "message_regenerate_$messageId"
+
+    fun messageUpvoteAction(messageId: String): String = "message_upvote_$messageId"
+
+    fun messageDownvoteAction(messageId: String): String = "message_downvote_$messageId"
+
+    fun messageError(messageId: String): String = "message_error_$messageId"
 }

@@ -86,6 +86,11 @@ class RoomChatRepositoryTest {
     @Test
     fun sendMessageStreamsIntoSingleAssistantMessageAndUpdatesPreview() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
+            server.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-1","appId":"app-1","title":"新会话"}}
+                """.trimIndent(),
+            )
             server.enqueueSse(
                 """
                 event: answer
@@ -119,6 +124,11 @@ class RoomChatRepositoryTest {
     @Test
     fun streamErrorPreservesPartialAssistantAndMarksFailure() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
+            server.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-2","appId":"app-1"}}
+                """.trimIndent(),
+            )
             server.enqueueSse(
                 """
                 event: answer
@@ -204,6 +214,11 @@ class RoomChatRepositoryTest {
     @Test
     fun regenerateDeletesTargetAssistantAndCreatesReplacement() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
+            server.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-3","appId":"app-1"}}
+                """.trimIndent(),
+            )
             server.enqueueSse(
                 """
                 event: answer
