@@ -17,3 +17,7 @@
 - DataStore
 - Markwon
 - Coil
+
+## Dev Workflow
+- 本地提交前先执行 `./scripts/ktlint-check.sh`，或者将 `.githooks/` 设为 `git config core.hooksPath .githooks`
+- M1 当前的最小回归链路是 `./gradlew testDebugUnitTest assembleDebug`
