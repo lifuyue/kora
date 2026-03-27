@@ -27,6 +27,8 @@ interface SettingsConnectionFacade {
         onboardingCompleted: Boolean,
     )
 
+    suspend fun updateSelectedAppId(selectedAppId: String)
+
     suspend fun clearConnection()
 
     suspend fun updateAppearance(
@@ -59,6 +61,10 @@ class ConnectionRepositorySettingsFacade @Inject constructor(
             selectedAppId = selectedAppId,
             onboardingCompleted = onboardingCompleted,
         )
+    }
+
+    override suspend fun updateSelectedAppId(selectedAppId: String) {
+        connectionRepository.updateSelectedAppId(selectedAppId)
     }
 
     override suspend fun clearConnection() {

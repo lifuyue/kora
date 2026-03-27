@@ -167,6 +167,12 @@ class AcceptanceChatRepository :
             }
         }
 
+    override suspend fun bootstrapChat(appId: String): com.lifuyue.kora.feature.chat.ChatBootstrap =
+        com.lifuyue.kora.feature.chat.ChatBootstrap(
+            chatId = nextId("chat"),
+            welcomeText = "欢迎使用 $appId",
+        )
+
     override suspend fun restoreMessages(appId: String, chatId: String) = Unit
 
     override suspend fun sendMessage(appId: String, chatId: String?, text: String): String {

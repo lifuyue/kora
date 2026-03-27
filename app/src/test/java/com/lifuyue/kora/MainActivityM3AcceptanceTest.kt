@@ -55,7 +55,8 @@ class MainActivityM3AcceptanceTest {
         completeOnboardingAndSaveConnection()
 
         composeRule.onNodeWithText("知识库").performClick()
-        composeRule.onNodeWithText("知识库将在 M5 接入。").assertIsDisplayed()
+        composeRule.onNodeWithText("数据集 0 个").assertIsDisplayed()
+        composeRule.onNodeWithText("进入数据集").assertIsDisplayed()
 
         composeRule.onNodeWithText("设置").performClick()
         composeRule.onNodeWithText("连接配置").assertIsDisplayed()

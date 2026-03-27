@@ -10,12 +10,14 @@ import com.lifuyue.kora.core.network.ChatCompletionMessageParam
 import com.lifuyue.kora.core.network.ChatCompletionRequest
 import com.lifuyue.kora.core.network.ChatHistoriesRequest
 import com.lifuyue.kora.core.network.ChatHistoryItemDto
+import com.lifuyue.kora.core.network.CitationDto
 import com.lifuyue.kora.core.network.ChatRecordItemDto
 import com.lifuyue.kora.core.network.DeleteChatItemRequest
 import com.lifuyue.kora.core.network.FastGptApi
 import com.lifuyue.kora.core.network.NetworkException
 import com.lifuyue.kora.core.network.NetworkJson
 import com.lifuyue.kora.core.network.PaginationRecordsRequest
+import com.lifuyue.kora.core.network.QuestionGuideRequest
 import com.lifuyue.kora.core.network.SseEventData
 import com.lifuyue.kora.core.network.SseStreamClient
 import com.lifuyue.kora.core.network.UpdateHistoryRequest
@@ -62,8 +64,20 @@ class RoomChatRepository
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val streamingJobs = linkedMapOf<String, Job>()
     private val restoringJobs = linkedMapOf<String, Job>()
+    private val chatBootstrapByChatId = linkedMapOf<String, ChatBootstrap>()
     private var localId = 0L
     private var lastCreatedAt = 0L
+
+    override suspend fun bootstrapChat(appId: String): ChatBootstrap {
+        val data = api.initChat(appId = appId, chatId = null).data
+        val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: nextId("chat")
+        return ChatBootstrap(
+            chatId = resolvedChatId,
+            title = data?.title.orEmpty(),
+            welcomeText = data?.welcomeText,
+            questionGuide = data?.questionGuide,
+        ).also { chatBootstrapByChatId[resolvedChatId] = it }
+    }
 
     override fun observeConversations(appId: String): Flow<List<ConversationListItemUiModel>> =
         conversationDao.observeConversationsForApp(appId).map { rows -> rows.map(::conversationToUiModel) }
@@ -202,6 +216,15 @@ class RoomChatRepository
             chatId
                 ?: initData?.chatId?.takeIf { it.isNotBlank() }
                 ?: nextId("chat")
+        if (initData != null) {
+            chatBootstrapByChatId[resolvedChatId] =
+                ChatBootstrap(
+                    chatId = resolvedChatId,
+                    title = initData.title.orEmpty(),
+                    welcomeText = initData.welcomeText,
+                    questionGuide = initData.questionGuide,
+                )
+        }
         val createdAt = nextCreatedAt()
         val humanMessage = newMessageEntity(
             dataId = nextId("human"),
@@ -440,6 +463,11 @@ class RoomChatRepository
                             errorMessage = null,
                         )
                         updateConversationPreview(chatId, markdown.ifBlank { prompt })
+                        attachAssistantEnhancements(
+                            appId = appId,
+                            chatId = chatId,
+                            assistantMessageId = assistantMessageId,
+                        )
                     }
                 } catch (_: CancellationException) {
                     return@launch
@@ -602,6 +630,58 @@ class RoomChatRepository
             deliveryState = entity.sendStatus.toDeliveryState(entity.isStreaming),
             errorMessage = storedPayload.errorMessage,
             feedback = entity.feedbackType.toFeedback(),
+            citations = storedPayload.citations.map(CitationPayload::toUiModel),
+            suggestedQuestions = storedPayload.suggestedQuestions,
+        )
+    }
+
+    private suspend fun attachAssistantEnhancements(
+        appId: String,
+        chatId: String,
+        assistantMessageId: String,
+    ) {
+        val current = messageDao.getMessagesForChat(chatId).firstOrNull { it.dataId == assistantMessageId } ?: return
+        val currentPayload = current.payloadJson.toStoredPayload(json)
+        val shouldLoadCitations =
+            currentPayload.eventPayloads.any { payload ->
+                payload.contains("quoteList", ignoreCase = true) ||
+                    payload.contains("datasetId", ignoreCase = true) ||
+                    payload.contains("collectionId", ignoreCase = true)
+            }
+        val citations =
+            runCatching {
+                if (shouldLoadCitations) {
+                    (api.getResData(appId = appId, dataId = assistantMessageId, chatId = chatId).data ?: JsonArray(emptyList())).extractCitations()
+                } else {
+                    emptyList()
+                }
+            }.getOrElse { emptyList() }
+        val suggestedQuestions =
+            runCatching {
+                val config = chatBootstrapByChatId[chatId]?.questionGuide
+                if (config?.open == true) {
+                    api.createQuestionGuide(
+                        QuestionGuideRequest(
+                            appId = appId,
+                            chatId = chatId,
+                            questionGuide = config,
+                        ),
+                    ).data.orEmpty()
+                } else {
+                    emptyList()
+                }
+            }.getOrElse { emptyList() }
+        messageDao.updateMessageState(
+            dataId = assistantMessageId,
+            payloadJson =
+                currentPayload
+                    .copy(
+                        citations = citations.map(CitationDto::toPayload),
+                        suggestedQuestions = suggestedQuestions,
+                    ).toJsonString(),
+            isStreaming = current.isStreaming,
+            sendStatus = current.sendStatus,
+            errorCode = current.errorCode,
         )
     }
 }
@@ -618,6 +698,17 @@ private data class StoredMessagePayload(
     val reasoning: String = "",
     val eventPayloads: List<String> = emptyList(),
     val errorMessage: String? = null,
+    val citations: List<CitationPayload> = emptyList(),
+    val suggestedQuestions: List<String> = emptyList(),
+)
+
+private data class CitationPayload(
+    val datasetId: String? = null,
+    val collectionId: String? = null,
+    val dataId: String? = null,
+    val title: String = "",
+    val snippet: String = "",
+    val scoreLabel: String = "",
 )
 
 private fun ChatHistoryItemDto.toConversationEntity(
@@ -629,6 +720,8 @@ private fun ChatHistoryItemDto.toConversationEntity(
         appId = appId,
         title = title,
         customTitle = customTitle,
+        folderName = cached?.folderName,
+        tags = cached?.tags.orEmpty(),
         isPinned = top == true,
         source = cached?.source ?: "online",
         updateTime = updateTime,
@@ -702,6 +795,26 @@ private fun String.toStoredPayload(json: Json): StoredMessagePayload =
                         ?.mapNotNull { it.stringContentOrNull() }
                         .orEmpty(),
                 errorMessage = payload["errorMessage"].stringContentOrNull(),
+                citations =
+                    payload["citations"]
+                        ?.jsonArray
+                        ?.mapNotNull { element ->
+                            (element as? JsonObject)?.let { citation ->
+                                CitationPayload(
+                                    datasetId = citation["datasetId"].stringContentOrNull(),
+                                    collectionId = citation["collectionId"].stringContentOrNull(),
+                                    dataId = citation["dataId"].stringContentOrNull(),
+                                    title = citation["title"].stringContentOrNull().orEmpty(),
+                                    snippet = citation["snippet"].stringContentOrNull().orEmpty(),
+                                    scoreLabel = citation["scoreLabel"].stringContentOrNull().orEmpty(),
+                                )
+                            }
+                        }.orEmpty(),
+                suggestedQuestions =
+                    payload["suggestedQuestions"]
+                        ?.jsonArray
+                        ?.mapNotNull { it.stringContentOrNull() }
+                        .orEmpty(),
             )
         }
     }.getOrElse {
@@ -800,6 +913,101 @@ private fun StoredMessagePayload.toJsonString(): String =
             put("markdown", JsonPrimitive(markdown))
             put("reasoning", JsonPrimitive(reasoning))
             put("eventPayloads", JsonArray(eventPayloads.map(::JsonPrimitive)))
+            put(
+                "citations",
+                JsonArray(
+                    citations.map {
+                        JsonObject(
+                            buildMap {
+                                it.datasetId?.let { datasetId -> put("datasetId", JsonPrimitive(datasetId)) }
+                                it.collectionId?.let { collectionId -> put("collectionId", JsonPrimitive(collectionId)) }
+                                it.dataId?.let { dataId -> put("dataId", JsonPrimitive(dataId)) }
+                                put("title", JsonPrimitive(it.title))
+                                put("snippet", JsonPrimitive(it.snippet))
+                                put("scoreLabel", JsonPrimitive(it.scoreLabel))
+                            },
+                        )
+                    },
+                ),
+            )
+            put("suggestedQuestions", JsonArray(suggestedQuestions.map(::JsonPrimitive)))
             errorMessage?.let { put("errorMessage", JsonPrimitive(it)) }
         },
     ).toString()
+
+private fun CitationPayload.toUiModel(): CitationItemUiModel =
+    CitationItemUiModel(
+        datasetId = datasetId,
+        collectionId = collectionId,
+        dataId = dataId,
+        title = title,
+        snippet = snippet,
+        scoreLabel = scoreLabel,
+    )
+
+private fun CitationDto.toPayload(): CitationPayload =
+    CitationPayload(
+        datasetId = datasetId,
+        collectionId = collectionId,
+        dataId = dataId,
+        title = title.ifBlank { sourceName.ifBlank { "引用" } },
+        snippet = snippet,
+        scoreLabel =
+            listOfNotNull(
+                scoreType,
+                score?.let { String.format("%.3f", it) },
+            ).joinToString(" · "),
+    )
+
+private fun JsonArray.extractCitations(): List<CitationDto> {
+    val result = linkedMapOf<String, CitationDto>()
+    forEach { element ->
+        element.collectCitationCandidates().forEach { citation ->
+            val key = listOf(citation.datasetId, citation.collectionId, citation.dataId, citation.title, citation.snippet).joinToString("|")
+            if (citation.title.isNotBlank() || citation.snippet.isNotBlank()) {
+                result[key] = citation
+            }
+        }
+    }
+    return result.values.toList()
+}
+
+private fun JsonElement.collectCitationCandidates(): List<CitationDto> =
+    when (this) {
+        is JsonArray -> flatMap { it.collectCitationCandidates() }
+        is JsonObject -> {
+            val direct =
+                if (
+                    containsKey("quoteList") ||
+                    containsKey("sourceName") ||
+                    containsKey("datasetId") ||
+                    containsKey("collectionId")
+                ) {
+                    listOf(
+                        CitationDto(
+                            datasetId = this["datasetId"].stringContentOrNull(),
+                            collectionId = this["collectionId"].stringContentOrNull(),
+                            dataId = this["dataId"].stringContentOrNull(),
+                            title =
+                                this["title"].stringContentOrNull()
+                                    ?: this["sourceName"].stringContentOrNull()
+                                    ?: this["name"].stringContentOrNull()
+                                    ?: "",
+                            sourceName = this["sourceName"].stringContentOrNull().orEmpty(),
+                            snippet =
+                                this["content"].stringContentOrNull()
+                                    ?: this["q"].stringContentOrNull()
+                                    ?: this["quote"].stringContentOrNull()
+                                    ?: this["a"].stringContentOrNull()
+                                    ?: "",
+                            score = this["score"]?.jsonPrimitive?.content?.toDoubleOrNull(),
+                            scoreType = this["scoreType"].stringContentOrNull(),
+                        ),
+                    )
+                } else {
+                    emptyList()
+                }
+            direct + values.flatMap { it.collectCitationCandidates() }
+        }
+        else -> emptyList()
+    }

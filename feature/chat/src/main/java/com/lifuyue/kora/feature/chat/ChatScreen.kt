@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +34,8 @@ import com.lifuyue.kora.core.common.ChatRole
 @Composable
 fun ChatScreen(
     uiState: ChatUiState,
+    appSelectorUiState: AppSelectorUiState = AppSelectorUiState(),
+    showAppSelector: Boolean = false,
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
@@ -40,12 +43,55 @@ fun ChatScreen(
     onContinueGeneration: () -> Unit,
     onFeedback: (ChatMessageUiModel, MessageFeedback) -> Unit,
     onRegenerate: (ChatMessageUiModel) -> Unit,
+    onOpenAppSelector: () -> Unit = {},
+    onDismissAppSelector: () -> Unit = {},
+    onSwitchApp: (String) -> Unit = {},
+    onSuggestedQuestion: (String) -> Unit = {},
+    onOpenCitation: (CitationItemUiModel) -> Unit = {},
 ) {
     val clipboardManager = LocalClipboardManager.current
+    if (showAppSelector) {
+        ModalBottomSheet(onDismissRequest = onDismissAppSelector) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("切换 App", style = MaterialTheme.typography.titleLarge)
+                appSelectorUiState.items.forEach { item ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(item.name, style = MaterialTheme.typography.titleMedium)
+                                if (item.intro.isNotBlank()) {
+                                    Text(item.intro, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            TextButton(onClick = { onSwitchApp(item.appId) }) {
+                                Text(if (appSelectorUiState.currentAppId == item.appId) "当前" else "切换")
+                            }
+                        }
+                    }
+                }
+                appSelectorUiState.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("聊天") },
+                title = {
+                    Column {
+                        Text("聊天")
+                        TextButton(onClick = onOpenAppSelector) {
+                            Text(appSelectorUiState.currentAppName.ifBlank { uiState.appId })
+                        }
+                    }
+                },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
                         Text("返回")
@@ -64,7 +110,7 @@ fun ChatScreen(
         ) {
             if (uiState.messages.isEmpty()) {
                 Text(
-                    text = "开始一个新对话，消息会在这里以 Markdown 和代码块形式渲染。",
+                    text = uiState.welcomeText ?: "开始一个新对话，消息会在这里以 Markdown 和代码块形式渲染。",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -87,6 +133,8 @@ fun ChatScreen(
                         onContinueGeneration = onContinueGeneration,
                         onRegenerate = { onRegenerate(message) },
                         onFeedback = { feedback -> onFeedback(message, feedback) },
+                        onSuggestedQuestion = onSuggestedQuestion,
+                        onOpenCitation = onOpenCitation,
                     )
                 }
             }
@@ -123,6 +171,8 @@ private fun MessageCard(
     onContinueGeneration: () -> Unit,
     onRegenerate: () -> Unit,
     onFeedback: (MessageFeedback) -> Unit,
+    onSuggestedQuestion: (String) -> Unit,
+    onOpenCitation: (CitationItemUiModel) -> Unit,
 ) {
     Card(
         modifier =
@@ -214,6 +264,24 @@ private fun MessageCard(
                         modifier = Modifier.testTag(ChatTestTags.messageDownvoteAction(message.messageId)),
                     ) {
                         Text(if (message.feedback == MessageFeedback.Downvote) "取消踩" else "点踩")
+                    }
+                }
+            }
+            if (message.citations.isNotEmpty()) {
+                Text("引用 ${message.citations.size} 条", style = MaterialTheme.typography.labelLarge)
+                message.citations.forEach { citation ->
+                    TextButton(onClick = { onOpenCitation(citation) }) {
+                        Text(citation.title.ifBlank { citation.snippet.take(18) })
+                    }
+                }
+            }
+            if (message.suggestedQuestions.isNotEmpty()) {
+                Text("推荐问题", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    message.suggestedQuestions.forEach { question ->
+                        OutlinedButton(onClick = { onSuggestedQuestion(question) }) {
+                            Text(question)
+                        }
                     }
                 }
             }

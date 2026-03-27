@@ -6,6 +6,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import com.lifuyue.kora.core.network.AppQuestionGuideConfigDto
 import com.lifuyue.kora.core.database.dao.ConversationDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.network.FastGptApi
@@ -28,6 +29,8 @@ interface ConversationRepository {
 interface ChatRepository {
     fun observeMessages(appId: String, chatId: String?): Flow<List<ChatMessageUiModel>>
 
+    suspend fun bootstrapChat(appId: String): ChatBootstrap
+
     suspend fun restoreMessages(appId: String, chatId: String)
 
     suspend fun sendMessage(appId: String, chatId: String?, text: String): String
@@ -45,6 +48,13 @@ interface ChatRepository {
         feedback: MessageFeedback,
     )
 }
+
+data class ChatBootstrap(
+    val chatId: String,
+    val title: String = "",
+    val welcomeText: String? = null,
+    val questionGuide: AppQuestionGuideConfigDto? = null,
+)
 
 data class AssistantResponseRequest(
     val appId: String,

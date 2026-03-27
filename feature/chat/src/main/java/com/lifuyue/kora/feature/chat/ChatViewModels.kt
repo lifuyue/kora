@@ -3,6 +3,8 @@ package com.lifuyue.kora.feature.chat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import com.lifuyue.kora.core.network.FastGptApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -10,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -102,10 +105,24 @@ class ChatViewModel
 
         init {
             viewModelScope.launch {
-                chatId.value?.let { existingChatId ->
+                val existingChatId = chatId.value
+                if (existingChatId != null) {
                     runCatching { chatRepository.restoreMessages(appId, existingChatId) }
                         .onFailure { error ->
                             metaState.update { it.copy(errorMessage = error.message ?: "恢复历史失败") }
+                        }
+                } else {
+                    runCatching { chatRepository.bootstrapChat(appId) }
+                        .onSuccess { bootstrap ->
+                            chatId.value = bootstrap.chatId
+                            metaState.update {
+                                it.copy(
+                                    welcomeText = bootstrap.welcomeText,
+                                    errorMessage = null,
+                                )
+                            }
+                        }.onFailure { error ->
+                            metaState.update { it.copy(errorMessage = error.message ?: "初始化会话失败") }
                         }
                 }
             }
@@ -120,6 +137,7 @@ class ChatViewModel
                 ChatUiState(
                     appId = appId,
                     chatId = chatId.value,
+                    welcomeText = meta.welcomeText,
                     input = currentInput,
                     isSending = meta.isSending,
                     errorMessage = meta.errorMessage,
@@ -128,7 +146,7 @@ class ChatViewModel
             }.stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
-                ChatUiState(appId = appId, chatId = chatId.value),
+                ChatUiState(appId = appId, chatId = chatId.value, welcomeText = metaState.value.welcomeText),
             )
 
         fun updateInput(value: String) {
@@ -218,4 +236,54 @@ class ChatViewModel
 private data class ChatMetaState(
     val isSending: Boolean = false,
     val errorMessage: String? = null,
+    val welcomeText: String? = null,
 )
+
+@HiltViewModel
+class AppSelectorViewModel @Inject constructor(
+    private val api: FastGptApi,
+    private val connectionRepository: ConnectionRepository,
+) : ViewModel() {
+    private val mutableState = MutableStateFlow(AppSelectorUiState())
+    val uiState: StateFlow<AppSelectorUiState> = mutableState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            connectionRepository.snapshot.collect { snapshot ->
+                mutableState.update { it.copy(currentAppId = snapshot.selectedAppId) }
+                refresh()
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            runCatching { api.getAppList().data.orEmpty() }
+                .onSuccess { apps ->
+                    val currentAppId = connectionRepository.snapshot.value.selectedAppId
+                    mutableState.value =
+                        AppSelectorUiState(
+                            currentAppId = currentAppId,
+                            currentAppName = apps.firstOrNull { it.id == currentAppId }?.name.orEmpty(),
+                            items =
+                                apps.map {
+                                    AppSelectorItemUiModel(
+                                        appId = it.id,
+                                        name = it.name,
+                                        intro = it.intro,
+                                    )
+                                },
+                        )
+                }.onFailure { error ->
+                    mutableState.update { it.copy(errorMessage = error.message ?: "加载 App 失败") }
+                }
+        }
+    }
+
+    fun switchApp(appId: String, onSwitched: (String) -> Unit) {
+        viewModelScope.launch {
+            connectionRepository.updateSelectedAppId(appId)
+            onSwitched(appId)
+        }
+    }
+}

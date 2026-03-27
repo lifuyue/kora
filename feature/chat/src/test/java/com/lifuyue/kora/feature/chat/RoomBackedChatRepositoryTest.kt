@@ -7,21 +7,36 @@ import com.lifuyue.kora.core.common.ResponseEnvelope
 import com.lifuyue.kora.core.database.KoraDatabase
 import com.lifuyue.kora.core.database.entity.ConversationEntity
 import com.lifuyue.kora.core.network.AppListItemDto
+import com.lifuyue.kora.core.network.CollectionListRequest
+import com.lifuyue.kora.core.network.CollectionSummaryDto
 import com.lifuyue.kora.core.network.ChatCompletionRequest
 import com.lifuyue.kora.core.network.ChatCompletionResponseDto
 import com.lifuyue.kora.core.network.ChatHistoriesRequest
 import com.lifuyue.kora.core.network.ChatHistoriesResponseData
 import com.lifuyue.kora.core.network.ChatHistoryItemDto
 import com.lifuyue.kora.core.network.ChatInitData
+import com.lifuyue.kora.core.network.ChunkDeleteRequest
+import com.lifuyue.kora.core.network.ChunkListRequest
+import com.lifuyue.kora.core.network.ChunkListResponseDto
+import com.lifuyue.kora.core.network.ChunkUpdateRequest
+import com.lifuyue.kora.core.network.DatasetCreateRequest
+import com.lifuyue.kora.core.network.DatasetDeleteRequest
+import com.lifuyue.kora.core.network.DatasetListRequest
+import com.lifuyue.kora.core.network.DatasetSummaryDto
 import com.lifuyue.kora.core.network.DeleteChatItemRequest
 import com.lifuyue.kora.core.network.FastGptApi
+import com.lifuyue.kora.core.network.LinkCollectionCreateRequest
 import com.lifuyue.kora.core.network.PaginationRecordsRequest
 import com.lifuyue.kora.core.network.PaginationRecordsResponseData
 import com.lifuyue.kora.core.network.ChatRecordItemDto
+import com.lifuyue.kora.core.network.QuestionGuideRequest
+import com.lifuyue.kora.core.network.SearchTestRequest
+import com.lifuyue.kora.core.network.SearchTestResponseDto
 import com.lifuyue.kora.core.network.UpdateHistoryRequest
 import com.lifuyue.kora.core.network.UpdateUserFeedbackRequest
 import com.lifuyue.kora.core.network.SseStreamClient
 import com.lifuyue.kora.core.network.StaticBaseUrlProvider
+import com.lifuyue.kora.core.network.TextCollectionCreateRequest
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -302,6 +317,46 @@ private class FakeFastGptApi : FastGptApi {
 
     override suspend fun getResData(appId: String, dataId: String, chatId: String?): ResponseEnvelope<JsonArray> =
         ResponseEnvelope(code = 200, data = JsonArray(emptyList()))
+
+    override suspend fun createQuestionGuide(request: QuestionGuideRequest): ResponseEnvelope<List<String>> =
+        ResponseEnvelope(code = 200, data = emptyList())
+
+    override suspend fun listDatasets(request: DatasetListRequest): ResponseEnvelope<List<DatasetSummaryDto>> =
+        ResponseEnvelope(code = 200, data = emptyList())
+
+    override suspend fun createDataset(request: DatasetCreateRequest): ResponseEnvelope<DatasetSummaryDto> =
+        ResponseEnvelope(code = 200, data = null)
+
+    override suspend fun deleteDataset(request: DatasetDeleteRequest): ResponseEnvelope<JsonObject> =
+        ResponseEnvelope(code = 200, data = JsonObject(emptyMap()))
+
+    override suspend fun listCollections(request: CollectionListRequest): ResponseEnvelope<List<CollectionSummaryDto>> =
+        ResponseEnvelope(code = 200, data = emptyList())
+
+    override suspend fun createTextCollection(request: TextCollectionCreateRequest): ResponseEnvelope<CollectionSummaryDto> =
+        ResponseEnvelope(code = 200, data = null)
+
+    override suspend fun createLinkCollection(request: LinkCollectionCreateRequest): ResponseEnvelope<List<CollectionSummaryDto>> =
+        ResponseEnvelope(code = 200, data = emptyList())
+
+    override suspend fun createLocalFileCollection(
+        file: okhttp3.MultipartBody.Part,
+        datasetId: okhttp3.RequestBody,
+        parentId: okhttp3.RequestBody?,
+        trainingType: okhttp3.RequestBody,
+    ): ResponseEnvelope<CollectionSummaryDto> = ResponseEnvelope(code = 200, data = null)
+
+    override suspend fun listChunkData(request: ChunkListRequest): ResponseEnvelope<ChunkListResponseDto> =
+        ResponseEnvelope(code = 200, data = ChunkListResponseDto())
+
+    override suspend fun updateChunkData(request: ChunkUpdateRequest): ResponseEnvelope<JsonObject> =
+        ResponseEnvelope(code = 200, data = JsonObject(emptyMap()))
+
+    override suspend fun deleteChunkData(request: ChunkDeleteRequest): ResponseEnvelope<JsonObject> =
+        ResponseEnvelope(code = 200, data = JsonObject(emptyMap()))
+
+    override suspend fun searchTest(request: SearchTestRequest): ResponseEnvelope<SearchTestResponseDto> =
+        ResponseEnvelope(code = 200, data = SearchTestResponseDto())
 
     override suspend fun deleteChatItem(request: DeleteChatItemRequest): ResponseEnvelope<JsonObject> =
         ResponseEnvelope(code = 200, data = JsonObject(emptyMap()))

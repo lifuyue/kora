@@ -26,6 +26,16 @@ sealed interface AssistantBlock {
 }
 
 @Immutable
+data class CitationItemUiModel(
+    val datasetId: String? = null,
+    val collectionId: String? = null,
+    val dataId: String? = null,
+    val title: String,
+    val snippet: String,
+    val scoreLabel: String = "",
+)
+
+@Immutable
 data class ChatMessageUiModel(
     val messageId: String,
     val chatId: String,
@@ -37,6 +47,8 @@ data class ChatMessageUiModel(
     val deliveryState: MessageDeliveryState = if (isStreaming) MessageDeliveryState.Streaming else MessageDeliveryState.Sent,
     val errorMessage: String? = null,
     val feedback: MessageFeedback = MessageFeedback.None,
+    val citations: List<CitationItemUiModel> = emptyList(),
+    val suggestedQuestions: List<String> = emptyList(),
 ) {
     val blocks: List<AssistantBlock>
         get() = parseAssistantBlocks(markdown)
@@ -75,6 +87,7 @@ data class ConversationListUiState(
 data class ChatUiState(
     val appId: String,
     val chatId: String? = null,
+    val welcomeText: String? = null,
     val input: String = "",
     val isSending: Boolean = false,
     val errorMessage: String? = null,
@@ -83,3 +96,17 @@ data class ChatUiState(
     val canStopGeneration: Boolean
         get() = messages.any { it.isStreaming }
 }
+
+@Immutable
+data class AppSelectorItemUiModel(
+    val appId: String,
+    val name: String,
+    val intro: String,
+)
+
+data class AppSelectorUiState(
+    val currentAppId: String? = null,
+    val currentAppName: String = "",
+    val items: List<AppSelectorItemUiModel> = emptyList(),
+    val errorMessage: String? = null,
+)

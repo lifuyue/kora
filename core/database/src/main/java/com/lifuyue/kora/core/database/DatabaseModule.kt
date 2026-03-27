@@ -6,8 +6,10 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
+import com.lifuyue.kora.core.database.dao.CachedCollectionDao
 import com.lifuyue.kora.core.database.dao.CachedDatasetDao
 import com.lifuyue.kora.core.database.dao.ConversationDao
+import com.lifuyue.kora.core.database.dao.ImportTaskDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
@@ -45,6 +47,12 @@ object DatabaseModule {
 
     @Provides
     fun provideCachedDatasetDao(database: KoraDatabase): CachedDatasetDao = database.cachedDatasetDao()
+
+    @Provides
+    fun provideCachedCollectionDao(database: KoraDatabase): CachedCollectionDao = database.cachedCollectionDao()
+
+    @Provides
+    fun provideImportTaskDao(database: KoraDatabase): ImportTaskDao = database.importTaskDao()
 
     @Provides
     @Singleton

@@ -33,6 +33,8 @@ import androidx.navigation.compose.rememberNavController
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatRoutes
 import com.lifuyue.kora.feature.chat.chatGraph
+import com.lifuyue.kora.feature.knowledge.KnowledgeRoutes
+import com.lifuyue.kora.feature.knowledge.knowledgeGraph
 import com.lifuyue.kora.feature.settings.SettingsRoutes
 import com.lifuyue.kora.feature.settings.settingsGraph
 import kotlinx.coroutines.launch
@@ -41,8 +43,6 @@ private const val ROUTE_BOOTSTRAP = "bootstrap"
 private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_CONNECTION = "connection"
 private const val ROUTE_SHELL = "shell"
-private const val ROUTE_KNOWLEDGE = "knowledge"
-
 @Composable
 fun KoraNavGraph(
     snapshot: ConnectionSnapshot,
@@ -198,7 +198,7 @@ private fun KoraShell(
                             val route =
                                 when (destination) {
                                     ShellDestination.Chat -> chatStartRoute
-                                    ShellDestination.Knowledge -> ROUTE_KNOWLEDGE
+                                    ShellDestination.Knowledge -> KnowledgeRoutes.overview
                                     ShellDestination.Settings -> SettingsRoutes.overview
                                 }
                             navController.navigate(route) {
@@ -221,9 +221,7 @@ private fun KoraShell(
             startDestination = chatStartRoute,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(ROUTE_KNOWLEDGE) {
-                KnowledgeGraphPlaceholder()
-            }
+            knowledgeGraph(navController = navController)
             settingsGraph(
                 navController = navController,
                 onConnectionSaved = {
@@ -243,17 +241,10 @@ private fun KoraShell(
         LaunchedEffect(currentRoute) {
             selectedTab =
                 when {
-                    currentRoute == ROUTE_KNOWLEDGE -> ShellDestination.Knowledge
+                    currentRoute?.startsWith("knowledge") == true -> ShellDestination.Knowledge
                     currentRoute?.startsWith("settings") == true -> ShellDestination.Settings
                     else -> ShellDestination.Chat
                 }
         }
-    }
-}
-
-@Composable
-private fun KnowledgeGraphPlaceholder() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("知识库将在 M5 接入。", style = MaterialTheme.typography.titleMedium)
     }
 }

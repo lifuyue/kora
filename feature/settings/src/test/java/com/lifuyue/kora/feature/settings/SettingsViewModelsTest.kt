@@ -178,6 +178,11 @@ private class FakeSettingsConnectionFacade(
         mutableSnapshot.value = ConnectionSnapshot()
     }
 
+    override suspend fun updateSelectedAppId(selectedAppId: String) {
+        savedSelectedAppId = selectedAppId
+        mutableSnapshot.value = mutableSnapshot.value.copy(selectedAppId = selectedAppId)
+    }
+
     override suspend fun updateAppearance(
         themeMode: ThemeMode,
         dynamicColorEnabled: Boolean,

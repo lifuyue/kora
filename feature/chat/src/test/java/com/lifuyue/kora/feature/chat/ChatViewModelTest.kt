@@ -128,6 +128,12 @@ private class RecordingChatRepository(
     override fun observeMessages(appId: String, chatId: String?): Flow<List<ChatMessageUiModel>> =
         messagesByChat.map { it[chatId].orEmpty() }
 
+    override suspend fun bootstrapChat(appId: String): ChatBootstrap =
+        ChatBootstrap(
+            chatId = "chat-1",
+            welcomeText = "欢迎语",
+        )
+
     override suspend fun restoreMessages(appId: String, chatId: String) = Unit
 
     override suspend fun sendMessage(appId: String, chatId: String?, text: String): String {

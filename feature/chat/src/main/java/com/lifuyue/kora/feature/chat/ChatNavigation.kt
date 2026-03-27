@@ -1,6 +1,10 @@
 package com.lifuyue.kora.feature.chat
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -8,7 +12,6 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-
 object ChatRoutes {
     const val conversations = "chat/{appId}"
     const val thread = "chat/thread/{appId}?chatId={chatId}"
@@ -49,7 +52,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController) {
                 },
             ),
     ) {
-        ChatRoute(onBack = { navController.popBackStack() })
+        ChatRoute(navController = navController, onBack = { navController.popBackStack() })
     }
 }
 
@@ -74,12 +77,18 @@ private fun ConversationListRoute(
 
 @Composable
 private fun ChatRoute(
+    navController: NavController,
     onBack: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel(),
+    appSelectorViewModel: AppSelectorViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+    val appSelectorUiState = appSelectorViewModel.uiState.collectAsStateWithLifecycle()
+    var showAppSelector by remember { mutableStateOf(false) }
     ChatScreen(
         uiState = uiState.value,
+        appSelectorUiState = appSelectorUiState.value,
+        showAppSelector = showAppSelector,
         onBack = onBack,
         onInputChanged = viewModel::updateInput,
         onSend = viewModel::send,
@@ -87,5 +96,25 @@ private fun ChatRoute(
         onContinueGeneration = viewModel::continueGeneration,
         onFeedback = viewModel::updateFeedback,
         onRegenerate = viewModel::regenerate,
+        onOpenAppSelector = { showAppSelector = true },
+        onDismissAppSelector = { showAppSelector = false },
+        onSwitchApp = { appId ->
+            showAppSelector = false
+            appSelectorViewModel.switchApp(appId) { selected ->
+                navController.navigate(ChatRoutes.conversations(selected)) {
+                    popUpTo(ChatRoutes.conversations) { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+        },
+        onSuggestedQuestion = {
+            viewModel.updateInput(it)
+            viewModel.send()
+        },
+        onOpenCitation = { citation ->
+            if (!citation.datasetId.isNullOrBlank() && !citation.collectionId.isNullOrBlank()) {
+                navController.navigate("knowledge/datasets/${citation.datasetId}/collections/${citation.collectionId}")
+            }
+        },
     )
 }

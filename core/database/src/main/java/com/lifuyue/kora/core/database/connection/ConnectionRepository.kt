@@ -114,6 +114,15 @@ class ConnectionRepository
             )
         }
 
+        suspend fun updateSelectedAppId(selectedAppId: String) {
+            preferencesStore.updateSelectedAppId(selectedAppId)
+            publishSnapshot(
+                mutableSnapshot.value.copy(
+                    selectedAppId = selectedAppId,
+                ),
+            )
+        }
+
         suspend fun clearConnection() {
             apiKeySecureStore.clear()
             preferencesStore.updateServerBaseUrl(null)
