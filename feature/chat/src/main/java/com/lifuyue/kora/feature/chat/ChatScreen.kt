@@ -22,6 +22,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
@@ -36,6 +37,7 @@ fun ChatScreen(
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
     onStopGenerating: () -> Unit,
+    onContinueGeneration: () -> Unit,
     onFeedback: (ChatMessageUiModel, MessageFeedback) -> Unit,
     onRegenerate: (ChatMessageUiModel) -> Unit,
 ) {
@@ -82,6 +84,7 @@ fun ChatScreen(
                         onCopyCode = { code ->
                             clipboardManager.setText(AnnotatedString(code))
                         },
+                        onContinueGeneration = onContinueGeneration,
                         onRegenerate = { onRegenerate(message) },
                         onFeedback = { feedback -> onFeedback(message, feedback) },
                     )
@@ -93,7 +96,7 @@ fun ChatScreen(
                 label = { Text("输入消息") },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { onSend() }),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.chatInput),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (uiState.canStopGeneration) {
@@ -117,6 +120,7 @@ private fun MessageCard(
     message: ChatMessageUiModel,
     onCopy: () -> Unit,
     onCopyCode: (String) -> Unit,
+    onContinueGeneration: () -> Unit,
     onRegenerate: () -> Unit,
     onFeedback: (MessageFeedback) -> Unit,
 ) {
@@ -163,6 +167,11 @@ private fun MessageCard(
                     Text("复制")
                 }
                 if (message.role == ChatRole.AI) {
+                    if (message.deliveryState == MessageDeliveryState.Stopped) {
+                        TextButton(onClick = onContinueGeneration) {
+                            Text("继续生成")
+                        }
+                    }
                     TextButton(onClick = onRegenerate) {
                         Text("重新生成")
                     }

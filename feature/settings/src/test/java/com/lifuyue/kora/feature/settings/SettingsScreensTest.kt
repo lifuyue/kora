@@ -66,6 +66,9 @@ class SettingsScreensTest {
             )
         }
 
+        composeRule.onNodeWithText("连接与账号").assertExists()
+        composeRule.onNodeWithText("外观与主题").assertExists()
+        composeRule.onNodeWithText("常用与信息").assertExists()
         composeRule.onNodeWithText("连接配置").assertIsDisplayed()
         composeRule.onNodeWithText("已连接到 FastGPT").assertIsDisplayed()
         composeRule.onNodeWithText("OLED 深色").assertIsDisplayed()

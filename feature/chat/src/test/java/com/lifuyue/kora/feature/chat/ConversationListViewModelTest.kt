@@ -29,6 +29,7 @@ class ConversationListViewModelTest {
                         appId = "app-1",
                         title = "安卓调试",
                         preview = "代码块",
+                        isPinned = true,
                     ),
                     ConversationListItemUiModel(
                         chatId = "chat-2",
@@ -52,6 +53,9 @@ class ConversationListViewModelTest {
             val state = viewModel.uiState.value
             assertEquals(1, state.items.size)
             assertEquals("chat-1", state.items.first().chatId)
+            assertEquals(1, state.pinnedItems.size)
+            assertTrue(state.otherItems.isEmpty())
+            assertTrue(state.canClear)
 
             viewModel.renameConversation("chat-1", "安卓调试*")
             viewModel.togglePin("chat-1", true)
@@ -63,6 +67,43 @@ class ConversationListViewModelTest {
             assertTrue(repository.pinned)
             assertEquals("chat-2", repository.deletedChatId)
             assertTrue(repository.cleared)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun pinnedItemsAreSeparatedFromRegularItems() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingConversationRepository()
+            repository.emit(
+                listOf(
+                    ConversationListItemUiModel(
+                        chatId = "chat-1",
+                        appId = "app-1",
+                        title = "Pinned",
+                        preview = "Preview",
+                        isPinned = true,
+                    ),
+                    ConversationListItemUiModel(
+                        chatId = "chat-2",
+                        appId = "app-1",
+                        title = "Regular",
+                        preview = "Preview",
+                        isPinned = false,
+                    ),
+                ),
+            )
+            val viewModel =
+                ConversationListViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1")),
+                    conversationRepository = repository,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(listOf("chat-1"), state.pinnedItems.map { it.chatId })
+            assertEquals(listOf("chat-2"), state.otherItems.map { it.chatId })
             collectJob.cancel()
         }
 }

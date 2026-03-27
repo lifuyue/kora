@@ -42,8 +42,9 @@ class ChatScreenTest {
                 onSend = {},
                 onBack = {},
                 onStopGenerating = {},
+                onContinueGeneration = {},
                 onFeedback = { _, _ -> },
-                onRegenerate = {},
+                onRegenerate = { _ -> },
             )
         }
 
@@ -77,12 +78,48 @@ class ChatScreenTest {
                 onSend = {},
                 onBack = {},
                 onStopGenerating = {},
+                onContinueGeneration = {},
                 onFeedback = { _, _ -> },
-                onRegenerate = {},
+                onRegenerate = { _ -> },
             )
         }
 
         composeRule.onNodeWithText("停止生成").assertIsDisplayed()
         composeRule.onNodeWithText("生成中").assertIsDisplayed()
+    }
+
+    @Test
+    fun stoppedAssistantShowsContinueGenerationAction() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "assistant-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "partial",
+                                    isStreaming = false,
+                                    deliveryState = MessageDeliveryState.Stopped,
+                                    errorMessage = "已停止生成",
+                                ),
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText("继续生成").assertIsDisplayed()
     }
 }

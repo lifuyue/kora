@@ -132,13 +132,39 @@ fun SettingsOverviewScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("设置", style = MaterialTheme.typography.headlineMedium)
-        SettingsEntry(title = "连接配置", summary = state.connectionSummary, onClick = onOpenConnection)
-        SettingsEntry(title = "主题外观", summary = state.themeSummary, onClick = onOpenTheme)
-        SettingsEntry(title = "当前 App", summary = state.selectedAppSummary, onClick = {})
-        SettingsEntry(title = "聊天偏好", summary = "将在后续里程碑接入", onClick = null)
-        SettingsEntry(title = "语言", summary = "跟随系统", onClick = null)
-        SettingsEntry(title = "缓存", summary = "清理入口待接入", onClick = null)
-        SettingsEntry(title = "关于", summary = "Kora Android Client", onClick = null)
+        SettingsSection(
+            title = "连接与账号",
+            content = {
+                SettingsEntry(title = "连接配置", summary = state.connectionSummary, onClick = onOpenConnection)
+                SettingsEntry(title = "当前 App", summary = state.selectedAppSummary, onClick = null)
+            },
+        )
+        SettingsSection(
+            title = "外观与主题",
+            content = {
+                SettingsEntry(title = "主题外观", summary = state.themeSummary, onClick = onOpenTheme)
+            },
+        )
+        SettingsSection(
+            title = "常用与信息",
+            content = {
+                SettingsEntry(title = "聊天偏好", summary = "将在后续里程碑接入", onClick = null)
+                SettingsEntry(title = "语言", summary = "跟随系统", onClick = null)
+                SettingsEntry(title = "缓存", summary = "清理入口待接入", onClick = null)
+                SettingsEntry(title = "关于", summary = "Kora Android Client", onClick = null)
+            },
+        )
+    }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    content: @Composable () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = MaterialTheme.typography.titleLarge)
+        content()
     }
 }
 

@@ -120,6 +120,62 @@ class KoraDatabaseTest {
         }
 
     @Test
+    fun conversationDaoMarksMissingChatsDeletedAndKeepsPinnedOrdering() =
+        runBlocking {
+            database.conversationDao().upsert(
+                ConversationEntity(
+                    chatId = "chat-1",
+                    appId = "app-a",
+                    title = "Pinned newer",
+                    customTitle = null,
+                    isPinned = true,
+                    source = ChatSource.online.name,
+                    updateTime = 200L,
+                    lastMessagePreview = "preview-1",
+                    hasDraft = false,
+                    isDeleted = false,
+                    isArchived = false,
+                ),
+            )
+            database.conversationDao().upsert(
+                ConversationEntity(
+                    chatId = "chat-2",
+                    appId = "app-a",
+                    title = "Pinned older",
+                    customTitle = null,
+                    isPinned = true,
+                    source = ChatSource.online.name,
+                    updateTime = 200L,
+                    lastMessagePreview = "preview-2",
+                    hasDraft = false,
+                    isDeleted = false,
+                    isArchived = false,
+                ),
+            )
+            database.conversationDao().upsert(
+                ConversationEntity(
+                    chatId = "chat-3",
+                    appId = "app-a",
+                    title = "Will disappear",
+                    customTitle = null,
+                    isPinned = false,
+                    source = ChatSource.online.name,
+                    updateTime = 50L,
+                    lastMessagePreview = null,
+                    hasDraft = false,
+                    isDeleted = false,
+                    isArchived = false,
+                ),
+            )
+
+            database.conversationDao().markMissingAsDeleted("app-a", listOf("chat-1", "chat-2"))
+
+            val visible = database.conversationDao().getConversationsForApp(appId = "app-a", limit = 10, offset = 0)
+            assertEquals(listOf("chat-2", "chat-1"), visible.map { it.chatId })
+            assertTrue(database.conversationDao().getConversationByChatId("chat-3")!!.isDeleted)
+        }
+
+    @Test
     fun messageDaoPersistsStreamingAndOrdersByCreatedAtThenDataId() =
         runBlocking {
             database.messageDao().upsertAll(
@@ -194,5 +250,41 @@ class KoraDatabaseTest {
 
             database.messageDao().deleteMessagesForChat("chat-1")
             assertTrue(database.messageDao().getMessagesForChat("chat-1").isEmpty())
+        }
+
+    @Test
+    fun messageDaoDeletesMessagesForEntireApp() =
+        runBlocking {
+            database.messageDao().upsertAll(
+                listOf(
+                    MessageEntity(
+                        dataId = "msg-a1",
+                        chatId = "chat-a",
+                        appId = "app-a",
+                        role = ChatRole.Human.name,
+                        payloadJson = "{}",
+                        createdAt = 1L,
+                        isStreaming = false,
+                        sendStatus = "sent",
+                        errorCode = null,
+                    ),
+                    MessageEntity(
+                        dataId = "msg-b1",
+                        chatId = "chat-b",
+                        appId = "app-b",
+                        role = ChatRole.AI.name,
+                        payloadJson = "{}",
+                        createdAt = 2L,
+                        isStreaming = false,
+                        sendStatus = "sent",
+                        errorCode = null,
+                    ),
+                ),
+            )
+
+            database.messageDao().deleteMessagesForApp("app-a")
+
+            assertTrue(database.messageDao().getMessagesForChat("chat-a").isEmpty())
+            assertEquals(listOf("msg-b1"), database.messageDao().getMessagesForChat("chat-b").map { it.dataId })
         }
 }

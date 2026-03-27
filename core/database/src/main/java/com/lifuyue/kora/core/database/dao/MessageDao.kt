@@ -12,6 +12,9 @@ interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsertAll(entities: List<MessageEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsert(entity: MessageEntity)
+
     @Query(
         """
         SELECT * FROM messages
@@ -57,4 +60,7 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE chatId = :chatId")
     fun deleteMessagesForChat(chatId: String)
+
+    @Query("DELETE FROM messages WHERE appId = :appId")
+    fun deleteMessagesForApp(appId: String)
 }

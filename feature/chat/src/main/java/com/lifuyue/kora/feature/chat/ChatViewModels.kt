@@ -75,7 +75,11 @@ class ConversationListViewModel
         }
 
         fun renameConversation(chatId: String, title: String) {
-            viewModelScope.launch { conversationRepository.renameConversation(appId, chatId, title.trim()) }
+            val trimmed = title.trim()
+            if (trimmed.isEmpty()) {
+                return
+            }
+            viewModelScope.launch { conversationRepository.renameConversation(appId, chatId, trimmed) }
         }
 
         fun togglePin(chatId: String, pinned: Boolean) {
@@ -95,6 +99,17 @@ class ChatViewModel
         private val chatId = MutableStateFlow(savedStateHandle.get<String?>("chatId"))
         private val input = MutableStateFlow("")
         private val metaState = MutableStateFlow(ChatMetaState())
+
+        init {
+            viewModelScope.launch {
+                chatId.value?.let { existingChatId ->
+                    runCatching { chatRepository.restoreMessages(appId, existingChatId) }
+                        .onFailure { error ->
+                            metaState.update { it.copy(errorMessage = error.message ?: "恢复历史失败") }
+                        }
+                }
+            }
+        }
 
         val uiState: StateFlow<ChatUiState> =
             combine(
@@ -153,6 +168,17 @@ class ChatViewModel
             val resolvedChatId = chatId.value ?: return
             viewModelScope.launch {
                 chatRepository.stopStreaming(appId, resolvedChatId)
+            }
+        }
+
+        fun continueGeneration() {
+            val resolvedChatId = chatId.value ?: return
+            viewModelScope.launch {
+                runCatching {
+                    chatRepository.continueGeneration(appId, resolvedChatId)
+                }.onFailure { error ->
+                    metaState.update { it.copy(errorMessage = error.message ?: "继续生成失败") }
+                }
             }
         }
 

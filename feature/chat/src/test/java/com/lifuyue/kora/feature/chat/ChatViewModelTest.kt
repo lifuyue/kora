@@ -93,6 +93,24 @@ class ChatViewModelTest {
             assertEquals(MessageFeedback.Downvote, repository.feedback)
             collectJob.cancel()
         }
+
+    @Test
+    fun continueGenerationDelegatesToRepository() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val viewModel =
+                ChatViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
+                    chatRepository = repository,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            viewModel.continueGeneration()
+            advanceUntilIdle()
+
+            assertEquals("chat-1", repository.continuedChatId)
+            collectJob.cancel()
+        }
 }
 
 private class RecordingChatRepository(
@@ -104,10 +122,13 @@ private class RecordingChatRepository(
     var sentText: String? = null
     var regeneratedMessageId: String? = null
     var stoppedChatId: String? = null
+    var continuedChatId: String? = null
     var feedback: MessageFeedback? = null
 
     override fun observeMessages(appId: String, chatId: String?): Flow<List<ChatMessageUiModel>> =
         messagesByChat.map { it[chatId].orEmpty() }
+
+    override suspend fun restoreMessages(appId: String, chatId: String) = Unit
 
     override suspend fun sendMessage(appId: String, chatId: String?, text: String): String {
         if (shouldFailSend) {
@@ -139,6 +160,11 @@ private class RecordingChatRepository(
 
     override suspend fun stopStreaming(appId: String, chatId: String) {
         stoppedChatId = chatId
+    }
+
+    override suspend fun continueGeneration(appId: String, chatId: String): String {
+        continuedChatId = chatId
+        return chatId
     }
 
     override suspend fun regenerateResponse(appId: String, chatId: String, messageId: String): String {

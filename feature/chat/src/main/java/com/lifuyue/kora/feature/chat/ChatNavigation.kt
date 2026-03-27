@@ -84,6 +84,7 @@ private fun ChatRoute(
         onInputChanged = viewModel::updateInput,
         onSend = viewModel::send,
         onStopGenerating = viewModel::stopGeneration,
+        onContinueGeneration = viewModel::continueGeneration,
         onFeedback = viewModel::updateFeedback,
         onRegenerate = viewModel::regenerate,
     )

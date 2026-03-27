@@ -12,6 +12,9 @@ interface ConversationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsert(entity: ConversationEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsertAll(entities: List<ConversationEntity>)
+
     @Query(
         """
         SELECT * FROM conversations
@@ -51,6 +54,15 @@ interface ConversationDao {
 
     @Query("SELECT * FROM conversations WHERE chatId = :chatId LIMIT 1")
     fun getConversationByChatId(chatId: String): ConversationEntity?
+
+    @Query(
+        """
+        UPDATE conversations
+        SET isDeleted = CASE WHEN chatId IN (:activeChatIds) THEN 0 ELSE 1 END
+        WHERE appId = :appId
+        """,
+    )
+    fun markMissingAsDeleted(appId: String, activeChatIds: List<String>)
 
     @Query(
         """

@@ -221,9 +221,7 @@ private fun KoraShell(
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(ROUTE_KNOWLEDGE) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("知识库将在 M5 接入。", style = MaterialTheme.typography.titleMedium)
-                }
+                KnowledgeGraphPlaceholder()
             }
             settingsGraph(
                 navController = navController,
@@ -249,5 +247,12 @@ private fun KoraShell(
                     else -> ShellDestination.Chat
                 }
         }
+    }
+}
+
+@Composable
+private fun KnowledgeGraphPlaceholder() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("知识库将在 M5 接入。", style = MaterialTheme.typography.titleMedium)
     }
 }

@@ -60,6 +60,15 @@ data class ConversationListUiState(
 ) {
     val isEmpty: Boolean
         get() = items.isEmpty()
+
+    val pinnedItems: List<ConversationListItemUiModel>
+        get() = items.filter { it.isPinned }
+
+    val otherItems: List<ConversationListItemUiModel>
+        get() = items.filterNot { it.isPinned }
+
+    val canClear: Boolean
+        get() = items.isNotEmpty()
 }
 
 @Immutable

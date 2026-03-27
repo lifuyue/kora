@@ -8,7 +8,7 @@ class MarkdownMessageTest {
     @Test
     fun parserSplitsMarkdownAndCodeFences() {
         val blocks =
-            parseAssistantBlocks(
+            parseMarkdownRenderNodes(
                 """
                 标题
 
@@ -21,8 +21,36 @@ class MarkdownMessageTest {
             )
 
         assertEquals(3, blocks.size)
-        assertTrue(blocks[0] is AssistantBlock.Markdown)
-        assertTrue(blocks[1] is AssistantBlock.CodeFence)
-        assertEquals("kotlin", (blocks[1] as AssistantBlock.CodeFence).language)
+        assertTrue(blocks[0] is MarkdownRenderNode.MarkdownText)
+        assertTrue(blocks[1] is MarkdownRenderNode.CodeBlock)
+        assertEquals("kotlin", (blocks[1] as MarkdownRenderNode.CodeBlock).language)
+    }
+
+    @Test
+    fun parserExtractsImagesLatexAndMermaidFallback() {
+        val blocks =
+            parseMarkdownRenderNodes(
+                """
+                说明 [OpenAI](https://openai.com)
+                ![图示](https://example.com/diagram.png)
+                行内公式 ${'$'}E=mc^2${'$'}
+                ${'$'}${'$'}\int_a^b x^2 dx${'$'}${'$'}
+                ```mermaid
+                graph TD
+                A-->B
+                ```
+                """.trimIndent(),
+            )
+
+        assertTrue(blocks.any { it is MarkdownRenderNode.Image && it.url == "https://example.com/diagram.png" })
+        assertTrue(blocks.any { it is MarkdownRenderNode.Latex && !it.displayMode && it.source == "E=mc^2" })
+        assertTrue(blocks.any { it is MarkdownRenderNode.Latex && it.displayMode && it.source.contains("x^2") })
+        assertTrue(
+            blocks.any {
+                it is MarkdownRenderNode.CodeBlock &&
+                    it.language == "mermaid" &&
+                    it.isMermaidFallback
+            },
+        )
     }
 }
