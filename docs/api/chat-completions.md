@@ -3,27 +3,152 @@
 ## Endpoint
 - `POST /api/v1/chat/completions`
 
-## 用途
-核心聊天接口，支持普通消息发送、流式响应、引用信息返回、工作流交互以及多轮上下文续接。
+## Snapshot
+- Primary sources:
+  - `.reference/FastGPT/projects/app/src/pages/api/v1/chat/completions.ts`
+  - `.reference/FastGPT/packages/global/core/ai/type.ts`
+  - `.reference/FastGPT/projects/app/src/web/common/api/fetch.ts`
 
-## 关键请求字段
-- `chatId`: 既有会话 ID；新会话可为空。
-- `stream`: 是否使用流式输出。
-- `detail`: 是否返回更完整的引用和调试信息，Kora 默认开启。
-- `messages`: 当前轮输入与上下文。
-- `variables`: 应用变量、知识库参数或工作流入参。
+## Purpose
+- Single entrypoint for normal chat, workflow-tool execution, share chat, team-space chat, interactive continuation, citations, tool traces, and variable updates.
 
-## 关键响应语义
-- 非流式模式返回完整 assistant 响应。
-- 流式模式结合 [chat-streaming.md](chat-streaming.md) 中的事件类型处理。
-- 成功响应可能包含新的 `chatId`，用于后续历史持久化。
+## Request Body
+```ts
+type Props = ChatCompletionCreateParams & {
+  chatId?: string;
+  appId?: string;
+  customUid?: string;
+  shareId?: string;
+  outLinkUid?: string;
+  teamId?: string;
+  teamToken?: string;
+  messages: ChatCompletionMessageParam[];
+  responseChatItemId?: string;
+  stream?: boolean;
+  detail?: boolean;
+  retainDatasetCite?: boolean;
+  variables: Record<string, any>;
+  metadata?: Record<string, any>;
+}
+```
 
-## 客户端注意事项
-- 只有拿到非空 `chatId` 后才持久化历史。
-- 消息发送期间要维护可取消、可重试的本地临时状态。
-- 需要把响应视为“聊天主链入口”，允许承载引用、工具、流程和交互节点，而不是只映射成 `assistant.content`。
+## Key Request Semantics
+- `chatId`
+  - `undefined`: server derives history from request messages.
+  - `""` or omitted in UI flows: start a new persisted chat.
+  - non-empty string: continue an existing chat and load history from DB.
+- `appId`
+  Required for app-bound chat and workflow-tool execution.
+- `messages`
+  Must be an array of `ChatCompletionMessageParam`. Non-plugin chat requires at least one user message.
+- `stream`
+  `true` returns SSE.
+- `detail`
+  `true` returns structured event payloads and richer non-stream responses. Kora should default this to `true`.
+- `responseChatItemId`
+  Client-generated assistant message id. Defaults server-side to `getNanoid()`.
+- `variables`
+  Global variables or workflow-tool/plugin inputs. Persisted chat variables are merged first, request variables override them.
+- `retainDatasetCite`
+  Effective only when the auth context allows citations.
 
-## 上游实现模式参考
-- FastGPT 在产品层把聊天、工作流和交互节点揉进一条对话链，因此 Kora 的请求和消息模型必须为结构化事件预留字段。
-- Open WebUI 的聊天页经验说明，这些附属信息最终仍应回到单一消息流渲染，而不是拆成多个不相关页面。
-- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md) 和 [../reference/open-webui-implementation-patterns.md](../reference/open-webui-implementation-patterns.md)。
+## `ChatCompletionMessageParam`
+FastGPT extends OpenAI's message type:
+```ts
+type ChatCompletionContentPartFile = {
+  type: 'file_url';
+  name: string;
+  url: string;
+  key?: string;
+}
+
+type ChatCompletionMessageParam = OpenAIMessageLike & {
+  reasoning_content?: string;
+  dataId?: string;
+  hideInUI?: boolean;
+}
+```
+
+## Extended Message Capabilities
+- User `content` may be:
+  - plain string
+  - array of content parts including `file_url`
+- Assistant messages may carry:
+  - `interactive`
+  - `reasoning_content`
+  - tool calls / function call data inherited from OpenAI SDK types
+- Tool messages may include optional `name`
+
+## Auth Modes
+- Bearer API key
+- Logged-in token/cookie
+- `shareId + outLinkUid`
+- `teamId + teamToken`
+
+## Stream Response
+- SSE events follow [chat-streaming.md](chat-streaming.md).
+- Terminal flow:
+  - server emits normal events
+  - emits final `answer` event with `finish_reason=stop`
+  - emits `data: [DONE]`
+  - if `detail=true`, emits final `flowResponses` event after `[DONE]`
+
+## Non-Stream Response Modes
+There are four practical shapes determined by `stream x detail`:
+
+### `stream=false`, `detail=false`
+```json
+{
+  "error": null,
+  "id": "chatId-or-empty",
+  "model": "",
+  "usage": { "prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 1 },
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "joined assistant text",
+        "reasoning_content": "joined reasoning text"
+      },
+      "finish_reason": "stop",
+      "index": 0
+    }
+  ]
+}
+```
+
+### `stream=false`, `detail=true`
+- Same outer shape as above.
+- Adds:
+  - `responseData`
+  - `newVariables`
+- `choices[0].message.content` may become an array of typed assistant value items instead of a single string.
+
+### `stream=true`, `detail=false`
+- SSE text stream optimized for answer text only.
+- Kora still parses `event:` boundaries because answer chunks are OpenAI-like JSON payloads.
+
+### `stream=true`, `detail=true`
+- Full SSE event bus.
+- Required for tool states, citations, flow node results, variables, interactive nodes, plans, helper-bot forms.
+
+## Server-Side Persistence Semantics
+- Server creates `saveChatId = chatId || getNanoid(24)`.
+- Source is derived as:
+  - `share`
+  - `api`
+  - `team`
+  - `online`
+- New title comes from latest user message for normal chat, or derived execution time for workflow tools.
+
+## Client Requirements
+- Use `detail=true` for all Kora chat traffic.
+- Preserve `responseChatItemId` locally so streamed assistant state maps to one local message.
+- Do not assume `choices[0].message.content` is always a string.
+- Persist chat only after receiving a non-empty resolved `chatId`.
+- Treat `newVariables` as authoritative app/session variable updates after completion.
+
+## Related Specs
+- [chat-streaming.md](chat-streaming.md)
+- [chat-interactive.md](chat-interactive.md)
+- [chat-records.md](chat-records.md)

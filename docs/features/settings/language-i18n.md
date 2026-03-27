@@ -7,36 +7,32 @@ phase: 3-advanced
 # Language I18n
 
 ## Overview
-支持多语言界面与本地化资源管理，提升 Kora 的国际化可用性。
+语言设置控制应用 locale 和本地化资源切换，并为远端错误映射提供本地文案容器。
 
 ## Functional Requirements
-- [ ] FR-1: 支持系统跟随与手动选择应用语言。
-- [ ] FR-2: 字符串资源按 locale 切换。
-- [ ] FR-3: 对时间、数字和文件大小做本地化格式化。
+- [ ] FR-1: 支持跟随系统和手动语言选择。
+- [ ] FR-2: 时间、数字和文件大小格式按 locale 显示。
+- [ ] FR-3: 切换后主要页面自动刷新。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 新增文案必须可追踪到资源文件，不允许硬编码。
-- [ ] NFR-2: 切换语言后需在合理范围内刷新页面而不丢状态。
+- [ ] NFR-1: 禁止新增硬编码文案。
+- [ ] NFR-2: 切换语言后不丢关键页面状态。
 
 ## API Contract
-本功能不直接依赖 FastGPT API，但需要与远端错误码文案映射保持一致，可参考 [../../api/error-handling.md](../../api/error-handling.md)。
+本地能力为主；远端错误码映射参考 [../../api/error-handling.md](../../api/error-handling.md)。
 
 ## UI Description
-设置页提供语言列表和当前语言摘要；切换语言后提示需要刷新或自动重建页面；未翻译字段需有回退策略。
+列表页展示可选语言、当前语言和“跟随系统”入口。切换后弹出轻提示说明部分页面会重建。
 
 ## Data Model
-- `AppLanguage`
-- `LanguagePreferenceState`
+- `LanguagePreferenceState(mode, selectedTag)`
 
 ## Architecture Notes
-语言偏好属于全局配置，`app` 层负责 locale 应用，业务模块只消费资源结果，不自行拼接文案。
+locale 由 app 层统一应用。feature 层仅消费资源，不自行缓存翻译字符串。
 
 ## Dependencies
-- Android locale 支持
-- DataStore
-- 字符串资源管理
+- [../../ui/accessibility.md](../../ui/accessibility.md)
 
 ## Acceptance Criteria
-- 应用语言切换后大部分核心页面文案正确更新。
-- 新增功能可接入现有 i18n 流程。
-
+- 语言切换后核心页面文案正确更新。
+- 格式化输出符合 locale。

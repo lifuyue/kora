@@ -1,13 +1,22 @@
 # Responsive Layout
 
-## 手机
-- 单栏布局优先，聊天页以消息流为中心。
+## Phone
+- Default single-column layout.
+- Chat screen keeps input pinned to bottom and message list as primary surface.
+- Knowledge pages use stacked navigation rather than side-by-side panes.
 
-## 平板
-- 会话列表和聊天详情可采用双栏。
-- 知识库列表与详情可并排显示。
+## Tablet
+- Support list-detail layout for:
+  - conversations + active chat
+  - dataset list + collection/chunk detail
+  - settings categories + detail
+- Preserve the same route semantics as phone.
 
-## 折叠屏
-- 根据折叠态在单栏与双栏之间切换。
-- 避免在折痕区域放置关键操作按钮。
+## Foldables
+- Switch between single-pane and dual-pane based on posture/available width.
+- Avoid placing critical tap targets near the hinge/fold line.
 
+## Layout Rules
+- Primary content width remains readable; do not stretch markdown/code indefinitely on wide screens.
+- Bottom sheets on tablets may become centered dialogs or side sheets when width is large enough.
+- Empty/error states should still align to the active pane, not the whole window.

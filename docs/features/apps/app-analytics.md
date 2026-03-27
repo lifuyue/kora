@@ -7,35 +7,32 @@ phase: 3-advanced
 # App Analytics
 
 ## Overview
-展示应用使用统计，帮助用户理解调用量、活跃度或资源消耗趋势。
+App analytics 展示 app 级使用概览，如请求量、会话量或活跃趋势。它是补充视图，不参与主聊天闭环。
 
 ## Functional Requirements
-- [ ] FR-1: 展示基础统计指标，如请求数、会话数或最近活跃度。
-- [ ] FR-2: 支持按时间范围查看统计变化。
-- [ ] FR-3: 支持空数据和权限不足状态。
+- [ ] FR-1: 展示基础统计卡片。
+- [ ] FR-2: 支持切换时间范围。
+- [ ] FR-3: 处理无权限或无数据状态。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 图表展示必须在手机端保持可读。
-- [ ] NFR-2: 统计刷新不应频繁打断主交互。
+- [ ] NFR-1: 图表在手机端保持可读。
+- [ ] NFR-2: 刷新节奏可控，不做高频轮询。
 
 ## API Contract
-依赖 [../../api/app-management.md](../../api/app-management.md)。
+依赖 [../../api/app-management.md](../../api/app-management.md)。若当前部署未开放统计端点，则该页面在产品层通过 feature flag 隐藏，不向用户暴露空壳入口。
 
 ## UI Description
-页面顶部展示关键数字卡片，下方展示趋势图或列表；无统计权限时提示当前限制；加载中显示骨架。
+页面顶部为关键指标，下方为趋势图或分布列表。无权限时展示只读说明和返回入口。
 
 ## Data Model
-- `AppAnalyticsSummary`
-- `AnalyticsTimeRange`
+- `AppAnalyticsState(summary, series, range, status)`
 
 ## Architecture Notes
-统计页可作为独立 screen，避免与聊天主链路耦合；数据更新采用显式刷新而不是高频轮询。
+analytics 单独建屏，避免耦合到 app detail。实现前若后端端点仍不稳定，可保留受控 feature flag。
 
 ## Dependencies
-- App 统计接口
-- 图表组件
+- [app-detail.md](app-detail.md)
 
 ## Acceptance Criteria
-- 统计数据可展示且时间范围切换正确。
-- 空数据和权限受限状态可区分。
-
+- 有数据时展示完整统计。
+- 无数据/无权限时界面清晰可理解。

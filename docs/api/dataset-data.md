@@ -1,15 +1,62 @@
 # Dataset Data
 
-## 目标
-围绕 Chunk 或数据块做推送、列表、编辑和删除。
+## Snapshot
+- Primary sources:
+  - `.reference/FastGPT/packages/global/core/dataset/type.ts`
+  - `.reference/FastGPT/projects/app/src/pages/api/core/dataset/data/*.ts`
 
-## 能力拆分
-- 批量推送数据块
-- 查询数据块列表
-- 编辑单个数据块
-- 删除数据块
+## `DatasetDataSchemaType`
+```ts
+type DatasetDataSchemaType = {
+  _id: string;
+  userId: string;
+  teamId: string;
+  tmbId: string;
+  datasetId: string;
+  collectionId: string;
+  chunkIndex: number;
+  updateTime: Date;
+  q: string;
+  a?: string;
+  imageId?: string;
+  history?: Array<{ q: string; a?: string; imageId?: string; updateTime: Date }>;
+  forbid?: boolean;
+  fullTextToken: string;
+  indexes: Array<{
+    type: string;
+    dataId: string;
+    text: string;
+  }>;
+  rebuilding?: boolean;
+  imageDescMap?: Record<string, string>;
+}
+```
 
-## 客户端策略
-- 数据块编辑支持乐观更新，但需要失败回滚。
-- 长文本编辑时保留草稿，防止意外丢失。
+## Data Operations
+- Insert / push chunk data
+- Update one chunk
+- Delete one chunk
+- Read detail
+- List paginated chunk rows
+- Resolve quote data for chat citations
 
+## Batch Insert Constraints
+- FastGPT dataset APIs cap batch push at `200` items per request.
+- Kora must chunk larger local edit/import jobs into batches of at most `200`.
+
+## Index / Search Fields
+- Each data row carries `indexes`.
+- Index item fields:
+  - `type`
+  - `dataId`
+  - `text`
+
+## Android Requirements
+- Treat `q` as the primary visible text in the chunk list.
+- Expose `a` only in detail/editor views.
+- Preserve `chunkIndex` ordering from server.
+- Support optimistic local edits with rollback when update/delete fails.
+
+## Related Specs
+- [dataset-collections.md](dataset-collections.md)
+- [dataset-search.md](dataset-search.md)

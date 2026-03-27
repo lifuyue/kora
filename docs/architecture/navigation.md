@@ -1,20 +1,36 @@
 # Navigation
 
-## 顶层路由
+## Top-Level Routes
 - `onboarding`
-- `auth`
-- `chat/home`
-- `chat/detail/{chatId}`
+- `app-selector`
+- `chat/{appId}`
+- `chat/{appId}/{chatId}`
+- `conversations/{appId}`
 - `knowledge`
-- `apps`
+- `knowledge/datasets`
+- `knowledge/datasets/{datasetId}`
+- `knowledge/datasets/{datasetId}/collections`
+- `knowledge/datasets/{datasetId}/collections/{collectionId}`
+- `knowledge/datasets/{datasetId}/search-test`
 - `settings`
+- `settings/connection`
+- `settings/chat-preferences`
+- `settings/audio`
+- `settings/language`
+- `settings/storage`
+- `settings/theme`
+- `settings/about`
+- `share/chat?shareId=...&outLinkUid=...&chatId=...`
 
-## 导航原则
-- 顶层使用 Compose Navigation 管理，参数通过类型安全路由对象封装。
-- 深层链接主要用于分享链接认证与打开指定会话。
-- 平板与折叠屏允许列表-详情双栏布局，但路由语义保持一致。
+## Navigation Rules
+- Route params carry ids only.
+- Detail data is always restored through repository calls keyed by ids.
+- Share links open into an isolated nav graph branch with share-scoped auth state.
 
-## 状态恢复
-- 导航参数只承载最小必要数据，详情内容通过 `SavedStateHandle` + repository 恢复。
-- 对于会话、知识库与应用详情，优先使用 ID 导航，而非传递大对象。
+## Tablet / Large Screen Adaptation
+- Conversations and datasets may render list-detail panes in one activity.
+- Route semantics do not change between phone and tablet.
 
+## Related Specs
+- [local-storage.md](local-storage.md)
+- [features/auth/share-link-auth.md](../features/auth/share-link-auth.md)

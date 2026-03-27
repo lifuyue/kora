@@ -7,35 +7,33 @@ phase: 2-knowledge
 # Conversation Folders
 
 ## Overview
-通过客户端 Room 实现文件夹分组，让用户能按项目或主题组织大量会话。
+文件夹是客户端本地组织能力，用于按项目/主题聚合会话，不改变 FastGPT 服务端历史结构。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可创建、重命名和删除文件夹。
-- [ ] FR-2: 会话可移动到指定文件夹。
-- [ ] FR-3: 列表支持按文件夹筛选。
+- [ ] FR-1: 用户可创建、重命名、删除文件夹。
+- [ ] FR-2: 会话可移动到某个文件夹，或移出文件夹。
+- [ ] FR-3: 会话列表支持按文件夹过滤。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 文件夹变更不能影响远端历史数据完整性。
-- [ ] NFR-2: 批量移动会话时应避免明显卡顿。
+- [ ] NFR-1: 文件夹删除前必须提示是否保留其中会话。
+- [ ] NFR-2: 批量移动操作不卡顿且可回滚。
 
 ## API Contract
-基础会话数据来自 [../../api/chat-history.md](../../api/chat-history.md)，文件夹元数据为本地扩展。
+无专属远端接口；基础会话数据仍来自 [../../api/chat-history.md](../../api/chat-history.md)。
 
 ## UI Description
-会话列表可切换“全部/文件夹”视图；文件夹作为侧边栏或顶部筛选入口；移动会话使用底部弹层选择目标文件夹。
+会话列表顶部过滤器支持切换文件夹。编辑文件夹和移动会话使用底部 sheet。删除文件夹时可选“仅删除文件夹”或“连同本地组织关系一并清除”。
 
 ## Data Model
-- `ConversationFolderEntity`
-- `ConversationFolderJoin`
+- `ConversationFolderEntity(folderId, name, order)`
+- `ConversationFolderCrossRef(chatId, folderId)`
 
 ## Architecture Notes
-文件夹能力完全本地实现，由 Room 维护多对一映射，不修改 FastGPT 历史接口。
+文件夹关系完全本地化，由 Room 管理；Repository 在列表 merge 时把 folder 信息挂入 `ConversationListItem`。
 
 ## Dependencies
-- 会话列表
-- Room 关系表
+- [conversation-list.md](conversation-list.md)
+- [../../architecture/local-storage.md](../../architecture/local-storage.md)
 
 ## Acceptance Criteria
-- 文件夹 CRUD 与会话归类流程完整可用。
-- 切换筛选后列表结果正确。
-
+- 文件夹 CRUD、移动会话、按文件夹过滤都可验证。

@@ -1,11 +1,20 @@
 # Accessibility
 
-## 基本要求
-- 文本和关键图标满足对比度要求。
-- 所有可点击控件提供语义标签。
-- 消息流、设置页和表单支持 TalkBack 顺序访问。
+## Core Rules
+- Text and interactive icons must meet contrast requirements in light, dark, and OLED themes.
+- All icon-only controls require content descriptions.
+- Every page must be fully navigable with TalkBack.
 
-## 交互要求
-- 语音、录音和播放状态需要可读状态提示。
-- 动画和流式输出需兼顾减少动态效果偏好。
+## Chat-Specific Rules
+- Streaming updates must announce message completion without spamming per-character accessibility events.
+- Voice input, recording, and playback states need explicit spoken labels.
+- Citation counts, message feedback state, and action menus must be semantically exposed.
 
+## Motion and Focus
+- Respect reduced-motion preferences where possible.
+- Focus order in message lists should remain chronological and predictable.
+- Bottom sheets must trap focus correctly and restore it on dismiss.
+
+## Forms
+- Connection config, interactive nodes, and dataset import forms require field labels, errors, and hint text.
+- Validation errors should be announced and visually persistent until fixed.

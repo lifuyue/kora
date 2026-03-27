@@ -1,18 +1,56 @@
 # Dataset Search
 
-## 目标
-提供知识库检索测试与调优能力。
+## Snapshot
+- Primary sources:
+  - `.reference/FastGPT/packages/global/core/dataset/constants.ts`
+  - `.reference/FastGPT/projects/app/src/pages/api/core/dataset/searchTest.ts`
 
-## 模式
+## Search Mode Enum
+- `embedding`
+- `fullTextRecall`
+- `mixedRecall`
+
+## Score Type Enum
 - `embedding`
 - `fullText`
-- `mixed`
-
-## 可选项
 - `reRank`
-- 返回相似度分数、命中文本、来源 Collection 与 Chunk 元信息
+- `rrf`
 
-## 客户端价值
-- 帮助用户验证知识库导入质量。
-- 让管理员比较不同检索模式对召回与排序的影响。
+## `searchTest` Request
+Important request fields:
+- `datasetId: string`
+- `text: string`
+- `limit?: number` with server cap `min(limit, 20000)`
+- `similarity?: number`
+- `searchMode?: DatasetSearchModeEnum`
+- `embeddingWeight?: number`
+- `usingReRank?: boolean`
+- `rerankModel?: string`
+- `rerankWeight?: number`
+- `datasetSearchUsingExtensionQuery?: boolean`
+- `datasetSearchExtensionModel?: string`
+- `datasetSearchExtensionBg?: string`
+- `datasetDeepSearch?: boolean`
+- `datasetDeepSearchModel?: string`
+- `datasetDeepSearchMaxTimes?: number`
+- `datasetDeepSearchBg?: string`
 
+## `searchTest` Response
+```ts
+{
+  list: SearchResultItem[];
+  duration: "0.123s";
+  queryExtensionModel?: string;
+  usingReRank: boolean;
+  // deep-search / debug result fields may also be present
+}
+```
+
+## Android Requirements
+- Surface search mode, similarity, embedding weight, and rerank toggles as explicit controls.
+- Show per-result score type and score only when the score type supports a visible score.
+- Display duration and whether re-rank/extension-query actually ran.
+
+## Related Specs
+- [dataset-management.md](dataset-management.md)
+- [features/knowledge/search-test.md](../features/knowledge/search-test.md)

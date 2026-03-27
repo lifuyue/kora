@@ -7,37 +7,35 @@ phase: 1-mvp
 # Message Actions
 
 ## Overview
-为消息提供复制、编辑重发、重新生成和继续生成操作，降低用户修正输入与迭代追问的成本。
+消息操作参考 Open WebUI `Messages/ResponseMessage.svelte` 的消息菜单，但移动端改为长按菜单和底部 action sheet。目标是支持复制、重发、重新生成、继续生成和辅助查看操作。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可复制任意消息纯文本内容。
-- [ ] FR-2: 用户可将历史用户消息载回输入框并再次发送。
-- [ ] FR-3: assistant 消息支持重新生成和继续生成。
+- [ ] FR-1: 用户消息支持复制和“编辑后重发”。
+- [ ] FR-2: assistant 消息支持复制、重新生成、继续生成。
+- [ ] FR-3: 当消息存在引用、完整节点响应或语音时，菜单展示相应入口。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 重发和重新生成必须保持所属会话上下文正确。
-- [ ] NFR-2: 长按菜单与底部操作不能影响消息列表滚动性能。
+- [ ] NFR-1: 菜单打开和关闭不打断列表滚动位置。
+- [ ] NFR-2: 冲突操作在生成中被正确禁用，例如同一会话已有活跃流时不允许再次重新生成。
 
 ## API Contract
-依赖 [../../api/chat-completions.md](../../api/chat-completions.md) 与 [../../api/chat-records.md](../../api/chat-records.md)。
+依赖 [../../api/chat-completions.md](../../api/chat-completions.md) 和 [../../api/chat-records.md](../../api/chat-records.md)。
 
 ## UI Description
-长按消息或点击操作按钮弹出菜单；用户消息展示复制与编辑重发，assistant 消息展示复制、重新生成和继续生成；网络进行中时禁用冲突操作。
+长按消息或点击消息尾部更多按钮，弹出底部菜单。用户消息显示“复制”“编辑重发”；assistant 消息显示“复制”“重新生成”“继续生成”“查看引用”“查看完整响应”。危险或不可用操作显示 disabled 说明。
 
 ## Data Model
-- `MessageAction`
-- `RegenerateRequest`
-- `ContinueGenerationContext`
+- `MessageActionSheetState(targetMessageId, actions)`
+- `ReplayMessageDraft(originalMessageId, text, attachments)`
+- `RegenerateContext(chatId, appId, anchorAssistantId)`
 
 ## Architecture Notes
-操作入口属于 `:feature:chat` UI，具体行为通过 ViewModel 转为意图并复用聊天发送链路，避免出现多条并行发送状态。
+重新生成和继续生成不新增独立网络协议，仍复用 chat completions，只是由 ViewModel 重组 `messages` 和 `chatId`。动作入口在 UI，动作执行在 ViewModel / Repository。
 
 ## Dependencies
-- 聊天会话状态
-- 剪贴板
-- 流式聊天能力
+- [../../ui/component-catalog.md](../../ui/component-catalog.md)
+- [streaming-chat.md](streaming-chat.md)
 
 ## Acceptance Criteria
-- 用户可稳定复制、编辑重发和重新生成。
-- 继续生成不会破坏已有消息顺序和本地历史。
-
+- 复制、编辑重发、重新生成、继续生成四个主动作都可验证。
+- 生成中不会触发冲突请求。

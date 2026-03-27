@@ -7,35 +7,34 @@ phase: 2-knowledge
 # App Selector
 
 ## Overview
-支持用户在多个 FastGPT App 之间切换，决定当前聊天、知识库引用和工作流执行所使用的应用上下文。
+App 选择器决定当前聊天上下文、变量表单、文件选择策略和推荐问题配置。它不是普通筛选器，而是全局会话上下文切换器。
 
 ## Functional Requirements
-- [ ] FR-1: 展示可用 App 列表及基本信息。
-- [ ] FR-2: 支持选择当前默认 App。
-- [ ] FR-3: 切换后聊天入口和新会话自动使用新 App。
+- [ ] FR-1: 展示可访问 App 列表和当前选中项。
+- [ ] FR-2: 支持切换默认 App，并刷新聊天入口依赖的 app 配置。
+- [ ] FR-3: 切换后新建聊天自动使用新 app 上下文。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 切换 App 必须避免污染旧会话上下文。
-- [ ] NFR-2: 列表加载失败时要允许重试且保留当前选择。
+- [ ] NFR-1: 切换 app 时不得污染旧会话的变量或输入草稿。
+- [ ] NFR-2: 列表加载失败时保留当前选择并可重试。
 
 ## API Contract
-依赖 [../../api/app-management.md](../../api/app-management.md)。
+依赖 [../../api/app-management.md](../../api/app-management.md) 和 [../../api/chat-records.md](../../api/chat-records.md)。
 
 ## UI Description
-应用选择器可以是设置页入口或聊天页顶部切换器；列表项展示名称、简介和当前状态；选择后给出轻量成功反馈。
+选择器可作为独立页面或聊天页顶部 sheet。列表项展示头像、名称、简介、类型和是否含交互节点。当前选中项有明显勾选状态。
 
 ## Data Model
-- `AppSummary`
-- `SelectedAppState`
+- `AppSelectorState(items, selectedAppId, loading, error)`
+- `AppSummaryUiModel(appId, name, avatar, intro, type, hasInteractiveNode)`
 
 ## Architecture Notes
-当前 App 选择应作为全局可观察状态，持久化在 DataStore，并由聊天和知识库模块消费。
-FastGPT 的产品结构说明 App 不是普通过滤器，而是聊天、知识库和工作流的上层上下文，因此 Kora 要把当前 App 作为全局会话上下文对待，并在切换时明确清理旧上下文。参考 [../../reference/fastgpt-implementation-patterns.md](../../reference/fastgpt-implementation-patterns.md)。
+当前 appId 写入 DataStore，并通过全局 observable state 分发给 chat/knowledge 模块。切换仅影响新会话和新的 app bootstrap，不 retroactively 改写已有 chatId。
 
 ## Dependencies
-- App 管理接口
-- DataStore
+- [app-detail.md](app-detail.md)
+- [../../architecture/navigation.md](../../architecture/navigation.md)
 
 ## Acceptance Criteria
-- 用户可切换并持久化当前 App。
-- 新开的聊天会话使用正确的 App 上下文。
+- 可切换当前 App 并持久化。
+- 新会话使用正确 app 上下文。

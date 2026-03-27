@@ -7,35 +7,33 @@ phase: 3-advanced
 # Text To Speech
 
 ## Overview
-支持将回答朗读出来，并提供播放队列与基础控制能力。
+TTS 把 assistant 消息朗读出来，配置来源受 app `ttsConfig` 和用户本地音频偏好共同影响。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可对单条 assistant 消息发起朗读。
-- [ ] FR-2: 支持播放、暂停、停止和切换下一条。
-- [ ] FR-3: 长消息支持分段朗读与进度恢复。
+- [ ] FR-1: assistant 消息支持开始朗读、暂停、停止。
+- [ ] FR-2: 支持单条消息朗读和顺序播放队列。
+- [ ] FR-3: 支持根据 app `ttsConfig` 选择 web/model/system TTS 路径或降级到系统 TTS。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: TTS 队列切换时不能出现明显音频重叠。
-- [ ] NFR-2: 后台播放与前台恢复要保持状态一致。
+- [ ] NFR-1: 播放状态和当前消息绑定稳定，不发生重叠播报。
+- [ ] NFR-2: 切后台后能安全停止或维持受控播放状态。
 
 ## API Contract
-默认使用系统 TTS，本功能不强依赖 FastGPT API；消息内容来源于 [../../api/chat-records.md](../../api/chat-records.md)。
+文本来源于 [../../api/chat-records.md](../../api/chat-records.md)，配置来源于 [../../api/app-management.md](../../api/app-management.md)。
 
 ## UI Description
-assistant 消息操作区提供朗读按钮；播放中的消息显示状态与进度；用户可在全局迷你播放器中查看当前队列。
+assistant 消息尾部显示朗读按钮；播放中的消息显示活动状态；可选全局迷你播放器显示当前播报进度。
 
 ## Data Model
-- `TtsQueueItem`
-- `TtsPlaybackState`
+- `TtsPlaybackState(messageId?, status, progress)`
+- `TtsQueueItem(messageId, text, voiceConfig)`
 
 ## Architecture Notes
-TTS 能力建议封装为独立 manager，由 `:feature:chat` 调用，避免 ViewModel 直接管理复杂音频生命周期。
+TTS 由独立 manager 管理，feature 只发播放意图和订阅状态，避免把音频生命周期塞进消息列表 reducer。
 
 ## Dependencies
-- Android TTS
-- 消息记录
+- [../settings/audio-config.md](../settings/audio-config.md)
 
 ## Acceptance Criteria
-- 单条消息朗读和全局停止都可用。
-- 队列切换与后台恢复状态正确。
-
+- 单条朗读和停止可稳定工作。
+- 连续朗读不会出现重叠播报。

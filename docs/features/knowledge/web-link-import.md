@@ -7,35 +7,33 @@ phase: 2-knowledge
 # Web Link Import
 
 ## Overview
-允许用户通过网页链接导入内容到知识库，适合快速采集公开网页资料。
+网页导入对应 `create/link`，用于把 URL 转换为 link-type collection。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可输入一个或多个 URL 创建链接型 Collection。
-- [ ] FR-2: 系统展示抓取与训练状态。
-- [ ] FR-3: 失败链接可单独重试或编辑。
+- [ ] FR-1: 支持输入一个或多个 URL 并创建 collection。
+- [ ] FR-2: 支持可选网页选择器输入。
+- [ ] FR-3: 展示抓取/处理状态，并允许失败项重试。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: URL 校验要在客户端预处理，减少无效请求。
-- [ ] NFR-2: 批量导入时需要控制并发和错误提示密度。
+- [ ] NFR-1: URL 在提交前必须完成格式校验与去重。
+- [ ] NFR-2: 批量导入的成功与失败应分别反馈，不互相阻塞。
 
 ## API Contract
 依赖 [../../api/dataset-collections.md](../../api/dataset-collections.md)。
 
 ## UI Description
-页面包含 URL 输入区、批量列表和状态反馈；处理中显示进度或状态标签；失败项允许局部修改和重试。
+输入区域提供 URL 列表编辑和可选高级参数如 selector。提交后页面显示每个链接的导入卡片和状态标签。
 
 ## Data Model
-- `LinkImportDraft`
-- `LinkImportItem`
+- `LinkImportDraft(url, selector?, status, error?)`
+- `LinkImportBatchState(items, submitting)`
 
 ## Architecture Notes
-链接导入与文件导入共享 Collection 创建流程，但前置输入校验和结果展示模型不同。
+Web link import 与文档上传共用 collection 刷新链路，但输入模型不同。UI 不直接暴露 FastGPT 内部抓取实现。
 
 ## Dependencies
-- Collection 接口
-- URL 校验器
+- [collection-management.md](collection-management.md)
 
 ## Acceptance Criteria
-- 单链接和多链接导入均可执行。
-- 失败项不会阻塞成功项完成。
-
+- 单链接和多链接都可正常导入。
+- 失败链接可单独重试。

@@ -7,35 +7,33 @@ phase: 2-knowledge
 # App Detail
 
 ## Overview
-展示应用详情，包括配置摘要、欢迎语和文件选择配置，帮助用户理解当前 App 的能力边界。
+App 详情页展示 app 的基础信息和对聊天有直接影响的 `chatConfig` 摘要，帮助用户理解欢迎语、变量、文件选择和语音配置。
 
 ## Functional Requirements
-- [ ] FR-1: 展示 App 基础信息与描述。
-- [ ] FR-2: 展示欢迎语、建议输入或能力标签。
-- [ ] FR-3: 展示文件选择相关配置和限制。
+- [ ] FR-1: 展示 app 基础信息、类型和简介。
+- [ ] FR-2: 展示欢迎语、变量字段、文件选择限制、推荐问题和语音配置摘要。
+- [ ] FR-3: 支持从详情页进入聊天或检索相关子页面。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 配置字段缺失时需要有合理占位。
-- [ ] NFR-2: 详情页加载失败时不能影响当前 App 继续使用。
+- [ ] NFR-1: 配置字段缺失时有稳定降级显示。
+- [ ] NFR-2: 详情页失败不影响当前 app 继续使用。
 
 ## API Contract
-依赖 [../../api/app-management.md](../../api/app-management.md)。
+依赖 [../../api/app-management.md](../../api/app-management.md) 和 [../../api/chat-records.md](../../api/chat-records.md)。
 
 ## UI Description
-详情页包含头部概要、能力标签区、欢迎语区域和配置列表；支持从选择器或设置页进入。
+页面顶部显示头像、名称和简介；下方分 section 展示 `welcomeText`、变量表单、附件支持、语音和推荐问题配置。只显示对客户端有实际影响的字段。
 
 ## Data Model
-- `AppDetail`
-- `AppCapabilityTag`
+- `AppDetailUiState(app, resolvedCapabilities)`
+- `AppCapabilitySection(title, items)`
 
 ## Architecture Notes
-详情页只读展示为主，可直接复用 App repository，不引入额外状态写回流程。
+详情页以 `chat/init` 返回的 app 概览为主要来源，必要时补充 app 列表中的元信息。不要泄露 FastGPT 内部 workflow 节点细节到 UI。
 
 ## Dependencies
-- App 详情接口
-- 可复用信息卡片组件
+- [app-selector.md](app-selector.md)
 
 ## Acceptance Criteria
-- 用户能看到当前 App 的主要能力说明。
-- 字段缺失时页面仍可正常展示。
-
+- 用户可读懂当前 app 的主要能力边界。
+- 详情页中的能力摘要与实际聊天行为一致。

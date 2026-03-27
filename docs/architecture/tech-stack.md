@@ -1,26 +1,43 @@
 # Tech Stack
 
-## 语言与平台
-- Kotlin 2.x: 主语言，统一协程与类型系统能力。
-- Android SDK + Jetpack: 原生 Android 能力基线。
+## Language and Platform
+- Kotlin `2.1.0`
+- Android Gradle Plugin aligned with Kotlin `2.1.x`
+- Android SDK + Jetpack
 
 ## UI
-- Jetpack Compose: 声明式 UI 与更高效的状态驱动渲染。
-- Material 3: 保持系统一致性并支持动态取色。
-- Coil: 图片加载与缓存。
-- Markwon: Markdown 渲染基础能力，可按需扩展代码块、表格与 LaTeX。
+- Compose BOM `2025.01.01`
+- Material 3 via Compose BOM
+- Navigation Compose `2.8.5`
+- Coil `2.7.0`
+- Markwon `4.6.2`
 
-## 架构与异步
-- Hilt: 依赖注入。
-- Kotlin Coroutines + Flow: 状态流、流式消息、仓库层异步调用。
+## DI and Async
+- Hilt `2.51.1`
+- Kotlin Coroutines + Flow
+- kotlinx-serialization `1.7.3`
 
-## 数据与网络
-- Retrofit: REST API 定义。
-- OkHttp: 拦截器、认证、SSE 和网络调优。
-- Room: 会话、消息、知识库缓存持久化。
-- DataStore: 连接配置、偏好设置和轻量状态。
+## Networking
+- Retrofit `2.11.0`
+- OkHttp `4.12.0`
+- SSE parsing:
+  - primary choice: manual OkHttp streaming reader
+  - reason: FastGPT requires custom `event:` handling, `[DONE]`, and mixed structured payloads
 
-## 质量工具
-- ktlint: Kotlin 风格统一。
-- JUnit / Turbine / MockWebServer: 单元、Flow 与接口层验证。
+## Local Persistence
+- Room `2.6.1`
+- DataStore `1.1.1`
 
+## Test and Quality
+- ktlint Gradle plugin
+- JUnit
+- Turbine
+- MockWebServer
+
+## Android Packaging Assumptions
+- Min SDK and target SDK remain open until M1 scaffold, but nothing in M0 should depend on legacy View/XML stacks.
+- All user-visible strings remain resource-backed once implementation starts.
+
+## Related Specs
+- [module-structure.md](module-structure.md)
+- [networking.md](networking.md)

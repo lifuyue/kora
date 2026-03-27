@@ -1,41 +1,40 @@
 ---
 status: draft
-priority: P2
+priority: P1
 phase: 2-knowledge
 ---
 
 # Chunk Viewer
 
 ## Overview
-提供知识数据块查看器，支持浏览、搜索和内联编辑单个 Chunk。
+Chunk 查看器展示 `DatasetDataSchemaType`，用于查看、编辑、禁用和回溯引用命中的知识片段。
 
 ## Functional Requirements
-- [ ] FR-1: 列出某个 Collection 下的数据块。
-- [ ] FR-2: 支持查看 chunk 内容、元信息和来源。
-- [ ] FR-3: 支持内联编辑和删除单个 chunk。
+- [ ] FR-1: 支持分页浏览 chunk 列表。
+- [ ] FR-2: 支持查看详情、编辑 `q/a`、删除或禁用 chunk。
+- [ ] FR-3: 支持从聊天引用跳入对应 chunk。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 大量 chunk 浏览要支持分页或懒加载。
-- [ ] NFR-2: 编辑保存失败时必须保留原始内容与重试入口。
+- [ ] NFR-1: 编辑和删除操作应有回滚策略。
+- [ ] NFR-2: 超长 chunk 详情采用分段或折叠显示，避免主线程卡顿。
 
 ## API Contract
-依赖 [../../api/dataset-data.md](../../api/dataset-data.md)。
+依赖 [../../api/dataset-data.md](../../api/dataset-data.md) 和 [../../api/chat-records.md](../../api/chat-records.md)。
 
 ## UI Description
-Chunk 列表支持搜索和分页；点击项后展开内联编辑区或进入详情页；保存中和删除中有明确按钮状态反馈。
+列表项显示 `chunkIndex`、问题/正文摘要和状态。点击进入详情页，可查看全文、索引信息、历史版本与关联引用。编辑页支持保存和取消。
 
 ## Data Model
-- `ChunkItem`
-- `ChunkEditorState`
+- `ChunkListItemUiModel(dataId, chunkIndex, preview, forbid, rebuilding)`
+- `ChunkEditorState(q, a, indexes, dirty)`
 
 ## Architecture Notes
-Chunk 查看器属于数据集详情子模块，编辑能力通过 repository 与本地 UI state 解耦。
+chunk viewer 既服务知识管理，也服务聊天引用回跳。跳入时通过 `datasetId/collectionId/dataId` 精确定位；普通浏览时走 collection 范围分页。
 
 ## Dependencies
-- 数据块接口
-- 列表分页
+- [collection-management.md](collection-management.md)
+- [../chat/citations.md](../chat/citations.md)
 
 ## Acceptance Criteria
-- 能查看、编辑和删除 chunk。
-- 编辑后的内容刷新后仍保持一致。
-
+- 能从 collection 列表进入 chunk 浏览。
+- 能从聊天引用跳入对应 chunk。

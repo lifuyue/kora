@@ -1,17 +1,57 @@
 # Chat Interactive
 
-## 目标
-支持工作流中需要用户继续参与的节点，典型类型为 `userSelect` 和 `userInput`。
+## Snapshot
+- Primary sources:
+  - `.reference/FastGPT/packages/global/core/chat/type.ts`
+  - `.reference/FastGPT/packages/global/core/ai/type.ts`
+  - `.reference/FastGPT/projects/app/src/web/common/api/fetch.ts`
 
-## 交互模式
-- `userSelect`: 服务端给出候选按钮，用户点击后继续流程。
-- `userInput`: 服务端声明表单或文本输入需求，用户填写后提交。
+## Purpose
+- Represent workflow checkpoints that require user action before the server can continue.
 
-## 客户端要求
-- 交互节点必须绑定到所属消息与流程上下文。
-- 用户输入后继续调用聊天接口或专用续交流程接口。
-- 未完成的交互节点需要可恢复，避免应用切后台后丢失。
+## Where Interactive State Appears
+- Assistant chat values:
+  `AIChatItemValueItemType.interactive`
+- Streaming SSE:
+  `event=interactive`
+- Assistant OpenAI-like messages:
+  `ChatCompletionMessageParam.interactive`
 
-## 上游实现模式参考
-- FastGPT 把交互节点定义为工作流中的正式节点类型，而不是异常分支，因此 Kora 要把 `userSelect` 和 `userInput` 当成消息流的一等结构。
-- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md)。
+## Canonical Client Model
+Kora should normalize interactive payloads into:
+```ts
+type InteractiveMessageState = {
+  chatId: string;
+  messageDataId: string;
+  responseValueId?: string;
+  stepId?: string;
+  kind: 'userSelect' | 'userInput' | 'collectionForm';
+  raw: JsonObject;
+  status: 'pending' | 'submitting' | 'resolved' | 'expired';
+}
+```
+
+## `userSelect`
+- Server provides a finite set of options.
+- Mobile UI should render inline chips or a bottom sheet action list.
+- Submission must preserve the owning `chatId`, assistant `dataId`, and current variable context.
+
+## `userInput`
+- Server requests free text or structured form input.
+- Kora should present a focused input affordance near the assistant message, not a detached page.
+
+## Recovery Rules
+- Interactive nodes are part of chat history, not ephemeral UI.
+- After process death or app restart, rebuild pending interactive state from:
+  - paginated chat records
+  - assistant `value[].interactive`
+  - latest unresolved local submission state
+
+## Kora Decisions
+- Keep one unresolved interactive node active per assistant message block.
+- Disable normal "send new unrelated prompt" CTA only when the active app flow explicitly requires the user to continue the interaction.
+- Persist pending form drafts locally until success or explicit cancel.
+
+## Related Specs
+- [chat-completions.md](chat-completions.md)
+- [chat-streaming.md](chat-streaming.md)

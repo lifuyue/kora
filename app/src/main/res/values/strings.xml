@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kora</string>
+    <string name="onboarding_title">欢迎使用 Kora</string>
+    <string name="onboarding_body">这是 M1 阶段的 Compose + Hilt 应用入口壳，后续会接入设置、聊天与知识库模块。</string>
+    <string name="onboarding_continue">继续</string>
+</resources>

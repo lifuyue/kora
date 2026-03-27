@@ -7,34 +7,31 @@ phase: 2-knowledge
 # Conversation Archive
 
 ## Overview
-支持归档不常用会话，在不删除历史的前提下降低主列表噪音。
+归档用于把低频会话从主列表移出，但不删除远端历史。
 
 ## Functional Requirements
 - [ ] FR-1: 用户可归档和取消归档会话。
-- [ ] FR-2: 主列表默认隐藏归档项。
-- [ ] FR-3: 提供单独的归档视图或筛选入口。
+- [ ] FR-2: 主列表默认不显示归档项。
+- [ ] FR-3: 提供单独归档过滤视图。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 归档操作应为轻量本地更新。
-- [ ] NFR-2: 归档状态切换后列表刷新要稳定。
+- [ ] NFR-1: 归档应为本地即时操作。
+- [ ] NFR-2: 归档状态重启后保持。
 
 ## API Contract
-基础会话数据来自 [../../api/chat-history.md](../../api/chat-history.md)，归档为本地扩展状态。
+无专属远端接口；基础会话依赖 [../../api/chat-history.md](../../api/chat-history.md)。
 
 ## UI Description
-列表项菜单支持归档；归档后项目从主列表消失；用户可在过滤器中打开归档视图并恢复会话。
+会话项菜单提供“归档/取消归档”。过滤器可切换到归档视图。归档会话默认不参与主列表搜索结果，除非显式进入归档视图。
 
 ## Data Model
-- `ArchivedConversationEntity`
+- `ArchivedConversationEntity(chatId, archivedAt)`
 
 ## Architecture Notes
-归档状态保存在本地，与置顶、标签、文件夹一起作为列表聚合层的一部分。
+归档与删除完全分离。Repository 只在列表 merge 层过滤，不影响消息数据存在。
 
 ## Dependencies
-- 会话列表
-- Room
+- [conversation-list.md](conversation-list.md)
 
 ## Acceptance Criteria
-- 归档和取消归档立即影响列表展示。
-- 归档数据在重启后保持。
-
+- 归档与取消归档均可验证，且不会误删会话数据。

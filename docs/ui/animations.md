@@ -1,12 +1,17 @@
 # Animations
 
-## 场景
-- 页面切换: 轻量位移和淡入。
-- 流式聊天: 文本增量出现，不做花哨逐字动画。
-- 列表加载: 骨架屏与淡入。
-- 底部面板: 标准 Material 动画。
+## Approved Motion
+- Page enter/exit: short fade + slide.
+- Bottom sheet/dialog: standard Material motion.
+- List insertion/removal: subtle placement animation only.
+- Streaming text: no per-character flourish; animate container/state transitions instead.
 
-## 原则
-- 动画服务于状态变化，不遮挡内容。
-- 错误和加载反馈优先清晰而不是炫技。
+## Chat Motion Rules
+- New assistant message may fade in once; subsequent token updates should not reanimate the whole bubble.
+- Tool status cards may pulse or crossfade when status changes.
+- Citation sheet and message action sheet use the same motion family as other modal surfaces.
 
+## Constraints
+- Motion must not delay content readability.
+- Error states appear immediately; do not hide failures behind long transitions.
+- Recording and voice-call indicators can animate, but must also expose static state cues.

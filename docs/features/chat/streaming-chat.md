@@ -7,39 +7,41 @@ phase: 1-mvp
 # Streaming Chat
 
 ## Overview
-提供 Kora 最核心的流式聊天体验，让用户在移动端以低等待感接收模型增量回复，并在必要时继续生成、取消或重试。
+提供 Kora 的核心对话主链。聊天页必须在一个消息流中同时承载文本增量、推理文本、工具状态、流程节点、引用和交互节点，行为参考 Open WebUI `src/lib/components/chat/Chat.svelte` 的 `chatCompletionEventHandler`，协议真值来自 FastGPT `chat/completions` 与 SSE 事件枚举。
 
 ## Functional Requirements
-- [ ] FR-1: 用户发送消息后，界面立即展示本地占位的 assistant 气泡。
-- [ ] FR-2: 客户端按 SSE 增量更新回复文本、工具状态和结束状态。
-- [ ] FR-3: 失败后允许重新生成或从中断位置继续生成。
+- [ ] FR-1: 用户发送消息后立即插入本地 `Human` 消息和一个带 `responseChatItemId` 的占位 `AI` 消息。
+- [ ] FR-2: `answer`/`fastAnswer` 增量更新同一条 assistant 消息的正文和 `reasoning` 子块。
+- [ ] FR-3: `toolCall`、`toolParams`、`toolResponse`、`plan`、`stepTitle`、`interactive`、`collectionForm`、`topAgentConfig` 都合并到同一 assistant 消息的结构化子块。
+- [ ] FR-4: `flowResponses` 到达后补齐引用和节点响应详情；`updateVariables` 到达后更新会话变量状态。
+- [ ] FR-5: 流结束后将临时消息转为持久化消息；失败时保留已收到内容并暴露“重试/继续生成”操作。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 首个可见 token 应尽快出现，避免长时间空白等待。
-- [ ] NFR-2: 流式解析异常不能导致页面崩溃或已收内容丢失。
+- [ ] NFR-1: 首个可见 token 在网络正常时应尽快出现，首包等待超时由上层 watchdog 约束在 60s。
+- [ ] NFR-2: 事件顺序必须严格保留，不能因 UI 动画或分页回收打乱。
+- [ ] NFR-3: 流解析失败、断流、进程重建后都不能导致已收到内容丢失。
 
 ## API Contract
-依赖 [../../api/chat-completions.md](../../api/chat-completions.md) 和 [../../api/chat-streaming.md](../../api/chat-streaming.md)。
+依赖 [../../api/chat-completions.md](../../api/chat-completions.md)、[../../api/chat-streaming.md](../../api/chat-streaming.md) 和 [../../api/chat-records.md](../../api/chat-records.md)。
 
 ## UI Description
-聊天页底部输入框发送后，消息列表追加用户消息与 assistant 占位消息；占位消息持续增长，工具调用与错误状态以内联状态条展示；加载、空会话、断流错误和成功完成状态都需可区分。
+聊天页由顶部 app 标题栏、消息列表、底部输入区组成。发送后列表尾部追加用户气泡和 assistant 占位卡片；正文增长时自动滚动到最新位置，但用户手动上滑后暂停强制滚动。工具调用显示为消息内状态条；推理文本默认折叠；发生错误时保留气泡并展示 inline error；成功完成后在消息尾部展示推荐问题和引用入口。
 
 ## Data Model
-- `ChatSession`
-- `MessageItem`
-- `StreamingMessageState`
-- `PendingSendDraft`
+- `ChatUiState(chatId, appId, messages, inputDraft, sendState, autoScrollEnabled, pendingInteractive, pendingSuggestions)`
+- `ChatMessageUiModel(dataId?, responseValueId?, role, blocks, sendStatus, error)`
+- `AssistantBlock(type=text|reasoning|tool|interactive|plan|stepTitle|citationSummary)`
+- `PendingSendDraft(localId, responseChatItemId, startedAt, retryContext)`
 
 ## Architecture Notes
-落在 `:feature:chat`，由 ViewModel 收集流式事件，repository 协调网络与本地落盘，遵循 [../../architecture/data-flow.md](../../architecture/data-flow.md)。
-Open WebUI 的实现模式说明聊天页应承载文本、引用、工具和多模态附属状态；FastGPT 的实现模式说明 SSE 本质上是产品事件流，因此消息模型必须允许结构化事件并最终统一落到消息流渲染。参考 [../../reference/open-webui-implementation-patterns.md](../../reference/open-webui-implementation-patterns.md) 和 [../../reference/fastgpt-implementation-patterns.md](../../reference/fastgpt-implementation-patterns.md)。
+`ChatViewModel` 只处理 intent 和 state reduce；SSE 解析在 `:core:network`；消息合并逻辑在 `ChatRepository`。历史分页与流式尾插要共用同一消息排序键：`time + dataId`。Open WebUI 的 `Chat.svelte` 说明客户端必须把所有附属事件都归并到单一消息流中；FastGPT 的 `SseResponseEventEnum` 说明协议本身就是产品级事件总线。
 
 ## Dependencies
-- Compose LazyColumn
-- Coroutines / Flow
-- OkHttp SSE
-- 本地消息缓存
+- [../../architecture/data-flow.md](../../architecture/data-flow.md)
+- [../../architecture/networking.md](../../architecture/networking.md)
+- [../../ui/component-catalog.md](../../ui/component-catalog.md)
 
 ## Acceptance Criteria
-- 可成功发送新消息并流式看到回复。
-- 中断、超时和服务端错误能被用户识别并重试。
+- 可在新会话和已有会话中稳定流式发送并看到增量回复。
+- 工具、计划、交互和引用不会被渲染成独立页面或丢失。
+- 断流后保留部分答案并可重试。
