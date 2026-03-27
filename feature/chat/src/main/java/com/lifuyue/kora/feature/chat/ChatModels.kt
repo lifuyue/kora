@@ -60,14 +60,34 @@ data class ConversationListItemUiModel(
     val appId: String,
     val title: String,
     val preview: String,
+    val folderId: String? = null,
+    val folderName: String? = null,
+    val tags: List<ConversationTagUiModel> = emptyList(),
     val isPinned: Boolean = false,
     val updateTime: Long = 0L,
+)
+
+@Immutable
+data class ConversationFolderUiModel(
+    val folderId: String,
+    val name: String,
+)
+
+@Immutable
+data class ConversationTagUiModel(
+    val tagId: String,
+    val name: String,
+    val colorToken: String,
 )
 
 @Immutable
 data class ConversationListUiState(
     val query: String = "",
     val items: List<ConversationListItemUiModel> = emptyList(),
+    val folders: List<ConversationFolderUiModel> = emptyList(),
+    val tags: List<ConversationTagUiModel> = emptyList(),
+    val selectedFolderId: String? = null,
+    val selectedTagId: String? = null,
     val isRefreshing: Boolean = false,
 ) {
     val isEmpty: Boolean
@@ -81,6 +101,12 @@ data class ConversationListUiState(
 
     val canClear: Boolean
         get() = items.isNotEmpty()
+
+    val selectedFolderName: String
+        get() = folders.firstOrNull { it.folderId == selectedFolderId }?.name ?: "全部文件夹"
+
+    val selectedTagName: String
+        get() = tags.firstOrNull { it.tagId == selectedTagId }?.name ?: "全部标签"
 }
 
 @Immutable

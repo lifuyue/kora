@@ -3,8 +3,16 @@ package com.lifuyue.kora.feature.chat
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.NetworkError
 import com.lifuyue.kora.core.database.dao.ConversationDao
+import com.lifuyue.kora.core.database.dao.ConversationFolderAssignmentRow
+import com.lifuyue.kora.core.database.dao.ConversationFolderDao
+import com.lifuyue.kora.core.database.dao.ConversationTagAssignmentRow
+import com.lifuyue.kora.core.database.dao.ConversationTagDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.entity.ConversationEntity
+import com.lifuyue.kora.core.database.entity.ConversationFolderCrossRef
+import com.lifuyue.kora.core.database.entity.ConversationFolderEntity
+import com.lifuyue.kora.core.database.entity.ConversationTagCrossRef
+import com.lifuyue.kora.core.database.entity.ConversationTagEntity
 import com.lifuyue.kora.core.database.entity.MessageEntity
 import com.lifuyue.kora.core.network.ChatCompletionMessageParam
 import com.lifuyue.kora.core.network.ChatCompletionRequest
@@ -30,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.Flow
@@ -55,6 +64,8 @@ class RoomChatRepository
     private val api: FastGptApi,
     private val sseStreamClient: SseStreamClient,
     private val conversationDao: ConversationDao,
+    private val conversationFolderDao: ConversationFolderDao,
+    private val conversationTagDao: ConversationTagDao,
     private val messageDao: MessageDao,
     private val json: Json = NetworkJson.default,
     ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -80,17 +91,45 @@ class RoomChatRepository
     }
 
     override fun observeConversations(appId: String): Flow<List<ConversationListItemUiModel>> =
-        conversationDao.observeConversationsForApp(appId).map { rows -> rows.map(::conversationToUiModel) }
+        combine(
+            conversationDao.observeConversationsForApp(appId),
+            conversationFolderDao.observeAssignments(appId),
+            conversationTagDao.observeAssignments(appId),
+        ) { conversations, folders, tags ->
+            val folderByChatId = folders.associateBy { it.chatId }
+            val tagsByChatId = tags.groupBy { it.chatId }
+            conversations.map { entity ->
+                entity.toUiModel(
+                    folder = folderByChatId[entity.chatId],
+                    tags = tagsByChatId[entity.chatId].orEmpty(),
+                )
+            }
+        }
+
+    override fun observeFolders(appId: String): Flow<List<ConversationFolderUiModel>> =
+        conversationFolderDao.observeFolders(appId).map { rows ->
+            rows.map { ConversationFolderUiModel(folderId = it.folderId, name = it.name) }
+        }
+
+    override fun observeTags(appId: String): Flow<List<ConversationTagUiModel>> =
+        conversationTagDao.observeTags(appId).map { rows ->
+            rows.map { ConversationTagUiModel(tagId = it.tagId, name = it.name, colorToken = it.colorToken) }
+        }
 
     override suspend fun refreshConversations(appId: String) {
         val histories = api.getHistories(ChatHistoriesRequest(appId = appId)).data?.list.orEmpty()
         val existing = conversationDao.getConversationsForAppIncludingDeleted(appId = appId, limit = Int.MAX_VALUE, offset = 0)
         val existingByChatId = existing.associateBy { it.chatId }
         val remoteChatIds = histories.map { it.chatId }
+        val missingChatIds = existing.map { it.chatId }.filterNot(remoteChatIds::contains)
 
         if (histories.isEmpty()) {
             val existingChatIds = existing.map { it.chatId }
             conversationDao.clearByAppId(appId)
+            if (existingChatIds.isNotEmpty()) {
+                conversationFolderDao.clearAssignments(existingChatIds)
+                conversationTagDao.clearAssignments(existingChatIds)
+            }
             existingChatIds.forEach(messageDao::deleteMessagesForChat)
             return
         }
@@ -104,8 +143,12 @@ class RoomChatRepository
                 ),
             )
         }
-        existing.map { it.chatId }.filterNot(remoteChatIds::contains).forEach(conversationDao::softDelete)
-        existing.map { it.chatId }.filterNot(remoteChatIds::contains).forEach(messageDao::deleteMessagesForChat)
+        missingChatIds.forEach(conversationDao::softDelete)
+        if (missingChatIds.isNotEmpty()) {
+            conversationFolderDao.clearAssignments(missingChatIds)
+            conversationTagDao.clearAssignments(missingChatIds)
+        }
+        missingChatIds.forEach(messageDao::deleteMessagesForChat)
     }
 
     override suspend fun renameConversation(appId: String, chatId: String, title: String) {
@@ -149,6 +192,8 @@ class RoomChatRepository
         streamingJobs.remove(chatId)?.cancel()
         api.deleteHistory(appId = appId, chatId = chatId)
         conversationDao.softDelete(chatId)
+        conversationFolderDao.clearAssignment(chatId)
+        conversationTagDao.clearAssignments(chatId)
         messageDao.deleteMessagesForChat(chatId)
     }
 
@@ -156,7 +201,67 @@ class RoomChatRepository
         val chatIds = conversationDao.getConversationsForAppIncludingDeleted(appId = appId, limit = Int.MAX_VALUE, offset = 0).map { it.chatId }
         api.clearHistories(appId)
         conversationDao.clearByAppId(appId)
+        if (chatIds.isNotEmpty()) {
+            conversationFolderDao.clearAssignments(chatIds)
+            conversationTagDao.clearAssignments(chatIds)
+        }
         chatIds.forEach(messageDao::deleteMessagesForChat)
+    }
+
+    override suspend fun createFolder(appId: String, name: String) {
+        conversationFolderDao.upsert(
+            ConversationFolderEntity(
+                folderId = nextId("folder"),
+                appId = appId,
+                name = name,
+                sortOrder = (conversationFolderDao.getLastFolder(appId)?.sortOrder ?: -1L) + 1L,
+            ),
+        )
+    }
+
+    override suspend fun renameFolder(appId: String, folderId: String, name: String) {
+        conversationFolderDao.rename(folderId = folderId, name = name)
+    }
+
+    override suspend fun deleteFolder(appId: String, folderId: String) {
+        conversationFolderDao.delete(folderId)
+    }
+
+    override suspend fun createTag(appId: String, name: String) {
+        val nextSortOrder = (conversationTagDao.getLastTag(appId)?.sortOrder ?: -1L) + 1L
+        val colorToken = tagColorTokens[(nextSortOrder % tagColorTokens.size.toLong()).toInt()]
+        conversationTagDao.upsert(
+            ConversationTagEntity(
+                tagId = nextId("tag"),
+                appId = appId,
+                name = name,
+                colorToken = colorToken,
+                sortOrder = nextSortOrder,
+            ),
+        )
+    }
+
+    override suspend fun renameTag(appId: String, tagId: String, name: String) {
+        conversationTagDao.rename(tagId = tagId, name = name)
+    }
+
+    override suspend fun deleteTag(appId: String, tagId: String) {
+        conversationTagDao.delete(tagId)
+    }
+
+    override suspend fun moveConversationToFolder(appId: String, chatId: String, folderId: String?) {
+        conversationFolderDao.clearAssignment(chatId)
+        if (!folderId.isNullOrBlank()) {
+            conversationFolderDao.upsertAssignment(ConversationFolderCrossRef(chatId = chatId, folderId = folderId))
+        }
+    }
+
+    override suspend fun setConversationTags(appId: String, chatId: String, tagIds: List<String>) {
+        conversationTagDao.clearAssignments(chatId)
+        val refs = tagIds.distinct().map { tagId -> ConversationTagCrossRef(chatId = chatId, tagId = tagId) }
+        if (refs.isNotEmpty()) {
+            conversationTagDao.upsertAssignments(refs)
+        }
     }
 
     override fun observeMessages(appId: String, chatId: String?): Flow<List<ChatMessageUiModel>> {
@@ -607,16 +712,6 @@ class RoomChatRepository
         return lastCreatedAt
     }
 
-    private fun conversationToUiModel(entity: ConversationEntity): ConversationListItemUiModel =
-        ConversationListItemUiModel(
-            chatId = entity.chatId,
-            appId = entity.appId,
-            title = entity.displayTitle,
-            preview = entity.lastMessagePreview.orEmpty(),
-            isPinned = entity.isPinned,
-            updateTime = entity.updateTime,
-        )
-
     private fun messageToUiModel(entity: MessageEntity): ChatMessageUiModel {
         val storedPayload = entity.payloadJson.toStoredPayload(json)
         return ChatMessageUiModel(
@@ -720,8 +815,6 @@ private fun ChatHistoryItemDto.toConversationEntity(
         appId = appId,
         title = title,
         customTitle = customTitle,
-        folderName = cached?.folderName,
-        tags = cached?.tags.orEmpty(),
         isPinned = top == true,
         source = cached?.source ?: "online",
         updateTime = updateTime,
@@ -751,6 +844,29 @@ private fun ChatRecordItemDto.toMessageEntity(
 
 private fun ConversationEntity.displayTitle(): String = customTitle?.takeIf { it.isNotBlank() } ?: title
 
+private fun ConversationEntity.toUiModel(
+    folder: ConversationFolderAssignmentRow?,
+    tags: List<ConversationTagAssignmentRow>,
+): ConversationListItemUiModel =
+    ConversationListItemUiModel(
+        chatId = chatId,
+        appId = appId,
+        title = displayTitle,
+        preview = lastMessagePreview.orEmpty(),
+        folderId = folder?.folderId,
+        folderName = folder?.folderName,
+        tags =
+            tags.map {
+                ConversationTagUiModel(
+                    tagId = it.tagId,
+                    name = it.tagName,
+                    colorToken = it.colorToken,
+                )
+            },
+        isPinned = isPinned,
+        updateTime = updateTime,
+    )
+
 private val ConversationEntity.displayTitle: String
     get() = displayTitle()
 
@@ -778,6 +894,18 @@ private fun MessageFeedback.toFeedbackType(): Int? =
         MessageFeedback.Upvote -> 1
         MessageFeedback.Downvote -> -1
     }
+
+private val tagColorTokens =
+    listOf(
+        "amber",
+        "mint",
+        "sky",
+        "coral",
+        "indigo",
+        "rose",
+        "teal",
+        "slate",
+    )
 
 private fun String.toStoredPayload(json: Json): StoredMessagePayload =
     runCatching {

@@ -29,27 +29,43 @@ class ConversationListViewModel
     ) : ViewModel() {
         val appId: String = checkNotNull(savedStateHandle["appId"])
         private val query = MutableStateFlow("")
+        private val selectedFolderId = MutableStateFlow<String?>(null)
+        private val selectedTagId = MutableStateFlow<String?>(null)
         private val isRefreshing = MutableStateFlow(false)
+        private val filters = combine(query, selectedFolderId, selectedTagId, isRefreshing) { currentQuery, folderId, tagId, refreshing ->
+            ConversationListFilters(
+                query = currentQuery,
+                folderId = folderId,
+                tagId = tagId,
+                isRefreshing = refreshing,
+            )
+        }
 
         val uiState: StateFlow<ConversationListUiState> =
             combine(
-                query,
-                isRefreshing,
+                filters,
                 conversationRepository.observeConversations(appId),
-            ) { currentQuery, refreshing, items ->
+                conversationRepository.observeFolders(appId),
+                conversationRepository.observeTags(appId),
+            ) { filters, items, folders, tags ->
                 val filtered =
-                    if (currentQuery.isBlank()) {
-                        items
-                    } else {
-                        items.filter {
-                            it.title.contains(currentQuery, ignoreCase = true) ||
-                                it.preview.contains(currentQuery, ignoreCase = true)
-                        }
+                    items.filter { item ->
+                        val matchesQuery =
+                            filters.query.isBlank() ||
+                                item.title.contains(filters.query, ignoreCase = true) ||
+                                item.preview.contains(filters.query, ignoreCase = true)
+                        val matchesFolder = filters.folderId == null || item.folderId == filters.folderId
+                        val matchesTag = filters.tagId == null || item.tags.any { it.tagId == filters.tagId }
+                        matchesQuery && matchesFolder && matchesTag
                     }
                 ConversationListUiState(
-                    query = currentQuery,
+                    query = filters.query,
                     items = filtered,
-                    isRefreshing = refreshing,
+                    folders = folders,
+                    tags = tags,
+                    selectedFolderId = filters.folderId,
+                    selectedTagId = filters.tagId,
+                    isRefreshing = filters.isRefreshing,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConversationListUiState())
 
@@ -59,6 +75,14 @@ class ConversationListViewModel
 
         fun updateQuery(value: String) {
             query.value = value
+        }
+
+        fun selectFolder(folderId: String?) {
+            selectedFolderId.value = folderId
+        }
+
+        fun selectTag(tagId: String?) {
+            selectedTagId.value = tagId
         }
 
         fun refresh() {
@@ -87,6 +111,64 @@ class ConversationListViewModel
 
         fun togglePin(chatId: String, pinned: Boolean) {
             viewModelScope.launch { conversationRepository.togglePinConversation(appId, chatId, pinned) }
+        }
+
+        fun createFolder(name: String) {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) {
+                return
+            }
+            viewModelScope.launch { conversationRepository.createFolder(appId, trimmed) }
+        }
+
+        fun renameFolder(folderId: String, name: String) {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) {
+                return
+            }
+            viewModelScope.launch { conversationRepository.renameFolder(appId, folderId, trimmed) }
+        }
+
+        fun deleteFolder(folderId: String) {
+            viewModelScope.launch {
+                conversationRepository.deleteFolder(appId, folderId)
+                if (selectedFolderId.value == folderId) {
+                    selectedFolderId.value = null
+                }
+            }
+        }
+
+        fun createTag(name: String) {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) {
+                return
+            }
+            viewModelScope.launch { conversationRepository.createTag(appId, trimmed) }
+        }
+
+        fun renameTag(tagId: String, name: String) {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) {
+                return
+            }
+            viewModelScope.launch { conversationRepository.renameTag(appId, tagId, trimmed) }
+        }
+
+        fun deleteTag(tagId: String) {
+            viewModelScope.launch {
+                conversationRepository.deleteTag(appId, tagId)
+                if (selectedTagId.value == tagId) {
+                    selectedTagId.value = null
+                }
+            }
+        }
+
+        fun moveConversation(chatId: String, folderId: String?) {
+            viewModelScope.launch { conversationRepository.moveConversationToFolder(appId, chatId, folderId) }
+        }
+
+        fun setConversationTags(chatId: String, tagIds: List<String>) {
+            viewModelScope.launch { conversationRepository.setConversationTags(appId, chatId, tagIds) }
         }
     }
 
@@ -237,6 +319,13 @@ private data class ChatMetaState(
     val isSending: Boolean = false,
     val errorMessage: String? = null,
     val welcomeText: String? = null,
+)
+
+private data class ConversationListFilters(
+    val query: String = "",
+    val folderId: String? = null,
+    val tagId: String? = null,
+    val isRefreshing: Boolean = false,
 )
 
 @HiltViewModel

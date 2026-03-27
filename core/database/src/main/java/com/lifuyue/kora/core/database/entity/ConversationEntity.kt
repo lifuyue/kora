@@ -9,8 +9,6 @@ data class ConversationEntity(
     val appId: String,
     val title: String,
     val customTitle: String?,
-    val folderName: String? = null,
-    val tags: List<String> = emptyList(),
     val isPinned: Boolean,
     val source: String,
     val updateTime: Long,

@@ -66,12 +66,22 @@ private fun ConversationListRoute(
     ConversationListScreen(
         uiState = uiState.value,
         onQueryChanged = viewModel::updateQuery,
+        onSelectFolderFilter = viewModel::selectFolder,
+        onSelectTagFilter = viewModel::selectTag,
         onOpenConversation = { chatId -> onOpenConversation(viewModel.appId, chatId) },
         onNewConversation = { onNewConversation(viewModel.appId) },
         onDeleteConversation = viewModel::deleteConversation,
         onRenameConversation = viewModel::renameConversation,
         onTogglePin = viewModel::togglePin,
         onClearConversations = viewModel::clearConversations,
+        onCreateFolder = viewModel::createFolder,
+        onRenameFolder = viewModel::renameFolder,
+        onDeleteFolder = viewModel::deleteFolder,
+        onCreateTag = viewModel::createTag,
+        onRenameTag = viewModel::renameTag,
+        onDeleteTag = viewModel::deleteTag,
+        onMoveConversationToFolder = viewModel::moveConversation,
+        onSetConversationTags = viewModel::setConversationTags,
     )
 }
 

@@ -9,6 +9,8 @@ import androidx.room.Room
 import com.lifuyue.kora.core.database.dao.CachedCollectionDao
 import com.lifuyue.kora.core.database.dao.CachedDatasetDao
 import com.lifuyue.kora.core.database.dao.ConversationDao
+import com.lifuyue.kora.core.database.dao.ConversationFolderDao
+import com.lifuyue.kora.core.database.dao.ConversationTagDao
 import com.lifuyue.kora.core.database.dao.ImportTaskDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
@@ -41,6 +43,12 @@ object DatabaseModule {
 
     @Provides
     fun provideConversationDao(database: KoraDatabase): ConversationDao = database.conversationDao()
+
+    @Provides
+    fun provideConversationFolderDao(database: KoraDatabase): ConversationFolderDao = database.conversationFolderDao()
+
+    @Provides
+    fun provideConversationTagDao(database: KoraDatabase): ConversationTagDao = database.conversationTagDao()
 
     @Provides
     fun provideMessageDao(database: KoraDatabase): MessageDao = database.messageDao()

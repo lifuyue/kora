@@ -67,6 +67,8 @@ class RoomChatRepositoryTest {
                 api = api,
                 sseStreamClient = sseClient,
                 conversationDao = database.conversationDao(),
+                conversationFolderDao = database.conversationFolderDao(),
+                conversationTagDao = database.conversationTagDao(),
                 messageDao = database.messageDao(),
                 json = NetworkJson.default,
                 ioDispatcher = mainDispatcherRule.dispatcher,

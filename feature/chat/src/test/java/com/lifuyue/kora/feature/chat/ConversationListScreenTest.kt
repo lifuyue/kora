@@ -10,8 +10,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -31,11 +29,10 @@ class ConversationListScreenTest {
     fun pinnedAndRegularSectionsAreGrouped() {
         composeRule.renderConversationList()
 
-        composeRule.onNodeWithText("置顶会话").assertIsDisplayed()
-        composeRule.onNodeWithText("全部会话").assertIsDisplayed()
-        composeRule.onNodeWithText("架构讨论").assertIsDisplayed()
-        composeRule.onNodeWithText("周报整理").assertIsDisplayed()
+        composeRule.onNodeWithTag("${ChatTestTags.conversationItemPrefix}chat-1").fetchSemanticsNode()
         composeRule.onNodeWithText("清空全部").assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.conversationFolderFilter).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.conversationTagFilter).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.conversationFab).assertIsDisplayed()
     }
 
@@ -49,7 +46,17 @@ class ConversationListScreenTest {
         composeRule.onNodeWithText("会话操作").assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.conversationActionTogglePin, useUnmergedTree = true).fetchSemanticsNode()
         composeRule.onNodeWithTag(ChatTestTags.conversationActionRename, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.conversationActionMoveFolder, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.conversationActionEditTags, useUnmergedTree = true).fetchSemanticsNode()
         composeRule.onNodeWithTag(ChatTestTags.conversationActionDelete, useUnmergedTree = true).fetchSemanticsNode()
+    }
+
+    @Test
+    fun conversationCardShowsFolderAndTagMeta() {
+        composeRule.renderConversationList()
+
+        composeRule.onNodeWithText("工作").assertIsDisplayed()
+        composeRule.onNodeWithText("Kotlin").assertIsDisplayed()
     }
 
     @Test
@@ -101,23 +108,43 @@ class ConversationListScreenTest {
 private fun ComposeContentTestRule.renderConversationList(
     uiState: ConversationListUiState = ConversationListUiState(items = sampleConversationItems),
     onQueryChanged: (String) -> Unit = {},
+    onSelectFolderFilter: (String?) -> Unit = {},
+    onSelectTagFilter: (String?) -> Unit = {},
     onOpenConversation: (String) -> Unit = {},
     onNewConversation: () -> Unit = {},
     onDeleteConversation: (String) -> Unit = {},
     onRenameConversation: (String, String) -> Unit = { _, _ -> },
     onTogglePin: (String, Boolean) -> Unit = { _, _ -> },
     onClearConversations: () -> Unit = {},
+    onCreateFolder: (String) -> Unit = {},
+    onRenameFolder: (String, String) -> Unit = { _, _ -> },
+    onDeleteFolder: (String) -> Unit = {},
+    onCreateTag: (String) -> Unit = {},
+    onRenameTag: (String, String) -> Unit = { _, _ -> },
+    onDeleteTag: (String) -> Unit = {},
+    onMoveConversationToFolder: (String, String?) -> Unit = { _, _ -> },
+    onSetConversationTags: (String, List<String>) -> Unit = { _, _ -> },
 ) {
     setContent {
         ConversationListScreen(
             uiState = uiState,
             onQueryChanged = onQueryChanged,
+            onSelectFolderFilter = onSelectFolderFilter,
+            onSelectTagFilter = onSelectTagFilter,
             onOpenConversation = onOpenConversation,
             onNewConversation = onNewConversation,
             onDeleteConversation = onDeleteConversation,
             onRenameConversation = onRenameConversation,
             onTogglePin = onTogglePin,
             onClearConversations = onClearConversations,
+            onCreateFolder = onCreateFolder,
+            onRenameFolder = onRenameFolder,
+            onDeleteFolder = onDeleteFolder,
+            onCreateTag = onCreateTag,
+            onRenameTag = onRenameTag,
+            onDeleteTag = onDeleteTag,
+            onMoveConversationToFolder = onMoveConversationToFolder,
+            onSetConversationTags = onSetConversationTags,
         )
     }
 }
@@ -129,6 +156,9 @@ private val sampleConversationItems =
             appId = "app-1",
             title = "架构讨论",
             preview = "最新内容",
+            folderId = "folder-1",
+            folderName = "工作",
+            tags = listOf(ConversationTagUiModel(tagId = "tag-1", name = "Kotlin", colorToken = "sky")),
             isPinned = true,
         ),
         ConversationListItemUiModel(

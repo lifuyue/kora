@@ -5,6 +5,10 @@ import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.ChatSource
 import com.lifuyue.kora.core.database.entity.ConversationEntity
+import com.lifuyue.kora.core.database.entity.ConversationFolderCrossRef
+import com.lifuyue.kora.core.database.entity.ConversationFolderEntity
+import com.lifuyue.kora.core.database.entity.ConversationTagCrossRef
+import com.lifuyue.kora.core.database.entity.ConversationTagEntity
 import com.lifuyue.kora.core.database.entity.MessageEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -286,5 +290,51 @@ class KoraDatabaseTest {
 
             assertTrue(database.messageDao().getMessagesForChat("chat-a").isEmpty())
             assertEquals(listOf("msg-b1"), database.messageDao().getMessagesForChat("chat-b").map { it.dataId })
+        }
+
+    @Test
+    fun folderAndTagDaosStoreAssignmentsPerApp() =
+        runBlocking {
+            database.conversationDao().upsert(
+                ConversationEntity(
+                    chatId = "chat-1",
+                    appId = "app-a",
+                    title = "Organized",
+                    customTitle = null,
+                    isPinned = false,
+                    source = ChatSource.online.name,
+                    updateTime = 100L,
+                    lastMessagePreview = null,
+                    hasDraft = false,
+                    isDeleted = false,
+                    isArchived = false,
+                ),
+            )
+            database.conversationFolderDao().upsert(
+                ConversationFolderEntity(
+                    folderId = "folder-1",
+                    appId = "app-a",
+                    name = "工作",
+                    sortOrder = 0L,
+                ),
+            )
+            database.conversationTagDao().upsert(
+                ConversationTagEntity(
+                    tagId = "tag-1",
+                    appId = "app-a",
+                    name = "Kotlin",
+                    colorToken = "sky",
+                    sortOrder = 0L,
+                ),
+            )
+            database.conversationFolderDao().upsertAssignment(
+                ConversationFolderCrossRef(chatId = "chat-1", folderId = "folder-1"),
+            )
+            database.conversationTagDao().upsertAssignments(
+                listOf(ConversationTagCrossRef(chatId = "chat-1", tagId = "tag-1")),
+            )
+
+            assertEquals(listOf("folder-1"), database.conversationFolderDao().observeAssignments("app-a").first().map { it.folderId })
+            assertEquals(listOf("tag-1"), database.conversationTagDao().observeAssignments("app-a").first().map { it.tagId })
         }
 }

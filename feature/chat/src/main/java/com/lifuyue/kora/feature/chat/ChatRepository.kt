@@ -8,12 +8,18 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import com.lifuyue.kora.core.network.AppQuestionGuideConfigDto
 import com.lifuyue.kora.core.database.dao.ConversationDao
+import com.lifuyue.kora.core.database.dao.ConversationFolderDao
+import com.lifuyue.kora.core.database.dao.ConversationTagDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.network.FastGptApi
 import com.lifuyue.kora.core.network.SseStreamClient
 
 interface ConversationRepository {
     fun observeConversations(appId: String): Flow<List<ConversationListItemUiModel>>
+
+    fun observeFolders(appId: String): Flow<List<ConversationFolderUiModel>>
+
+    fun observeTags(appId: String): Flow<List<ConversationTagUiModel>>
 
     suspend fun refreshConversations(appId: String)
 
@@ -24,6 +30,22 @@ interface ConversationRepository {
     suspend fun deleteConversation(appId: String, chatId: String)
 
     suspend fun clearConversations(appId: String)
+
+    suspend fun createFolder(appId: String, name: String)
+
+    suspend fun renameFolder(appId: String, folderId: String, name: String)
+
+    suspend fun deleteFolder(appId: String, folderId: String)
+
+    suspend fun createTag(appId: String, name: String)
+
+    suspend fun renameTag(appId: String, tagId: String, name: String)
+
+    suspend fun deleteTag(appId: String, tagId: String)
+
+    suspend fun moveConversationToFolder(appId: String, chatId: String, folderId: String?)
+
+    suspend fun setConversationTags(appId: String, chatId: String, tagIds: List<String>)
 }
 
 interface ChatRepository {
@@ -83,12 +105,16 @@ object ChatRepositoryModule {
         api: FastGptApi,
         sseStreamClient: SseStreamClient,
         conversationDao: ConversationDao,
+        conversationFolderDao: ConversationFolderDao,
+        conversationTagDao: ConversationTagDao,
         messageDao: MessageDao,
     ): RoomChatRepository =
         RoomChatRepository(
             api = api,
             sseStreamClient = sseStreamClient,
             conversationDao = conversationDao,
+            conversationFolderDao = conversationFolderDao,
+            conversationTagDao = conversationTagDao,
             messageDao = messageDao,
         )
 

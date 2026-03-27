@@ -54,6 +54,8 @@ class ChatRepositoryTest {
                         baseUrlProvider = StaticBaseUrlProvider(baseUrl),
                     ),
                 conversationDao = database.conversationDao(),
+                conversationFolderDao = database.conversationFolderDao(),
+                conversationTagDao = database.conversationTagDao(),
                 messageDao = database.messageDao(),
             )
     }
@@ -179,6 +181,8 @@ class ChatRepositoryTest {
                             baseUrlProvider = StaticBaseUrlProvider(serverRule.baseUrl),
                         ),
                     conversationDao = database.conversationDao(),
+                    conversationFolderDao = database.conversationFolderDao(),
+                    conversationTagDao = database.conversationTagDao(),
                     messageDao = database.messageDao(),
                     responsePlanner =
                         AssistantResponsePlanner {

@@ -225,6 +225,44 @@ class RoomBackedChatRepositoryTest {
                 assertTrue(fixture.database.conversationDao().getConversationsForApp("app-1", 10, 0).isEmpty())
             }
         }
+
+    @Test
+    fun folderAndTagAssignmentsMergeIntoConversationListAndAreClearedOnDelete() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.api.histories =
+                    listOf(
+                        ChatHistoryItemDto(
+                            chatId = "chat-1",
+                            updateTime = "2026-03-27T00:00:00Z",
+                            appId = "app-1",
+                            customTitle = null,
+                            title = "History",
+                            top = false,
+                        ),
+                    )
+                fixture.repository.refreshConversations("app-1")
+                fixture.repository.createFolder("app-1", "工作")
+                fixture.repository.createTag("app-1", "Kotlin")
+                advanceUntilIdle()
+
+                val folderId = fixture.repository.observeFolders("app-1").first().single().folderId
+                val tagId = fixture.repository.observeTags("app-1").first().single().tagId
+                fixture.repository.moveConversationToFolder("app-1", "chat-1", folderId)
+                fixture.repository.setConversationTags("app-1", "chat-1", listOf(tagId))
+                advanceUntilIdle()
+
+                val item = fixture.repository.observeConversations("app-1").first().single()
+                assertEquals("工作", item.folderName)
+                assertEquals(listOf("Kotlin"), item.tags.map { it.name })
+
+                fixture.repository.deleteConversation("app-1", "chat-1")
+                advanceUntilIdle()
+
+                assertTrue(fixture.database.conversationFolderDao().observeAssignments("app-1").first().isEmpty())
+                assertTrue(fixture.database.conversationTagDao().observeAssignments("app-1").first().isEmpty())
+            }
+        }
 }
 
 private fun jsonContent(text: String) =
@@ -258,6 +296,8 @@ private fun RoomBackedChatRepositoryTest.newFixture(): Fixture {
     val repository =
         RoomBackedChatRepository(
             conversationDao = database.conversationDao(),
+            conversationFolderDao = database.conversationFolderDao(),
+            conversationTagDao = database.conversationTagDao(),
             messageDao = database.messageDao(),
             api = api,
             sseStreamClient =

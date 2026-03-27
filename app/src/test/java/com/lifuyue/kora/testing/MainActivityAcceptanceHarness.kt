@@ -8,8 +8,10 @@ import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatMessageUiModel
 import com.lifuyue.kora.feature.chat.ChatRepository
 import com.lifuyue.kora.feature.chat.ChatTestOverrides
+import com.lifuyue.kora.feature.chat.ConversationFolderUiModel
 import com.lifuyue.kora.feature.chat.ConversationListItemUiModel
 import com.lifuyue.kora.feature.chat.ConversationRepository
+import com.lifuyue.kora.feature.chat.ConversationTagUiModel
 import com.lifuyue.kora.feature.chat.MessageDeliveryState
 import com.lifuyue.kora.feature.chat.MessageFeedback
 import java.util.concurrent.atomic.AtomicLong
@@ -67,6 +69,8 @@ class AcceptanceChatRepository :
     private val refreshCalls = AtomicLong()
     private val sendCalls = AtomicLong()
     private val conversations = MutableStateFlow<Map<String, List<ConversationListItemUiModel>>>(emptyMap())
+    private val folders = MutableStateFlow<Map<String, List<ConversationFolderUiModel>>>(emptyMap())
+    private val tags = MutableStateFlow<Map<String, List<ConversationTagUiModel>>>(emptyMap())
     private val messages = MutableStateFlow<Map<String, List<ChatMessageUiModel>>>(emptyMap())
     private val attempts = linkedMapOf<String, Int>()
     private val probes = MutableStateFlow<Map<String, AcceptanceProbe>>(emptyMap())
@@ -76,6 +80,8 @@ class AcceptanceChatRepository :
         refreshCalls.set(0L)
         sendCalls.set(0L)
         conversations.value = emptyMap()
+        folders.value = emptyMap()
+        tags.value = emptyMap()
         messages.value = emptyMap()
         attempts.clear()
         probes.value = emptyMap()
@@ -83,6 +89,12 @@ class AcceptanceChatRepository :
 
     override fun observeConversations(appId: String): Flow<List<ConversationListItemUiModel>> =
         conversations.map { state -> state[appId].orEmpty() }
+
+    override fun observeFolders(appId: String): Flow<List<ConversationFolderUiModel>> =
+        folders.map { state -> state[appId].orEmpty() }
+
+    override fun observeTags(appId: String): Flow<List<ConversationTagUiModel>> =
+        tags.map { state -> state[appId].orEmpty() }
 
     fun hasRefreshed(): Boolean = refreshCalls.get() > 0
 
@@ -156,6 +168,95 @@ class AcceptanceChatRepository :
             probes.value.toMutableMap().apply {
                 ids.forEach(::remove)
             }
+    }
+
+    override suspend fun createFolder(appId: String, name: String) {
+        val folder = ConversationFolderUiModel(folderId = nextId("folder"), name = name)
+        folders.value =
+            folders.value.toMutableMap().apply {
+                put(appId, get(appId).orEmpty() + folder)
+            }
+    }
+
+    override suspend fun renameFolder(appId: String, folderId: String, name: String) {
+        folders.value =
+            folders.value.toMutableMap().apply {
+                put(appId, get(appId).orEmpty().map { if (it.folderId == folderId) it.copy(name = name) else it })
+            }
+    }
+
+    override suspend fun deleteFolder(appId: String, folderId: String) {
+        folders.value =
+            folders.value.toMutableMap().apply {
+                put(appId, get(appId).orEmpty().filterNot { it.folderId == folderId })
+            }
+        conversations.value =
+            conversations.value.toMutableMap().apply {
+                put(
+                    appId,
+                    get(appId).orEmpty().map { conversation ->
+                        if (conversation.folderId == folderId) {
+                            conversation.copy(folderId = null, folderName = null)
+                        } else {
+                            conversation
+                        }
+                    },
+                )
+            }
+    }
+
+    override suspend fun createTag(appId: String, name: String) {
+        val tag = ConversationTagUiModel(tagId = nextId("tag"), name = name, colorToken = "sky")
+        tags.value =
+            tags.value.toMutableMap().apply {
+                put(appId, get(appId).orEmpty() + tag)
+            }
+    }
+
+    override suspend fun renameTag(appId: String, tagId: String, name: String) {
+        tags.value =
+            tags.value.toMutableMap().apply {
+                put(appId, get(appId).orEmpty().map { if (it.tagId == tagId) it.copy(name = name) else it })
+            }
+        conversations.value =
+            conversations.value.toMutableMap().apply {
+                put(
+                    appId,
+                    get(appId).orEmpty().map { conversation ->
+                        conversation.copy(
+                            tags = conversation.tags.map { if (it.tagId == tagId) it.copy(name = name) else it },
+                        )
+                    },
+                )
+            }
+    }
+
+    override suspend fun deleteTag(appId: String, tagId: String) {
+        tags.value =
+            tags.value.toMutableMap().apply {
+                put(appId, get(appId).orEmpty().filterNot { it.tagId == tagId })
+            }
+        conversations.value =
+            conversations.value.toMutableMap().apply {
+                put(
+                    appId,
+                    get(appId).orEmpty().map { conversation ->
+                        conversation.copy(tags = conversation.tags.filterNot { it.tagId == tagId })
+                    },
+                )
+            }
+    }
+
+    override suspend fun moveConversationToFolder(appId: String, chatId: String, folderId: String?) {
+        val folder = folders.value[appId].orEmpty().firstOrNull { it.folderId == folderId }
+        updateConversation(appId, chatId) {
+            it.copy(folderId = folder?.folderId, folderName = folder?.name)
+        }
+    }
+
+    override suspend fun setConversationTags(appId: String, chatId: String, tagIds: List<String>) {
+        val selectedTags = tags.value[appId].orEmpty().filter { it.tagId in tagIds }
+        updateConversation(appId, chatId) { it.copy(tags = selectedTags) }
     }
 
     override fun observeMessages(appId: String, chatId: String?) =
