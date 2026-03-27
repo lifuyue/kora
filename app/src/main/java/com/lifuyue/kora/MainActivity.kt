@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installDebugDemoOverrides(intent)
         enableEdgeToEdge()
         setContent {
             KoraApp(connectionRepository = connectionRepository)
