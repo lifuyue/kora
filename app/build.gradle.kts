@@ -41,9 +41,22 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    sourceSets {
+        getByName("test") {
+            java.srcDir("../core/testing/src/consumerAppTest/java")
+        }
+    }
 }
 
 dependencies {
+    implementation(project(":core:common"))
+    implementation(project(":core:database"))
+    implementation(project(":core:network"))
+    implementation(project(":feature:chat"))
+    implementation(project(":feature:knowledge"))
+    implementation(project(":feature:settings"))
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
@@ -51,8 +64,11 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.android.material)
     implementation(libs.hilt.android)
 
@@ -61,6 +77,7 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(project(":core:testing"))
     testImplementation(libs.robolectric)
 
     kapt(libs.hilt.compiler)

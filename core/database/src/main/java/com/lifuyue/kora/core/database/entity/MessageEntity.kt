@@ -20,4 +20,5 @@ data class MessageEntity(
     val isStreaming: Boolean,
     val sendStatus: String,
     val errorCode: Int?,
+    val feedbackType: Int? = null,
 )

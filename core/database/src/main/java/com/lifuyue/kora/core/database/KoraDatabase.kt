@@ -16,7 +16,7 @@ import com.lifuyue.kora.core.database.entity.MessageEntity
         MessageEntity::class,
         CachedDatasetEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(KoraTypeConverters::class)

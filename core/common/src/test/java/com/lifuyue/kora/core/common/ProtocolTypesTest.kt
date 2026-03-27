@@ -122,4 +122,28 @@ class ProtocolTypesTest {
         assertEquals(SseEvent.flowNodeResponse, sseEventFromWireName("flowNodeResponse"))
         assertEquals(null, sseEventFromWireName("unknown"))
     }
+
+    @Test
+    fun connectionSnapshotReflectsConnectionState() {
+        val disconnected = ConnectionSnapshot()
+        val connected =
+            ConnectionSnapshot(
+                serverBaseUrl = "https://api.fastgpt.in/",
+                apiKey = "fastgpt-secret",
+            )
+
+        assertEquals(false, disconnected.hasValidConnection)
+        assertEquals(true, connected.hasApiKey)
+        assertEquals(true, connected.hasValidConnection)
+    }
+
+    @Test
+    fun appearancePreferencesDefaultsMatchM3Behavior() {
+        val preferences = AppearancePreferences()
+
+        assertEquals(ThemeMode.SYSTEM, preferences.themeMode)
+        assertEquals(true, preferences.dynamicColorEnabled)
+        assertEquals(false, preferences.oledEnabled)
+        assertNull(preferences.languageTag)
+    }
 }

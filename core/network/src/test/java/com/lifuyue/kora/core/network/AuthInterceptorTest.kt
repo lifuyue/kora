@@ -11,7 +11,7 @@ import org.junit.Test
 class AuthInterceptorTest {
     @Test
     fun addsBearerHeaderWhenApiKeyExists() {
-        val interceptor = AuthInterceptor { "fastgpt-secret" }
+        val interceptor = AuthInterceptor(StaticApiKeyProvider("fastgpt-secret"))
         val request =
             Request.Builder()
                 .url("https://example.com/api/core/app/list")
@@ -27,7 +27,7 @@ class AuthInterceptorTest {
 
     @Test
     fun skipsHeaderWhenApiKeyMissing() {
-        val interceptor = AuthInterceptor { null }
+        val interceptor = AuthInterceptor(StaticApiKeyProvider(null))
         val request =
             Request.Builder()
                 .url("https://example.com/api/core/app/list")

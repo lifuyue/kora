@@ -53,6 +53,31 @@ data class PaginationRecordsRequest(
 )
 
 @Serializable
+data class UpdateHistoryRequest(
+    val appId: String,
+    val chatId: String,
+    val title: String? = null,
+    val customTitle: String? = null,
+    val top: Boolean? = null,
+)
+
+@Serializable
+data class DeleteChatItemRequest(
+    val appId: String,
+    val chatId: String,
+    val contentId: String,
+)
+
+@Serializable
+data class UpdateUserFeedbackRequest(
+    val appId: String,
+    val chatId: String,
+    val dataId: String,
+    val userGoodFeedback: String? = null,
+    val userBadFeedback: String? = null,
+)
+
+@Serializable
 data class AppListItemDto(
     @SerialName("_id")
     val id: String,
@@ -105,6 +130,13 @@ data class ChatRecordItemDto(
 data class PaginationRecordsResponseData(
     val list: List<ChatRecordItemDto> = emptyList(),
     val total: Int = 0,
+)
+
+@Serializable
+data class ChatResponseDataItemDto(
+    val id: String? = null,
+    val name: String? = null,
+    val value: JsonElement? = null,
 )
 
 @Serializable

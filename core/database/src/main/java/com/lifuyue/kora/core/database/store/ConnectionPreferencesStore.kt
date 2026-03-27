@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.lifuyue.kora.core.common.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,6 +40,13 @@ class ConnectionPreferencesStore internal constructor(
                     autoScroll = preferences[Keys.AUTO_SCROLL] ?: true,
                     fontSizeScale = preferences[Keys.FONT_SIZE_SCALE] ?: 1f,
                     showCitationsByDefault = preferences[Keys.SHOW_CITATIONS_BY_DEFAULT] ?: true,
+                    themeMode =
+                        preferences[Keys.THEME_MODE]
+                            ?.let { storedMode -> ThemeMode.entries.firstOrNull { it.name == storedMode } }
+                            ?: ThemeMode.SYSTEM,
+                    dynamicColorEnabled = preferences[Keys.DYNAMIC_COLOR_ENABLED] ?: true,
+                    oledEnabled = preferences[Keys.OLED_ENABLED] ?: false,
+                    languageTag = preferences[Keys.LANGUAGE_TAG],
                 )
             }
 
@@ -98,6 +106,34 @@ class ConnectionPreferencesStore internal constructor(
         }
     }
 
+    suspend fun updateThemeMode(value: ThemeMode) {
+        dataStore.edit { preferences ->
+            preferences[Keys.THEME_MODE] = value.name
+        }
+    }
+
+    suspend fun updateDynamicColorEnabled(value: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.DYNAMIC_COLOR_ENABLED] = value
+        }
+    }
+
+    suspend fun updateOledEnabled(value: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.OLED_ENABLED] = value
+        }
+    }
+
+    suspend fun updateLanguageTag(value: String?) {
+        dataStore.edit { preferences ->
+            if (value == null) {
+                preferences.remove(Keys.LANGUAGE_TAG)
+            } else {
+                preferences[Keys.LANGUAGE_TAG] = value
+            }
+        }
+    }
+
     companion object {
         fun create(
             scope: CoroutineScope,
@@ -130,5 +166,9 @@ class ConnectionPreferencesStore internal constructor(
         val AUTO_SCROLL = booleanPreferencesKey("auto_scroll")
         val FONT_SIZE_SCALE = floatPreferencesKey("font_size_scale")
         val SHOW_CITATIONS_BY_DEFAULT = booleanPreferencesKey("show_citations_by_default")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
+        val OLED_ENABLED = booleanPreferencesKey("oled_enabled")
+        val LANGUAGE_TAG = stringPreferencesKey("language_tag")
     }
 }

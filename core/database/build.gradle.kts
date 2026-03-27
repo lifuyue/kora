@@ -29,12 +29,15 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(project(":core:network"))
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.security.crypto)
     implementation(libs.hilt.android)
+    implementation(libs.retrofit)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
@@ -45,6 +48,7 @@ dependencies {
     testImplementation(libs.kotlinx.serialization.json)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.retrofit)
+    testImplementation(project(":core:testing"))
     testImplementation(project(":core:network"))
 
     kapt(libs.androidx.room.compiler)

@@ -6,6 +6,7 @@ import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.ChatSource
 import com.lifuyue.kora.core.database.entity.ConversationEntity
 import com.lifuyue.kora.core.database.entity.MessageEntity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -110,6 +111,7 @@ class KoraDatabaseTest {
 
             database.conversationDao().softDelete(chatId = "chat-2")
             assertTrue(database.conversationDao().getConversationByChatId("chat-2")!!.isDeleted)
+            assertEquals(listOf("chat-1"), database.conversationDao().observeConversationsForApp("app-a").first().map { it.chatId })
 
             database.conversationDao().clearByAppId("app-a")
 
@@ -186,6 +188,9 @@ class KoraDatabaseTest {
 
             database.messageDao().deleteMessage("msg-1")
             assertEquals(listOf("msg-2"), database.messageDao().getMessagesForChat("chat-1").map { it.dataId })
+
+            database.messageDao().updateFeedback("msg-2", 1)
+            assertEquals(1, database.messageDao().observeMessagesForChat("chat-1").first().single().feedbackType)
 
             database.messageDao().deleteMessagesForChat("chat-1")
             assertTrue(database.messageDao().getMessagesForChat("chat-1").isEmpty())
