@@ -103,7 +103,9 @@
 
 ## Reference
 - [reference/open-webui-feature-map.md](reference/open-webui-feature-map.md)
+- [reference/open-webui-implementation-patterns.md](reference/open-webui-implementation-patterns.md)
 - [reference/fastgpt-api-map.md](reference/fastgpt-api-map.md)
+- [reference/fastgpt-implementation-patterns.md](reference/fastgpt-implementation-patterns.md)
 - [reference/prior-art.md](reference/prior-art.md)
 
 ## Roadmap
@@ -111,4 +113,3 @@
 - [roadmap/phase-1-mvp.md](roadmap/phase-1-mvp.md)
 - [roadmap/phase-2-knowledge.md](roadmap/phase-2-knowledge.md)
 - [roadmap/phase-3-advanced.md](roadmap/phase-3-advanced.md)
-

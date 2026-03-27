@@ -30,6 +30,7 @@ phase: 2-knowledge
 
 ## Architecture Notes
 当前 App 选择应作为全局可观察状态，持久化在 DataStore，并由聊天和知识库模块消费。
+FastGPT 的产品结构说明 App 不是普通过滤器，而是聊天、知识库和工作流的上层上下文，因此 Kora 要把当前 App 作为全局会话上下文对待，并在切换时明确清理旧上下文。参考 [../../reference/fastgpt-implementation-patterns.md](../../reference/fastgpt-implementation-patterns.md)。
 
 ## Dependencies
 - App 管理接口
@@ -38,4 +39,3 @@ phase: 2-knowledge
 ## Acceptance Criteria
 - 用户可切换并持久化当前 App。
 - 新开的聊天会话使用正确的 App 上下文。
-

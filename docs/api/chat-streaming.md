@@ -23,3 +23,7 @@
 - 断流时要区分可恢复网络错误与业务失败。
 - 解析异常不能直接崩溃 UI，应记录原始片段以便排查。
 
+## 上游实现模式参考
+- FastGPT 的 SSE 事件流是产品事件总线而不是纯文本流，这要求 Kora 先做事件级解析，再交给 ViewModel 归并到消息状态。
+- Open WebUI 的聊天交互方式进一步说明，工具状态、引用和回答文本都应在同一消息流中可见。
+- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md) 和 [../reference/open-webui-implementation-patterns.md](../reference/open-webui-implementation-patterns.md)。

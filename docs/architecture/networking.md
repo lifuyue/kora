@@ -14,3 +14,7 @@
 - CommonQueryInterceptor: 为需要引用信息的请求追加 `detail=true`。
 - RetryInterceptor: 针对幂等请求做有限重试。
 
+## 上游实现模式参考
+- FastGPT 的聊天接口实际上是产品级事件入口，SSE 里既有文本也有流程、工具和交互节点，因此 Kora 需要单独的事件解析层，而不是把流式响应当普通字符串流。
+- Open WebUI 的服务端聚合方式说明客户端应尽量消费稳定的聚合结果，不在 UI 层重新拼接网络语义。
+- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md) 和 [../reference/open-webui-implementation-patterns.md](../reference/open-webui-implementation-patterns.md)。

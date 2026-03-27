@@ -20,3 +20,5 @@
 - 高度插件化桌面配置
 - 复杂管理后台能力
 
+## 延伸阅读
+- 实现模式手册: [open-webui-implementation-patterns.md](open-webui-implementation-patterns.md)

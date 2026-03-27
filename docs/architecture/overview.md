@@ -14,3 +14,6 @@ Kora 采用面向 Android 原生的分层架构，围绕聊天、知识库与设
 - 网络、数据库、文件缓存彼此隔离，通过 repository 编排。
 - 聊天与知识库能力按 feature 拆分，避免 `app` 模块承载业务细节。
 
+## 上游实现模式参考
+- Open WebUI 把前端可复用能力与页面路由分层组织，适合作为 Kora 的 screen 与共享 UI 能力拆分参考，见 [../reference/open-webui-implementation-patterns.md](../reference/open-webui-implementation-patterns.md)。
+- FastGPT 把聊天、知识库和应用能力放在产品主链中，而不是把每个接口当成独立子系统，适合作为 Kora 顶层 feature 切分依据，见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md)。

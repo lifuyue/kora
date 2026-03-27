@@ -21,4 +21,9 @@
 ## 客户端注意事项
 - 只有拿到非空 `chatId` 后才持久化历史。
 - 消息发送期间要维护可取消、可重试的本地临时状态。
+- 需要把响应视为“聊天主链入口”，允许承载引用、工具、流程和交互节点，而不是只映射成 `assistant.content`。
 
+## 上游实现模式参考
+- FastGPT 在产品层把聊天、工作流和交互节点揉进一条对话链，因此 Kora 的请求和消息模型必须为结构化事件预留字段。
+- Open WebUI 的聊天页经验说明，这些附属信息最终仍应回到单一消息流渲染，而不是拆成多个不相关页面。
+- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md) 和 [../reference/open-webui-implementation-patterns.md](../reference/open-webui-implementation-patterns.md)。

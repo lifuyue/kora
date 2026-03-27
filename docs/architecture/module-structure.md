@@ -19,3 +19,7 @@
 - 以业务域为边界，而不是按页面随意切分。
 - 可测试逻辑优先放入 use case/repository，而不是 Compose 层。
 
+## 上游实现模式参考
+- Open WebUI 的 `src/lib` 与 `src/routes` 分层说明“共享能力先下沉、页面负责组装”更适合长期扩展，因此 Kora 把消息渲染、引用、附件等能力放在 feature 内共享层而不是分散进 screen。
+- FastGPT 的 `projects` 与 `packages` 分层说明产品主链和共享服务要分开，因此 Kora 继续坚持 `feature -> core` 方向，不把 FastGPT 的产品复杂度直接泄漏到 `app` 模块。
+- 详见 [../reference/open-webui-implementation-patterns.md](../reference/open-webui-implementation-patterns.md) 和 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md)。

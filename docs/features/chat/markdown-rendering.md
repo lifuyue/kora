@@ -31,6 +31,7 @@ phase: 1-mvp
 
 ## Architecture Notes
 渲染层位于 `:feature:chat` UI 子层，解析器可下沉到 `:core:common` 以便复用，避免将富文本解析逻辑放入 ViewModel。
+Open WebUI 的 `src/lib` / `src/routes` 分层说明富文本、消息块和引用展示应该是共享渲染能力，而不是聊天页专属临时代码；Kora 采用同样思路，但实现技术栈改为 Compose。参考 [../../reference/open-webui-implementation-patterns.md](../../reference/open-webui-implementation-patterns.md)。
 
 ## Dependencies
 - Markwon
@@ -40,4 +41,3 @@ phase: 1-mvp
 ## Acceptance Criteria
 - 常见 Markdown 内容在手机竖屏下可稳定阅读。
 - 代码块复制、链接点击和超长内容滚动行为正常。
-

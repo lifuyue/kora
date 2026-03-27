@@ -31,6 +31,7 @@ phase: 2-knowledge
 
 ## Architecture Notes
 文件上传与 Collection 创建应拆为两个步骤，便于复用和错误恢复；临时文件 URI 由平台层统一管理。
+FastGPT 的知识链路明确区分 Dataset、Collection 和 Chunk，Open WebUI 的使用方式又说明导入最终服务聊天上下文，因此 Kora 要把“上传文件”和“创建 Collection/等待训练”拆开建模，并允许从导入结果返回知识详情或聊天语境。参考 [../../reference/fastgpt-implementation-patterns.md](../../reference/fastgpt-implementation-patterns.md) 和 [../../reference/open-webui-implementation-patterns.md](../../reference/open-webui-implementation-patterns.md)。
 
 ## Dependencies
 - 文件上传接口
@@ -40,4 +41,3 @@ phase: 2-knowledge
 ## Acceptance Criteria
 - 常见文档格式可完成上传与导入。
 - 失败重试不会重复生成脏 Collection。
-

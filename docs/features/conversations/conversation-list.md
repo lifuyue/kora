@@ -31,6 +31,7 @@ phase: 1-mvp
 
 ## Architecture Notes
 列表数据由 `:feature:chat` 或独立 conversations 子域承载，Room 可缓存最近结果并叠加本地扩展字段。
+Open WebUI 的会话组织方式说明列表的首要任务是帮助用户快速回到上下文，而不是承担复杂工作台职责；因此 Kora 的列表优先保留摘要、搜索、排序和快速恢复，扩展组织能力再用本地元数据叠加。参考 [../../reference/open-webui-implementation-patterns.md](../../reference/open-webui-implementation-patterns.md)。
 
 ## Dependencies
 - 会话历史接口
@@ -40,4 +41,3 @@ phase: 1-mvp
 ## Acceptance Criteria
 - 用户可稳定浏览、搜索和打开会话。
 - 列表刷新和分页不会打乱已显示顺序。
-

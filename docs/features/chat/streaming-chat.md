@@ -32,6 +32,7 @@ phase: 1-mvp
 
 ## Architecture Notes
 落在 `:feature:chat`，由 ViewModel 收集流式事件，repository 协调网络与本地落盘，遵循 [../../architecture/data-flow.md](../../architecture/data-flow.md)。
+Open WebUI 的实现模式说明聊天页应承载文本、引用、工具和多模态附属状态；FastGPT 的实现模式说明 SSE 本质上是产品事件流，因此消息模型必须允许结构化事件并最终统一落到消息流渲染。参考 [../../reference/open-webui-implementation-patterns.md](../../reference/open-webui-implementation-patterns.md) 和 [../../reference/fastgpt-implementation-patterns.md](../../reference/fastgpt-implementation-patterns.md)。
 
 ## Dependencies
 - Compose LazyColumn
@@ -42,4 +43,3 @@ phase: 1-mvp
 ## Acceptance Criteria
 - 可成功发送新消息并流式看到回复。
 - 中断、超时和服务端错误能被用户识别并重试。
-

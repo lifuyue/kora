@@ -16,3 +16,5 @@
 - 文件上传 -> `features/knowledge/document-upload.md`, `features/chat/multimodal-input.md`
 - 分享认证 -> `features/auth/share-link-auth.md`
 
+## 延伸阅读
+- 实现模式手册: [fastgpt-implementation-patterns.md](fastgpt-implementation-patterns.md)

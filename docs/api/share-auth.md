@@ -12,3 +12,6 @@
 - 分享态与常规登录态隔离，避免污染主账号会话。
 - 认证失败时提供返回首页或重新打开链接的出口。
 
+## 上游实现模式参考
+- FastGPT 的分享能力属于独立入口和临时认证上下文，因此 Kora 不应把分享令牌写回主连接配置。
+- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md)。
