@@ -1,17 +1,116 @@
 # Error Handling
 
-## 错误分类
-- 网络错误: 超时、断网、TLS、DNS。
-- 认证错误: 401、403、无效 Key。
-- 业务错误: 参数不合法、资源不存在、配额限制。
-- 解析错误: SSE 或 JSON payload 不符合预期。
+## Snapshot
+- Primary sources:
+  - `.reference/FastGPT/packages/service/common/response/index.ts`
+  - `.reference/FastGPT/packages/global/common/error/errorCode.ts`
+  - `.reference/FastGPT/packages/global/common/error/code/*.ts`
 
-## 响应处理原则
-- 所有接口错误统一映射到领域错误模型。
-- 对用户显示可理解文案，对日志保留原始错误码与上下文。
+## Success Envelope
+FastGPT JSON responses are normalized as:
+```ts
+type ResponseType<T> = {
+  code: number;
+  message: string;
+  data: T;
+}
+```
 
-## 重试策略
-- 幂等读请求可以自动有限重试。
-- 聊天发送与知识库写操作默认不自动重试，交由用户显式重试。
-- SSE 中断时保留已接收内容，并提示继续生成或重新生成。
+Actual HTTP JSON success emitted by `jsonRes` also includes:
+```ts
+{
+  code: number;
+  statusText: "";
+  message: string;
+  data: T | null;
+}
+```
 
+## Error Envelope
+```ts
+{
+  code: number;
+  statusText: string;
+  message: string;
+  data: any | null;
+  zodError?: any;
+}
+```
+
+## Standard HTTP/transport codes
+- `400`
+- `401`
+- `403`
+- `404`
+- `405`
+- `406`
+- `410`
+- `422`
+- `429`
+- `500`
+- `502`
+- `503`
+- `504`
+
+## Built-in global status texts
+- `unAuthorization` -> `403`
+- `tooManyRequest` -> `429`
+- `insufficientQuota` -> `510`
+- `unAuthModel` -> `511`
+- `unAuthFile` -> `513`
+- `unAuthApiKey` -> `514`
+
+## Domain Error Ranges
+- Team: `500000+`
+- Dataset: `501000+`
+- App: `502000+`
+- User: `503000+`
+- Chat: `504000+`
+- OutLink: `505000+`
+- OpenAPI: `506000+`
+- Common: `507000+`
+- Plugin: `508000+`
+- System/license: `509000+`
+
+## Important Domain Errors
+- Dataset:
+  - `unExistDataset`
+  - `unExistCollection`
+  - `unAuthDataset`
+  - `unAuthDatasetCollection`
+  - `sameApiCollection`
+- App:
+  - `appUnExist`
+  - `unAuthApp`
+  - `invalidAppType`
+- Chat:
+  - `unAuthChat`
+- OutLink:
+  - `outlinkUnExist`
+  - `unAuthLink`
+  - `linkUnInvalid`
+  - `unAuthUser`
+- OpenAPI:
+  - `openapiUnExist`
+  - `openapiUnAuth`
+  - `openapiExceedLimit`
+- Team:
+  - `aiPointsNotEnough`
+  - `datasetSizeNotEnough`
+  - `appAmountNotEnough`
+  - `websiteSyncNotEnough`
+  - `reRankNotEnough`
+
+## SSE Error Rules
+- `sseErrRes` sends `event: error`.
+- Payload mirrors the same normalized error shape or a reduced `{ message }` object.
+- Kora must preserve partial answer text when an SSE error arrives after prior chunks.
+
+## Android Mapping Rules
+- Keep raw `code` and `statusText` in domain errors for analytics and retry decisions.
+- Convert user-visible text at the presentation layer.
+- Retry only for idempotent reads and transport failures, never automatically for chat-send or dataset-write operations.
+
+## Related Specs
+- [authentication.md](authentication.md)
+- [chat-streaming.md](chat-streaming.md)

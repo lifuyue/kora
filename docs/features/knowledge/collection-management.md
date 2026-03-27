@@ -7,35 +7,35 @@ phase: 2-knowledge
 # Collection Management
 
 ## Overview
-管理某个数据集下的 Collection 列表与训练状态，帮助用户理解导入来源和处理进度。
+Collection 管理页围绕 `DatasetCollectionSchemaType` 展示导入单元、训练类型和处理状态，是数据集详情的主视图。
 
 ## Functional Requirements
-- [ ] FR-1: 列出 Collection 来源类型、创建时间和训练状态。
-- [ ] FR-2: 支持删除 Collection。
-- [ ] FR-3: 支持从列表进入对应内容详情。
+- [ ] FR-1: 展示 collection 列表、类型、训练模式和更新时间。
+- [ ] FR-2: 支持进入某个 collection 的 chunk 查看器。
+- [ ] FR-3: 支持删除、重试导入、查看训练异常。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 训练状态刷新需要明确节流策略。
-- [ ] NFR-2: 失败状态必须保留可诊断信息入口。
+- [ ] NFR-1: 大量 collection 时列表仍可快速滚动和筛选。
+- [ ] NFR-2: 状态更新不会导致整页闪烁。
 
 ## API Contract
-依赖 [../../api/dataset-collections.md](../../api/dataset-collections.md)。
+依赖 [../../api/dataset-collections.md](../../api/dataset-collections.md) 和 [../../api/dataset-data.md](../../api/dataset-data.md)。
 
 ## UI Description
-Collection 列表按来源展示图标与标题，状态标签区分处理中、完成和失败；列表支持下拉刷新，删除前有确认步骤。
+页面显示 collection 列表卡片，包含名称、来源类型、训练模式、更新时间和状态标签。顶部提供“上传文件”“导入网页”“录入文本”等新增入口。失败项允许重试或查看错误。
 
 ## Data Model
-- `CollectionListItem`
-- `CollectionTrainingState`
+- `CollectionListState(items, filters, createEntryPoints)`
+- `CollectionItemUiModel(collectionId, type, trainingType, status, sourceName, canRetry)`
 
 ## Architecture Notes
-Collection 管理位于 `:feature:knowledge` 数据集详情子页，与导入入口共用 repository。
+Collection 创建入口虽然分散，但最终都回到同一个列表刷新链路。Repository 负责把不同来源的 collection 统一成一个 UI 模型。
 
 ## Dependencies
-- Collection 接口
-- 列表刷新能力
+- [document-upload.md](document-upload.md)
+- [web-link-import.md](web-link-import.md)
+- [text-input.md](text-input.md)
 
 ## Acceptance Criteria
-- 用户可看到准确的 Collection 状态。
-- 删除后列表和计数同步更新。
-
+- collection 列表、创建入口和查看详情闭环可用。
+- 不同来源类型能正确显示。

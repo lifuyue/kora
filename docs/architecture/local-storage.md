@@ -1,14 +1,62 @@
 # Local Storage
 
-## Room
-- 保存会话摘要、消息记录、置顶/归档/标签/文件夹等客户端扩展能力。
-- 数据库迁移需要前向兼容，避免直接破坏旧版本数据。
+## Room Entities
 
-## DataStore
-- 保存服务器 URL、API Key、主题偏好、语言、音频引擎与聊天偏好。
-- 敏感信息只保留最小必要副本，并优先配合加密方案。
+### `ConversationEntity`
+- `chatId: String` primary key
+- `appId: String`
+- `title: String`
+- `customTitle: String?`
+- `isPinned: Boolean`
+- `source: String`
+- `updateTime: Long`
+- `lastMessagePreview: String?`
+- `hasDraft: Boolean`
+- `isDeleted: Boolean`
 
-## 文件缓存
-- 图片、导出文件、上传临时文件与附件缩略图分目录管理。
-- 缓存清理应支持按大小和按时间策略。
+### `MessageEntity`
+- `dataId: String` primary key
+- `chatId: String`
+- `appId: String`
+- `role: String`
+- `payloadJson: String`
+- `createdAt: Long`
+- `isStreaming: Boolean`
+- `sendStatus: String`
+- `errorCode: Int?`
 
+### `CachedDatasetEntity`
+- `datasetId: String` primary key
+- `name: String`
+- `type: String`
+- `status: String`
+- `updateTime: Long`
+- `summaryJson: String`
+
+## DataStore Keys
+- `server_base_url`
+- `server_api_key_present`
+- `selected_app_id`
+- `theme_mode`
+- `dynamic_color_enabled`
+- `language_tag`
+- `tts_enabled`
+- `stt_auto_send`
+- `chat_markdown_enabled`
+- `chat_show_citations`
+- `storage_last_cleanup_at`
+- `onboarding_completed`
+
+## Persistence Rules
+- API key secret is stored outside DataStore in encrypted storage; DataStore only stores presence and profile metadata.
+- Share-session state uses a separate namespace from primary auth state.
+- Pending interactive drafts must survive process death.
+
+## Cache Ownership
+- Room stores user continuity.
+- DataStore stores app preferences and connection metadata.
+- Media/file cache stores previews and temporary uploads.
+
+## Related Specs
+- [data-flow.md](data-flow.md)
+- [features/settings/storage-cache.md](../features/settings/storage-cache.md)

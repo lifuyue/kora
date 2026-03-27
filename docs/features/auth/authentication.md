@@ -7,36 +7,33 @@ phase: 1-mvp
 # Authentication
 
 ## Overview
-定义 API Key 认证流程与会话管理行为，确保 Kora 在单用户配置模式下安全、清晰地接入 FastGPT 服务。
+Kora 的认证不是传统账号登录，而是围绕连接配置、API key 校验和全局 session 状态展开。
 
 ## Functional Requirements
-- [ ] FR-1: 首次配置 API Key 后完成鉴权校验。
-- [ ] FR-2: 鉴权失败时提示重新配置。
-- [ ] FR-3: 用户可主动清除当前认证信息。
+- [ ] FR-1: 在首次连接成功后建立已认证状态。
+- [ ] FR-2: 认证失败时阻止进入依赖远端的主功能。
+- [ ] FR-3: 用户可主动清除凭证并退出到未认证状态。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 敏感凭证不得以明文形式暴露在 UI 或日志中。
-- [ ] NFR-2: 鉴权状态变化要能及时传导到所有需要网络能力的页面。
+- [ ] NFR-1: 凭证不以明文出现在 UI、日志和非加密存储。
+- [ ] NFR-2: 认证状态变化应立即传递到聊天、知识和 app 选择模块。
 
 ## API Contract
 依赖 [../../api/authentication.md](../../api/authentication.md) 和 [../../api/error-handling.md](../../api/error-handling.md)。
 
 ## UI Description
-认证流程与连接配置页联动；鉴权成功后进入主应用；失败时停留在配置或引导页并显示错误摘要。
+认证本身可由连接配置页承载，不单独新增复杂登录页。已认证时显示当前连接摘要；失效时显示重新连接提示。
 
 ## Data Model
-- `AuthState`
-- `StoredCredentialRef`
+- `AuthState(unconfigured|validating|authenticated|invalid)`
+- `CredentialSummary(baseUrl, keyMasked, lastValidatedAt)`
 
 ## Architecture Notes
-鉴权不走传统登录账户体系，而是围绕 API Key 与服务器配置展开，由全局 session manager 管理。
+session manager 是全局单例状态容器，负责连接摘要、认证状态和 share session 隔离。
 
 ## Dependencies
-- 安全存储
-- 连接配置
-- 全局会话状态
+- [../settings/connection-config.md](../settings/connection-config.md)
 
 ## Acceptance Criteria
-- 有效凭证可进入应用，无效凭证被拦截。
-- 清除凭证后应用回到未认证状态。
-
+- 有效连接进入 authenticated。
+- 清除凭证后全局状态恢复到 unconfigured。

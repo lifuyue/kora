@@ -7,36 +7,33 @@ phase: 2-knowledge
 # Conversation Tags
 
 ## Overview
-为会话提供轻量标签分类，适合跨文件夹的主题检索与筛选。
+标签是跨文件夹的本地组织能力，用于轻量检索和筛选会话主题。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可创建标签并绑定到会话。
-- [ ] FR-2: 支持按单个标签筛选会话。
-- [ ] FR-3: 会话详情和列表项可展示已绑定标签。
+- [ ] FR-1: 用户可创建、重命名、删除标签。
+- [ ] FR-2: 会话可绑定多个标签。
+- [ ] FR-3: 列表支持按标签过滤。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 标签选择器要适配大量标签场景。
-- [ ] NFR-2: 标签颜色和名称需要满足可访问性要求。
+- [ ] NFR-1: 标签选择器需要支持大量标签搜索。
+- [ ] NFR-2: 颜色与文本对比度满足可访问性要求。
 
 ## API Contract
-基础会话数据来自 [../../api/chat-history.md](../../api/chat-history.md)，标签为本地扩展元数据。
+无专属远端接口；基础会话仍来自 [../../api/chat-history.md](../../api/chat-history.md)。
 
 ## UI Description
-标签通过 chips 形式展示；列表提供标签筛选器；编辑标签时支持搜索已有标签和创建新标签。
+标签以 chips 显示在会话行或详情页。编辑标签使用弹层选择器，支持搜索已有标签和快速创建。过滤时顶部展示当前激活标签 chip。
 
 ## Data Model
-- `ConversationTagEntity`
-- `ConversationTagJoin`
+- `ConversationTagEntity(tagId, name, color)`
+- `ConversationTagCrossRef(chatId, tagId)`
 
 ## Architecture Notes
-标签与文件夹类似，属于客户端组织能力，存储在本地数据库并与会话摘要联表查询。
+标签与文件夹、归档、pin 一样属于本地扩展层。列表查询通过 Room 先过滤本地关系，再与远端摘要合并。
 
 ## Dependencies
-- 会话列表
-- Room
-- 设计系统 chips
+- [conversation-list.md](conversation-list.md)
 
 ## Acceptance Criteria
-- 标签创建、绑定、解绑和筛选均可工作。
-- 列表和详情的标签显示一致。
-
+- 标签 CRUD 和按标签过滤可正常工作。
+- 删除标签不会删除原会话。

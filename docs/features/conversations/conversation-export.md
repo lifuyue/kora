@@ -7,36 +7,33 @@ phase: 3-advanced
 # Conversation Export
 
 ## Overview
-支持将会话导出为 JSON、TXT 或 PDF，满足备份、归档和外部审阅需求。
+导出用于备份或离线审阅。MVP 交付 `JSON` 和 `TXT` 两种格式；`PDF` 不进入当前实现范围。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可选择导出格式和导出范围。
-- [ ] FR-2: 导出文件包含基本会话元数据与消息内容。
-- [ ] FR-3: 导出完成后可打开、分享或保存到指定位置。
+- [ ] FR-1: 用户可导出整段会话为 `JSON` 或 `TXT`。
+- [ ] FR-2: 导出内容包含会话元数据、消息顺序、时间和角色。
+- [ ] FR-3: 导出完成后支持打开或分享文件。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 大会话导出需在后台线程执行。
-- [ ] NFR-2: 导出失败要保留明确错误原因和重试入口。
+- [ ] NFR-1: 大会话导出在后台线程执行。
+- [ ] NFR-2: 导出失败时保留明确错误和重试入口。
 
 ## API Contract
-会话内容来自 [../../api/chat-records.md](../../api/chat-records.md) 或本地缓存；导出本身不依赖额外 FastGPT 端点。
+数据来源是 [../../api/chat-records.md](../../api/chat-records.md) 与本地缓存，不依赖额外远端导出端点。
 
 ## UI Description
-用户在会话菜单中进入导出面板，选择 `JSON/TXT/PDF` 和导出范围；处理中显示进度，成功后提供“分享”与“打开文件夹”操作。
+导出面板允许选择格式和范围。执行中显示进度条；完成后展示结果卡片，含“打开”“分享”“重新导出”。
 
 ## Data Model
-- `ConversationExportRequest`
-- `ConversationExportFile`
+- `ConversationExportRequest(chatId, format, range)`
+- `ConversationExportResult(fileUri, bytes, createdAt)`
 
 ## Architecture Notes
-导出能力应独立于聊天页主状态机，避免长时 IO 影响消息滚动；PDF 可作为后续增强实现。
+导出与分享分层：导出先生产文件，分享再消费文件。消息富内容在导出时需要展开为稳定文本或结构化 JSON。
 
 ## Dependencies
-- 会话记录
-- 本地文件写入
-- PDF 生成能力
+- [conversation-share.md](conversation-share.md)
 
 ## Acceptance Criteria
-- JSON 和 TXT 导出完整可用。
-- 导出后的文件能被系统或外部应用读取。
-
+- JSON 和 TXT 导出可读且顺序正确。
+- 导出后文件可被系统打开。

@@ -1,15 +1,56 @@
 # Design System
 
-## 目标
-Kora UI 采用 Material 3 作为基础设计系统，并通过自定义 token 定义颜色、字体、形状、间距和阴影。
+## Foundation
+- Base system: Material 3
+- Variant support:
+  - light
+  - dark
+  - OLED dark
+  - dynamic color when supported
 
-## 设计令牌
-- 颜色: 支持亮色、暗色、OLED 和动态取色。
-- 字体: 标题、正文、代码文本分层定义。
-- 形状: 气泡、卡片、输入框和底部弹层保持统一圆角体系。
-- 阴影: 仅用于层级表达，不滥用。
+## Color Tokens
+- `surface/background` for page and sheet layers
+- `primary/secondary/tertiary` for actions and accents
+- `error` for destructive or failed states
+- `outline/outlineVariant` for separators and subtle borders
+- Chat-specific semantic tokens:
+  - `chat.userBubble`
+  - `chat.assistantBubble`
+  - `chat.reasoningBubble`
+  - `chat.toolStatus`
+  - `chat.citationCard`
 
-## 组件应用原则
-- 聊天气泡、引用卡片、工具状态条和设置条目应共享 token。
-- 组件状态需覆盖默认、悬停或按压、禁用、错误和加载。
+## Typography Scale
+- `displaySmall` for onboarding hero
+- `headlineMedium` for page titles
+- `titleLarge` for section titles
+- `bodyLarge/bodyMedium` for message text
+- `labelLarge/labelMedium` for chips and buttons
+- `codeBody` custom token for code blocks and chunk preview
 
+## Shape Tokens
+- Message bubbles: 20dp rounded family
+- Cards: 16dp
+- Text fields: 14dp
+- Bottom sheets/dialogs: 24dp top corners
+- Chips: pill / 999dp radius
+
+## Elevation and State
+- Use low elevation for cards and sheets; rely on tonal contrast first.
+- All interactive components must define:
+  - default
+  - pressed
+  - focused
+  - disabled
+  - error
+  - loading
+
+## Kora-Specific UI Rules
+- User and assistant bubbles must be visually distinct without relying only on color.
+- Reasoning text should look subordinate to final answer.
+- Destructive actions always use explicit error semantics, not only iconography.
+- Loading and empty states should reuse the same spacing and typography tokens as content states.
+
+## Related Specs
+- [component-catalog.md](component-catalog.md)
+- [accessibility.md](accessibility.md)

@@ -1,14 +1,24 @@
 # Iconography
 
-## 规范
-- 优先使用 Material Symbols 作为基础图标库。
-- 聊天、知识库、设置和语音域使用一致的描边风格。
-- 危险操作使用明确但不过度夸张的视觉提示。
+## Base Library
+- Material Symbols / Material Icons as the primary icon set.
+- Style direction: rounded or outlined family used consistently within one surface.
 
-## 语义映射
-- 聊天发送: send
-- 继续生成: refresh / autoplay
-- 引用来源: article / link
-- 知识库: folder / library_books
-- 语音: mic / volume_up
+## Semantic Mapping
+- send: message send
+- refresh/autorenew: regenerate
+- article/link: citations
+- folder/library_books: dataset / collection
+- description/upload_file: document import
+- mic / graphic_eq: STT and voice state
+- volume_up: TTS
+- tune: advanced search or settings
+- push_pin: pin
+- archive: archive
+- sell: tags
+- share: local conversation share
 
+## Rules
+- Destructive actions add color and text, not icon-only meaning.
+- Do not overload the same icon for remote share auth and local conversation share without labels.
+- Status icons should be paired with text chips when the meaning is not obvious.

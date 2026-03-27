@@ -7,35 +7,33 @@ phase: 2-knowledge
 # Text Input
 
 ## Overview
-支持手动输入纯文本或问答对并导入知识库，适合补充零散知识片段。
+文本录入是最轻量的知识导入方式，对应 `create/text` 或后续 chunk 数据批量插入。
 
 ## Functional Requirements
-- [ ] FR-1: 支持纯文本与 QA 两种录入模式。
-- [ ] FR-2: 支持草稿保留与再次编辑。
-- [ ] FR-3: 提交后自动创建文本型 Collection 或数据块。
+- [ ] FR-1: 支持直接输入长文本并创建 collection。
+- [ ] FR-2: 支持 QA 样式输入，映射到 `q/a` 数据结构。
+- [ ] FR-3: 支持本地草稿恢复和基础字符统计。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 长文本编辑要避免输入丢失。
-- [ ] NFR-2: 表单校验必须覆盖空内容和超长输入。
+- [ ] NFR-1: 超长文本在提交前提示切分或限制。
+- [ ] NFR-2: 表单切换模式时不丢草稿。
 
 ## API Contract
 依赖 [../../api/dataset-collections.md](../../api/dataset-collections.md) 和 [../../api/dataset-data.md](../../api/dataset-data.md)。
 
 ## UI Description
-页面顶部切换文本模式与 QA 模式；正文区支持多行输入；提交后展示处理结果和进入查看器入口。
+页面提供“纯文本导入”和“QA 导入”切换。纯文本模式使用大文本框；QA 模式使用成对输入项列表。提交后跳回 collection 列表并定位到新条目。
 
 ## Data Model
-- `ManualTextDraft`
-- `QaInputPair`
+- `ManualTextDraft(name, text, mode)`
+- `QaDraftItem(q, a)`
 
 ## Architecture Notes
-文本录入是知识导入最轻量的入口，建议与 Collection 创建流程共用表单状态和提交 use case。
+文本录入属于 collection 创建链路的一种来源，提交成功后不再停留在编辑页，而是回到 collection 管理页查看处理结果。
 
 ## Dependencies
-- Collection / data 接口
-- 本地草稿缓存
+- [collection-management.md](collection-management.md)
 
 ## Acceptance Criteria
-- 文本和 QA 两种模式都能成功导入。
-- 草稿恢复和输入校验行为正确。
-
+- 纯文本和 QA 两种模式都可完整走通。
+- 草稿在切后台后可恢复。

@@ -1,20 +1,44 @@
 # Networking
 
-## 基础配置
-- 统一基于 OkHttpClient 注入超时、日志、认证与重试策略。
-- Bearer Token 从安全存储读取并通过拦截器注入。
-- Retrofit 处理常规 REST，SSE 使用自定义流式读取层。
+## OkHttp Stack
+Recommended interceptor order:
+1. Base URL / environment resolver
+2. Auth interceptor
+3. Common headers interceptor
+4. Logging interceptor in debug only
+5. Retry policy for idempotent requests only
 
-## SSE 处理
-- 不能只依赖 Retrofit converter，需要对事件边界、自定义 event 字段与增量 payload 做解析。
-- 流式事件需映射为领域层 `StreamEvent`，交给聊天 ViewModel 顺序消费。
+## Default Headers
+- `Authorization: Bearer fastgpt-*`
+- `Content-Type: application/json`
+- Locale header may be added later for multilingual user-facing responses
 
-## 拦截器建议
-- AuthInterceptor: 注入 API Key。
-- CommonQueryInterceptor: 为需要引用信息的请求追加 `detail=true`。
-- RetryInterceptor: 针对幂等请求做有限重试。
+## Timeout Policy
+- REST connect timeout: `15s`
+- REST read timeout: `30s`
+- Upload timeout: `120s`
+- SSE call timeout: disabled or effectively very large
+- First-event watchdog in app layer: `60s` to match upstream web behavior
 
-## 上游实现模式参考
-- FastGPT 的聊天接口实际上是产品级事件入口，SSE 里既有文本也有流程、工具和交互节点，因此 Kora 需要单独的事件解析层，而不是把流式响应当普通字符串流。
-- Open WebUI 的服务端聚合方式说明客户端应尽量消费稳定的聚合结果，不在 UI 层重新拼接网络语义。
-- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md) 和 [../reference/open-webui-implementation-patterns.md](../reference/open-webui-implementation-patterns.md)。
+## SSE Implementation Decision
+- Choose manual OkHttp streaming parser over Retrofit converters or browser-like EventSource wrappers.
+- Reason:
+  - FastGPT mixes `event:` and `data:` frames.
+  - Kora must preserve event order and parse non-text payloads.
+  - Stream termination includes `[DONE]` plus optional trailing `flowResponses`.
+
+## REST / Stream Split
+- Retrofit handles normal JSON APIs.
+- Dedicated `SseStreamClient` handles `/api/v1/chat/completions` when `stream=true`.
+
+## Error Propagation
+- Convert JSON envelopes into domain errors in `:core:network`.
+- Convert SSE `event=error` frames into the same domain error type.
+- Preserve:
+  - `code`
+  - `statusText`
+  - `message`
+
+## Related Specs
+- [chat-streaming.md](../api/chat-streaming.md)
+- [error-handling.md](../api/error-handling.md)

@@ -1,17 +1,52 @@
 # Share Auth
 
-## 目标
-支持分享链接三步认证流程，使外部打开的分享内容能够在客户端完成校验与展示。
+## Snapshot
+- Primary sources:
+  - `.reference/FastGPT/packages/service/support/outLink/runtime/auth.ts`
+  - `.reference/FastGPT/packages/service/support/outLink/tools.ts`
+  - `.reference/FastGPT/projects/app/src/pages/api/core/chat/outLink/init.ts`
 
-## 建议三步
-1. 解析深层链接中的分享参数。
-2. 请求分享鉴权或访问令牌。
-3. 用临时凭证拉取分享详情或进入分享会话。
+## FastGPT Share Auth Model
+FastGPT share links use a three-step external hook protocol when a share/out-link defines `tokenUrl` or `limit.hookUrl`:
 
-## 客户端要求
-- 分享态与常规登录态隔离，避免污染主账号会话。
-- 认证失败时提供返回首页或重新打开链接的出口。
+1. `POST /shareAuth/init`
+   - request body: `{ token: outLinkUid }`
+   - purpose: normalize/validate the external user id before initializing the share session
+2. `POST /shareAuth/start`
+   - request body: `{ token: outLinkUid, question }`
+   - purpose: preflight auth/rate-limit before a chat request starts
+3. `POST /shareAuth/finish`
+   - request body: `{ token: outLinkUid, shareId, chatId, appName, responses }`
+   - purpose: post-result callback after chat finishes
 
-## 上游实现模式参考
-- FastGPT 的分享能力属于独立入口和临时认证上下文，因此 Kora 不应把分享令牌写回主连接配置。
-- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md)。
+## In-app Share Session Init
+Kora's first local share bootstrap call is:
+- `GET /api/core/chat/outLink/init?shareId=...&outLinkUid=...&chatId=...`
+
+Response:
+- `chatId`
+- `appId`
+- `title`
+- `userAvatar`
+- `variables`
+- `app.chatConfig`
+- `app.name/avatar/intro/type`
+- `pluginInputs`
+
+## Share Session Identity
+- `shareId`
+  Stable id for the published out-link.
+- `outLinkUid`
+  External user token before normalization.
+- `uid`
+  Normalized identity returned by `/shareAuth/init` or `/shareAuth/start`.
+
+## Android Requirements
+- Parse `shareId` and `outLinkUid` from deep links.
+- Store share session state separately from the user's primary connection.
+- Call out-link init before rendering the shared chat screen.
+- Never write share-session credentials back into the saved primary API connection profile.
+
+## Related Specs
+- [authentication.md](authentication.md)
+- [chat-records.md](chat-records.md)

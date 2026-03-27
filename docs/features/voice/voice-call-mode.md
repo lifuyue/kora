@@ -7,37 +7,33 @@ phase: 3-advanced
 # Voice Call Mode
 
 ## Overview
-提供更接近通话的全双工或近实时语音交互模式，串联 STT、LLM 与 TTS。
+Voice Call Mode 把 STT、流式聊天和 TTS 串成连续语音会话，交互参考 Open WebUI `MessageInput/CallOverlay.svelte`。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可进入专用语音通话界面并开始连续对话。
-- [ ] FR-2: 支持 STT -> Chat -> TTS 的连续链路。
-- [ ] FR-3: 支持中断模型朗读并继续说话。
+- [ ] FR-1: 用户可进入独立语音会话界面并开始一轮或连续多轮对话。
+- [ ] FR-2: 支持 STT -> chat completions -> TTS 的端到端链路。
+- [ ] FR-3: 用户说话时可打断 AI 播放并进入下一轮。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 音频焦点、回声控制和功耗管理必须明确。
-- [ ] NFR-2: 网络抖动时要有降级策略和状态提示。
+- [ ] NFR-1: 音频焦点和资源切换明确，不能与普通 TTS/STT 冲突。
+- [ ] NFR-2: 网络异常时可安全回退到文本聊天。
 
 ## API Contract
-聊天依赖 [../../api/chat-completions.md](../../api/chat-completions.md)，语音侧依赖 [speech-to-text.md](speech-to-text.md) 与 [text-to-speech.md](text-to-speech.md) 的能力组合。
+依赖 [../../api/chat-completions.md](../../api/chat-completions.md)、[speech-to-text.md](speech-to-text.md) 和 [text-to-speech.md](text-to-speech.md)。
 
 ## UI Description
-进入语音模式后展示全屏通话界面，包括收音状态、实时字幕、AI 回答字幕和结束按钮；错误状态提供回到文字聊天入口。
+进入语音模式后显示全屏或半屏 overlay，包括当前收音状态、实时字幕、AI 字幕和结束按钮。错误时提示切回文字聊天。
 
 ## Data Model
-- `VoiceCallSessionState`
-- `LiveTranscriptSegment`
+- `VoiceCallState(listening|thinking|speaking|error|idle, transcript, lastAssistantText)`
 
 ## Architecture Notes
-该功能跨越音频、聊天和状态编排，建议以独立 coordinator 组织，而不是把所有逻辑塞进单一聊天 ViewModel。
+建议独立 coordinator 管理，不复用普通聊天页的每个细粒度 state，但底层仍复用相同 Repository。
 
 ## Dependencies
-- STT
-- TTS
-- 流式聊天
-- 音频焦点管理
+- [../../ui/animations.md](../../ui/animations.md)
+- [../../architecture/data-flow.md](../../architecture/data-flow.md)
 
 ## Acceptance Criteria
-- 用户能完成至少一轮语音往返对话。
-- 打断、暂停和退出流程可预测且稳定。
-
+- 至少能完成一轮语音问答闭环。
+- 退出语音模式后普通聊天仍可正常使用。

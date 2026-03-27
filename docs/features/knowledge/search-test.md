@@ -7,36 +7,34 @@ phase: 2-knowledge
 # Search Test
 
 ## Overview
-为知识库管理员提供检索测试工具，直接验证不同检索模式与 re-rank 的实际效果。
+检索测试是 FastGPT 的调试闭环能力，允许用户验证召回、重排和扩展查询质量。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可输入查询并选择 `embedding/fullText/mixed`。
-- [ ] FR-2: 用户可切换 `reRank` 并查看结果变化。
-- [ ] FR-3: 结果列表展示相似度、来源和命中文本。
+- [ ] FR-1: 用户可输入测试问题并选择 `embedding/fullTextRecall/mixedRecall`。
+- [ ] FR-2: 支持 similarity、embeddingWeight、re-rank、extension-query 等高级参数。
+- [ ] FR-3: 展示结果列表、耗时、得分和扩展查询信息。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 多次测试请求要支持取消过期查询。
-- [ ] NFR-2: 相似度数值和排序需要稳定、可比较。
+- [ ] NFR-1: 测试请求和常规聊天状态分离，互不影响。
+- [ ] NFR-2: 结果列表可读且在手机端不拥挤。
 
 ## API Contract
 依赖 [../../api/dataset-search.md](../../api/dataset-search.md)。
 
 ## UI Description
-页面由查询输入框、模式选择器、re-rank 开关和结果列表组成；加载中显示骨架，空结果提示优化数据集或检索参数。
+页面分为输入区和结果区。高级参数折叠在“更多选项”；结果区展示每条命中的标题、片段、得分标签和数据来源。失败时显示错误而保留上一次输入。
 
 ## Data Model
-- `SearchTestQuery`
-- `SearchTestResult`
-- `SearchMode`
+- `SearchTestState(input, params, results, status)`
+- `SearchResultUiModel(title, snippet, scoreType, score, collectionId, dataId)`
 
 ## Architecture Notes
-检索测试属于工具型页面，不直接影响聊天主流程，但应与引用数据模型保持字段一致，便于对照验证。
+Search test 是知识 feature 独立屏，不与聊天页共享 ViewModel，但可复用同一引用展示组件。
 
 ## Dependencies
-- 检索测试接口
-- 表单状态管理
+- [../../api/error-handling.md](../../api/error-handling.md)
+- [../chat/citations.md](../chat/citations.md)
 
 ## Acceptance Criteria
-- 三种检索模式都能发起并展示结果。
-- re-rank 开关对结果变化可见。
-
+- 基础检索和开启 re-rank 的结果都可展示。
+- 结果与参数切换逻辑正确。

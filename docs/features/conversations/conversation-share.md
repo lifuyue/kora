@@ -7,36 +7,32 @@ phase: 3-advanced
 # Conversation Share
 
 ## Overview
-允许用户通过 Android Share Sheet 分享会话内容，支持复制摘要或导出后的文件分享。
+会话分享是 Android 本地分享能力，不等同于 FastGPT out-link 分享。它将当前会话内容导出为文本或文件并调用系统 Share Sheet。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可分享当前会话的文本摘要。
-- [ ] FR-2: 用户可选择分享部分消息或整段会话。
-- [ ] FR-3: 分享前可生成简短标题和预览文本。
+- [ ] FR-1: 支持分享整段会话或选中消息片段。
+- [ ] FR-2: 支持生成文本分享内容和导出文件后分享。
+- [ ] FR-3: 分享前提供预览和敏感内容确认。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 分享过程不能泄露未选择的敏感内容。
-- [ ] NFR-2: 大会话导出前要有明确进度反馈。
+- [ ] NFR-1: 默认不泄露未选中的消息。
+- [ ] NFR-2: 文件生成在后台执行，避免阻塞 UI。
 
 ## API Contract
-会话内容主要来自 [../../api/chat-records.md](../../api/chat-records.md)，分享动作本身依赖 Android 系统能力。
+消息数据来自 [../../api/chat-records.md](../../api/chat-records.md) 或本地缓存。
 
 ## UI Description
-聊天页和会话详情页提供分享入口；点击后展示分享范围选择；确认后调起系统 Share Sheet 或生成临时文本文件。
+聊天页/会话详情页提供“分享”操作。进入分享面板后选择范围和格式，确认后调起系统 Share Sheet。若生成文件较慢，先展示进度。
 
 ## Data Model
-- `ConversationSharePayload`
-- `ShareSelectionRange`
+- `ConversationShareSelection(messageIds, format)`
+- `ConversationSharePayload(title, content, fileUri?)`
 
 ## Architecture Notes
-分享逻辑由 `:feature:chat` 组织，真正的文件生成与 `FileProvider` 适配可下沉到 `:core:common`。
+分享逻辑位于 feature 层，文件创建和 `FileProvider` 适配可下沉到 common。
 
 ## Dependencies
-- 会话记录
-- Android Share Sheet
-- 可选导出能力
+- [conversation-export.md](conversation-export.md)
 
 ## Acceptance Criteria
-- 可将选定会话内容成功分享给外部应用。
-- 分享取消或失败不会影响原始会话数据。
-
+- 文本分享和文件分享至少各有一种实现路径可用。

@@ -7,37 +7,34 @@ phase: 2-knowledge
 # Document Upload
 
 ## Overview
-支持通过文件选择器上传文档到知识库，并配置基础训练参数。
+文档上传是创建 file-type collection 的主入口，直接对应 `create/localFile` 与 `create/fileId`。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可选择本地文件并看到上传进度。
-- [ ] FR-2: 用户可在上传前填写或调整训练配置。
-- [ ] FR-3: 上传成功后自动创建或关联 Collection。
+- [ ] FR-1: 支持本地文件选择、上传、导入为 collection。
+- [ ] FR-2: 展示上传进度、导入结果和失败重试。
+- [ ] FR-3: 支持重复导入前提示或复用已有 `fileId`。
 
 ## Non-Functional Requirements
-- [ ] NFR-1: 大文件上传要可取消、可重试。
-- [ ] NFR-2: 文件格式校验必须在提交前完成。
+- [ ] NFR-1: 大文件上传可取消且不阻塞页面其他操作。
+- [ ] NFR-2: 文件类型和大小在客户端预校验。
 
 ## API Contract
 依赖 [../../api/file-upload.md](../../api/file-upload.md) 和 [../../api/dataset-collections.md](../../api/dataset-collections.md)。
 
 ## UI Description
-导入页包含文件选择区、训练配置表单和进度区域；上传中展示百分比，失败给出具体错误；成功后跳转到 Collection 详情或列表刷新。
+上传页显示选择文件按钮、当前上传队列和结果卡片。上传完成后自动刷新 collection 列表；失败项显示明确原因和重试按钮。
 
 ## Data Model
-- `DocumentUploadDraft`
-- `TrainingConfig`
-- `UploadProgressState`
+- `DocumentUploadDraft(uri, filename, size, status, progress, fileId?)`
+- `DocumentImportResult(collectionId, resultSummary)`
 
 ## Architecture Notes
-文件上传与 Collection 创建应拆为两个步骤，便于复用和错误恢复；临时文件 URI 由平台层统一管理。
-FastGPT 的知识链路明确区分 Dataset、Collection 和 Chunk，Open WebUI 的使用方式又说明导入最终服务聊天上下文，因此 Kora 要把“上传文件”和“创建 Collection/等待训练”拆开建模，并允许从导入结果返回知识详情或聊天语境。参考 [../../reference/fastgpt-implementation-patterns.md](../../reference/fastgpt-implementation-patterns.md) 和 [../../reference/open-webui-implementation-patterns.md](../../reference/open-webui-implementation-patterns.md)。
+上传与导入需要拆成两个状态：对象存储上传成功并不等于 collection 创建成功。Repository 应分别暴露 `uploadStatus` 和 `importStatus`。
 
 ## Dependencies
-- 文件上传接口
-- Android 文档选择器
-- Collection 管理
+- [collection-management.md](collection-management.md)
+- [../../architecture/networking.md](../../architecture/networking.md)
 
 ## Acceptance Criteria
-- 常见文档格式可完成上传与导入。
-- 失败重试不会重复生成脏 Collection。
+- 选中文档后可完成上传和导入。
+- 失败和取消流程不会留下僵尸任务。

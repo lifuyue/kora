@@ -1,29 +1,128 @@
 # Chat Streaming
 
-## 范围
-聊天流式返回通过 SSE 传递，客户端需要处理至少以下 9 类事件：
-- `answer`
-- `toolCall`
-- `toolResult`
-- `flowResponses`
-- `moduleStatus`
-- `interactive`
-- `citation`
+## Snapshot
+- Primary sources:
+  - `.reference/FastGPT/packages/global/core/workflow/runtime/constants.ts`
+  - `.reference/FastGPT/packages/service/common/response/index.ts`
+  - `.reference/FastGPT/projects/app/src/web/common/api/fetch.ts`
+
+## SSE Frame Format
+FastGPT writes SSE frames as:
+```text
+event: <eventName>
+data: <json-string>
+
+```
+
+## Transport Rules
+- Kora must parse both `event:` and `data:` lines.
+- Do not treat the stream as plain token text.
+- `data: [DONE]` is a sentinel, not JSON.
+
+## Canonical Event Enum
+FastGPT defines 16 events in `SseResponseEventEnum`:
 - `error`
-- `finish`
+- `workflowDuration`
+- `answer`
+- `fastAnswer`
+- `flowNodeStatus`
+- `flowNodeResponse`
+- `toolCall`
+- `toolParams`
+- `toolResponse`
+- `flowResponses`
+- `updateVariables`
+- `interactive`
+- `plan`
+- `stepTitle`
+- `collectionForm`
+- `topAgentConfig`
 
-## 解析要求
-- 按事件边界顺序消费，不能假设所有 payload 都是文本。
-- `answer` 事件用于增量拼接可见回复。
-- `toolCall`、`toolResult` 和 `flowResponses` 用于展示工作流与工具执行过程。
-- `interactive` 事件需转交 [chat-interactive.md](chat-interactive.md) 处理。
-- `finish` 到达后统一落盘与收尾。
+## Payload Shapes
 
-## 健壮性要求
-- 断流时要区分可恢复网络错误与业务失败。
-- 解析异常不能直接崩溃 UI，应记录原始片段以便排查。
+### `answer`
+- Incremental OpenAI-style delta payload.
+- Typical fields:
+  - `responseValueId?: string`
+  - `stepId?: string`
+  - `choices[0].delta.content?: string`
+  - `choices[0].delta.reasoning_content?: string`
+  - `choices[0].finish_reason?: string | null`
 
-## 上游实现模式参考
-- FastGPT 的 SSE 事件流是产品事件总线而不是纯文本流，这要求 Kora 先做事件级解析，再交给 ViewModel 归并到消息状态。
-- Open WebUI 的聊天交互方式进一步说明，工具状态、引用和回答文本都应在同一消息流中可见。
-- 详见 [../reference/fastgpt-implementation-patterns.md](../reference/fastgpt-implementation-patterns.md) 和 [../reference/open-webui-implementation-patterns.md](../reference/open-webui-implementation-patterns.md)。
+### `fastAnswer`
+- Same logical payload family as `answer`.
+- Web client treats it as non-animated direct text append.
+
+### `flowNodeStatus`
+- Small status payload emitted from `responseWriteNodeStatus`.
+- Known shape:
+```json
+{ "status": "running", "name": "node display name" }
+```
+
+### `flowNodeResponse`
+- Structured node response block for inspection/debug rendering.
+- Forward directly into message-side structured response storage.
+
+### `toolCall` / `toolParams` / `toolResponse`
+- Payload includes a `tool` object matching `ToolModuleResponseItemType`:
+  - `id`
+  - `toolName`
+  - `toolAvatar`
+  - `params`
+  - `response`
+  - `functionName`
+
+### `flowResponses`
+- Final structured node-response array.
+- In `detail=true` streaming mode this is the canonical source for citations and flow-result inspection.
+
+### `updateVariables`
+- Payload is the new variables object after workflow execution.
+
+### `interactive`
+- Payload carries interactive node data; see [chat-interactive.md](chat-interactive.md).
+
+### `plan`
+- Agent-plan payload used by assistant planning steps.
+
+### `stepTitle`
+- Payload matches `StepTitleItemType`:
+  - `stepId`
+  - `title`
+  - optional `folded`
+
+### `collectionForm`
+- Helper-bot collection form payload; treat as an inline form request.
+
+### `topAgentConfig`
+- Helper-bot/top-agent form config payload.
+
+### `workflowDuration`
+- Duration metadata for the overall workflow run.
+
+### `error`
+- JSON error object.
+- Common fields observed by web client:
+  - `code`
+  - `statusText`
+  - `message`
+  - `data`
+
+## Completion Sequence
+- `answer` / `fastAnswer` chunks may interleave with tool and plan events.
+- On success, server emits:
+  - final `answer` with `finish_reason=stop`
+  - `[DONE]`
+  - optional `flowResponses` if `detail=true`
+
+## Android Parser Requirements
+- Preserve order across all events.
+- Separate visible answer text from structured side-channel data.
+- Keep `responseValueId` and `stepId` for merging tool/plan/interactive fragments into one assistant message.
+- Handle malformed JSON defensively and surface raw frame metadata to logs.
+
+## Related Specs
+- [chat-completions.md](chat-completions.md)
+- [chat-interactive.md](chat-interactive.md)
+- [error-handling.md](error-handling.md)

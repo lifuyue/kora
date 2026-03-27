@@ -1,18 +1,46 @@
 # Screen Inventory
 
-## 核心页面
-- OnboardingScreen: 首次启动与连接引导。
-- ChatListScreen: 会话列表。
-- ChatDetailScreen: 消息流、输入框、引用和操作。
-- KnowledgeScreen: 数据集列表与入口。
-- DatasetDetailScreen: Collection、Chunk、检索测试。
-- AppSelectorScreen: 应用选择与详情入口。
-- SettingsScreen: 各类配置总览。
+## Primary Screens
+| Screen | Route | Feature |
+|---|---|---|
+| `OnboardingScreen` | `onboarding` | auth/settings |
+| `AppSelectorScreen` | `app-selector` | apps |
+| `ChatScreen` | `chat/{appId}/{chatId?}` | chat |
+| `ConversationListScreen` | `conversations/{appId}` | conversations |
+| `KnowledgeHomeScreen` | `knowledge` | knowledge |
+| `DatasetBrowserScreen` | `knowledge/datasets` | knowledge |
+| `CollectionScreen` | `knowledge/datasets/{datasetId}/collections` | knowledge |
+| `ChunkViewerScreen` | `knowledge/datasets/{datasetId}/collections/{collectionId}` | knowledge |
+| `SearchTestScreen` | `knowledge/datasets/{datasetId}/search-test` | knowledge |
+| `SettingsOverviewScreen` | `settings` | settings |
 
-## 关键 ViewModel
-- ChatListViewModel
-- ChatDetailViewModel
-- KnowledgeViewModel
-- DatasetDetailViewModel
-- SettingsViewModel
+## Secondary / Modal Screens
+| Screen | Form |
+|---|---|
+| `ConnectionConfigScreen` | full screen |
+| `ThemeAppearanceScreen` | full screen |
+| `ChatPreferencesScreen` | full screen |
+| `AudioConfigScreen` | full screen |
+| `LanguageScreen` | full screen |
+| `StorageCacheScreen` | full screen |
+| `AboutScreen` | full screen |
+| `CitationSheet` | bottom sheet |
+| `MessageActionSheet` | bottom sheet |
+| `ConversationActionSheet` | bottom sheet |
+| `InteractiveInputSheet` | bottom sheet or inline form |
 
+## Share Flow
+| Screen | Route | Notes |
+|---|---|---|
+| `ShareLoadingScreen` | `share/chat?...` | bootstraps share auth |
+| `ShareChatScreen` | `share/chat?...` | isolated session graph |
+
+## ViewModel Ownership
+- `ChatViewModel`
+- `ConversationListViewModel`
+- `KnowledgeOverviewViewModel`
+- `DatasetBrowserViewModel`
+- `CollectionViewModel`
+- `ChunkViewerViewModel`
+- `SettingsOverviewViewModel`
+- `ConnectionConfigViewModel`

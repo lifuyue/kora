@@ -1,20 +1,44 @@
 # API Overview
 
-## 范围
-Kora 当前面向 FastGPT 的聊天、会话历史、消息记录、知识库、应用管理、文件上传、分享认证与推荐问题能力。
+## Scope
+- Authentication and connection bootstrap
+- Chat completions and SSE
+- Chat history and message records
+- Dataset / collection / chunk management
+- Search test
+- App discovery and chat config bootstrap
+- Upload and share-link auth
 
-## 端点分组速查
-- 认证: [authentication.md](authentication.md)
-- 核心聊天: [chat-completions.md](chat-completions.md)
-- 历史与记录: [chat-history.md](chat-history.md), [chat-records.md](chat-records.md)
-- 流式事件: [chat-streaming.md](chat-streaming.md), [chat-interactive.md](chat-interactive.md)
-- 知识库: [dataset-management.md](dataset-management.md), [dataset-collections.md](dataset-collections.md), [dataset-data.md](dataset-data.md), [dataset-search.md](dataset-search.md)
-- 应用: [app-management.md](app-management.md)
-- 文件与辅助: [file-upload.md](file-upload.md), [question-guide.md](question-guide.md), [share-auth.md](share-auth.md)
-- 错误: [error-handling.md](error-handling.md)
+## Endpoint Table
+| Area | Method | Endpoint | Spec |
+|---|---|---|---|
+| Auth | Header | `Authorization: Bearer fastgpt-*` | [authentication.md](authentication.md) |
+| Chat | `POST` | `/api/v1/chat/completions` | [chat-completions.md](chat-completions.md) |
+| Chat init | `GET` | `/api/core/chat/init` | [chat-records.md](chat-records.md) |
+| Chat history | `POST` | `/api/core/chat/history/getHistories` | [chat-history.md](chat-history.md) |
+| Chat history | `PUT` | `/api/core/chat/history/updateHistory` | [chat-history.md](chat-history.md) |
+| Chat history | `DELETE` | `/api/core/chat/history/delHistory` | [chat-history.md](chat-history.md) |
+| Chat history | `DELETE` | `/api/core/chat/history/clearHistories` | [chat-history.md](chat-history.md) |
+| Chat records | `POST` | `/api/core/chat/getPaginationRecords` | [chat-records.md](chat-records.md) |
+| Chat records | `GET` | `/api/core/chat/getResData` | [chat-records.md](chat-records.md) |
+| Chat item | `POST` | `/api/core/chat/item/delete` | [chat-records.md](chat-records.md) |
+| Feedback | `POST` | `/api/core/chat/feedback/updateUserFeedback` | [chat-records.md](chat-records.md) |
+| Question guide | `POST` | `/api/core/ai/agent/v2/createQuestionGuide` | [question-guide.md](question-guide.md) |
+| Share init | `GET` | `/api/core/chat/outLink/init` | [share-auth.md](share-auth.md) |
+| App list | `POST` | `/api/core/app/list` | [app-management.md](app-management.md) |
+| Dataset search test | `POST` | `/api/core/dataset/searchTest` | [dataset-search.md](dataset-search.md) |
+| Collection create | `POST` | `/api/core/dataset/collection/create/text` | [dataset-collections.md](dataset-collections.md) |
+| Collection create | `POST` | `/api/core/dataset/collection/create/link` | [dataset-collections.md](dataset-collections.md) |
+| Collection create | `POST` | `/api/core/dataset/collection/create/localFile` | [file-upload.md](file-upload.md) |
+| Collection create | `POST` | `/api/core/dataset/collection/create/fileId` | [dataset-collections.md](dataset-collections.md) |
+| Collection create | `POST` | `/api/core/dataset/collection/create/apiCollection` | [dataset-collections.md](dataset-collections.md) |
+| Collection create | `POST` | `/api/core/dataset/collection/create/apiCollectionV2` | [dataset-collections.md](dataset-collections.md) |
 
-## 客户端约束
-- 所有需要鉴权的请求统一走 Bearer Token。
-- 聊天相关请求优先支持 `stream=true`。
-- 需要引用和附加信息时默认带 `detail=true`。
+## Kora Defaults
+- All chat calls use `detail=true`.
+- Chat sends use `stream=true` except explicit fallback or tests.
+- All requests preserve raw `code` and `statusText` for error mapping.
 
+## Related Specs
+- [chat-streaming.md](chat-streaming.md)
+- [error-handling.md](error-handling.md)
