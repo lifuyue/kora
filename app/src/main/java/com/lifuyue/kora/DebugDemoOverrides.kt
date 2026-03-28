@@ -17,30 +17,39 @@ import com.lifuyue.kora.testing.KoraTestOverrides
 import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val EXTRA_OPEN_DEMO_CHAT = "com.lifuyue.kora.extra.OPEN_DEMO_CHAT"
+private const val EXTRA_OPEN_DEBUG_SHELL = "com.lifuyue.kora.extra.OPEN_DEBUG_SHELL"
 private const val DEMO_APP_ID = "demo-app"
 private const val DEMO_CHAT_ID = "demo-chat"
 
 internal fun installDebugDemoOverrides(intent: Intent?) {
-    if (intent?.getBooleanExtra(EXTRA_OPEN_DEMO_CHAT, false) != true) {
-        return
-    }
-
-    KoraTestOverrides.snapshotOverride =
-        MutableStateFlow(
-            ConnectionSnapshot(
-                serverBaseUrl = "https://demo.fastgpt.local/api/",
-                apiKey = "fastgpt-demo-key",
-                selectedAppId = DEMO_APP_ID,
-                onboardingCompleted = true,
-            ),
-        )
-    KoraTestOverrides.shellRouteOverride =
-        object : KoraTestOverrides.ShellRouteOverride {
-            @Composable
-            override fun Render(snapshot: ConnectionSnapshot) {
-                DemoChatScreen()
-            }
+    when {
+        intent?.getBooleanExtra(EXTRA_OPEN_DEBUG_SHELL, false) == true -> {
+            KoraTestOverrides.snapshotOverride = MutableStateFlow(createDemoSnapshot())
+            KoraTestOverrides.shellRouteOverride = null
         }
+        intent?.getBooleanExtra(EXTRA_OPEN_DEMO_CHAT, false) == true -> {
+            KoraTestOverrides.snapshotOverride = MutableStateFlow(createDemoSnapshot())
+            KoraTestOverrides.shellRouteOverride =
+                object : KoraTestOverrides.ShellRouteOverride {
+                    @Composable
+                    override fun Render(snapshot: ConnectionSnapshot) {
+                        DemoChatScreen()
+                    }
+                }
+        }
+        else -> {
+            return
+        }
+    }
+}
+
+private fun createDemoSnapshot(): ConnectionSnapshot {
+    return ConnectionSnapshot(
+        serverBaseUrl = "https://demo.fastgpt.local/api/",
+        apiKey = "fastgpt-demo-key",
+        selectedAppId = DEMO_APP_ID,
+        onboardingCompleted = true,
+    )
 }
 
 @Composable
