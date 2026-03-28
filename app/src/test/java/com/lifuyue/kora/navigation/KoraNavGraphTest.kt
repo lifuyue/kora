@@ -13,6 +13,7 @@ import com.lifuyue.kora.KoraApplication
 import com.lifuyue.kora.R
 import com.lifuyue.kora.core.common.AppearancePreferences
 import com.lifuyue.kora.core.common.ConnectionSnapshot
+import com.lifuyue.kora.core.database.store.ShareLinkPayload
 import com.lifuyue.kora.core.common.ThemeMode
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -128,5 +129,18 @@ class KoraNavGraphTest {
         }
 
         composeRule.onNodeWithText("Fake Shell app-1").assertIsDisplayed()
+    }
+
+    @Test
+    fun shareLinkPayloadBypassesBootstrapAndShowsShareRoute() {
+        composeRule.setContent {
+            KoraNavGraph(
+                snapshot = ConnectionSnapshot(),
+                shareLinkPayload = ShareLinkPayload("share-1", "uid-1", "chat-1"),
+                shareRoute = { Text("Fake Share ${it.shareId}") },
+            )
+        }
+
+        composeRule.onNodeWithText("Fake Share share-1").assertIsDisplayed()
     }
 }

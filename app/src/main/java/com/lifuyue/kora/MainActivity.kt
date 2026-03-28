@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.i18n.AppLocaleController
 import com.lifuyue.kora.navigation.KoraNavGraph
+import com.lifuyue.kora.navigation.parseShareLinkIntent
 import com.lifuyue.kora.testing.KoraTestOverrides
 import com.lifuyue.kora.ui.theme.KoraTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,14 +31,18 @@ class MainActivity : AppCompatActivity() {
         installDebugDemoOverrides(intent)
         AppLocaleController.apply(connectionRepository.snapshot.value.appearancePreferences.languageTag)
         enableEdgeToEdge()
+        val shareLinkPayload = parseShareLinkIntent(intent)
         setContent {
-            KoraApp(connectionRepository = connectionRepository)
+            KoraApp(connectionRepository = connectionRepository, shareLinkPayload = shareLinkPayload)
         }
     }
 }
 
 @Composable
-private fun KoraApp(connectionRepository: ConnectionRepository) {
+private fun KoraApp(
+    connectionRepository: ConnectionRepository,
+    shareLinkPayload: com.lifuyue.kora.core.database.store.ShareLinkPayload? = null,
+) {
     val snapshotFlow = KoraTestOverrides.snapshotOverride ?: connectionRepository.snapshot
     val snapshot by snapshotFlow.collectAsState()
     val scope = rememberCoroutineScope()
@@ -67,6 +72,7 @@ private fun KoraApp(connectionRepository: ConnectionRepository) {
                 connectionRouteOverride != null && shellRouteOverride != null -> {
                     KoraNavGraph(
                         snapshot = snapshot,
+                        shareLinkPayload = shareLinkPayload,
                         onOnboardingCompleted = onOnboardingCompleted,
                         connectionRoute = { onConnectionSaved ->
                             connectionRouteOverride.Render(onConnectionSaved)
@@ -79,6 +85,7 @@ private fun KoraApp(connectionRepository: ConnectionRepository) {
                 connectionRouteOverride != null -> {
                     KoraNavGraph(
                         snapshot = snapshot,
+                        shareLinkPayload = shareLinkPayload,
                         onOnboardingCompleted = onOnboardingCompleted,
                         connectionRoute = { onConnectionSaved ->
                             connectionRouteOverride.Render(onConnectionSaved)
@@ -88,6 +95,7 @@ private fun KoraApp(connectionRepository: ConnectionRepository) {
                 shellRouteOverride != null -> {
                     KoraNavGraph(
                         snapshot = snapshot,
+                        shareLinkPayload = shareLinkPayload,
                         onOnboardingCompleted = onOnboardingCompleted,
                         shellRoute = { shellSnapshot ->
                             shellRouteOverride.Render(shellSnapshot)
@@ -97,6 +105,7 @@ private fun KoraApp(connectionRepository: ConnectionRepository) {
                 else -> {
                     KoraNavGraph(
                         snapshot = snapshot,
+                        shareLinkPayload = shareLinkPayload,
                         onOnboardingCompleted = onOnboardingCompleted,
                     )
                 }
