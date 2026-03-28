@@ -56,7 +56,7 @@
     <string name="conversation_list_pinned_section">置顶会话</string>
     <string name="conversation_list_all_section">全部会话</string>
     <string name="conversation_list_empty_title">暂无会话</string>
-    <string name="conversation_list_empty_body">点击右下角的新建会话开始第一轮对话，历史记录会显示在这里。</string>
+    <string name="conversation_list_empty_body">点击右下角开始新的会话。</string>
     <string name="conversation_list_action_sheet_title">会话操作</string>
     <string name="conversation_list_action_rename">重命名</string>
     <string name="conversation_list_action_move_to_folder">移动到文件夹</string>

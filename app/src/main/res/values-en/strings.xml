@@ -59,4 +59,8 @@
     <string name="conversation_list_filter_archived">Show archived conversations</string>
     <string name="conversation_list_action_archive">Archive conversation</string>
     <string name="conversation_list_action_unarchive">Unarchive conversation</string>
+    <string name="adaptive_chat_placeholder_title">Select a conversation</string>
+    <string name="adaptive_chat_placeholder_body">Choose an existing conversation on the left or start a new one.</string>
+    <string name="adaptive_settings_placeholder_title">Select a settings item</string>
+    <string name="adaptive_settings_placeholder_body">Choose connection, theme, chat, audio, or language settings on the left.</string>
 </resources>

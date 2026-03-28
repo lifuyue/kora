@@ -90,17 +90,38 @@ fun SettingsOverviewRoute(
     viewModel: SettingsOverviewViewModel = settingsViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    SettingsOverviewScreen(
-        state = uiState,
-        onOpenConnection = onOpenConnection,
-        onOpenCurrentApp = onOpenCurrentApp,
-        onOpenTheme = onOpenTheme,
-        onOpenChatPreferences = onOpenChatPreferences,
-        onOpenAudio = onOpenAudio,
-        onOpenLanguage = onOpenLanguage,
-        onOpenCache = onOpenCache,
-        onOpenAbout = onOpenAbout,
-    )
+    val useDualPane = rememberSettingsDualPaneEnabled()
+    if (useDualPane) {
+        AdaptiveSettingsScaffold(
+            isExpanded = true,
+            listPane = {
+                SettingsOverviewScreen(
+                    state = uiState,
+                    onOpenConnection = onOpenConnection,
+                    onOpenCurrentApp = onOpenCurrentApp,
+                    onOpenTheme = onOpenTheme,
+                    onOpenChatPreferences = onOpenChatPreferences,
+                    onOpenAudio = onOpenAudio,
+                    onOpenLanguage = onOpenLanguage,
+                    onOpenCache = onOpenCache,
+                    onOpenAbout = onOpenAbout,
+                )
+            },
+            detailPane = { SettingsAdaptivePlaceholder() },
+        )
+    } else {
+        SettingsOverviewScreen(
+            state = uiState,
+            onOpenConnection = onOpenConnection,
+            onOpenCurrentApp = onOpenCurrentApp,
+            onOpenTheme = onOpenTheme,
+            onOpenChatPreferences = onOpenChatPreferences,
+            onOpenAudio = onOpenAudio,
+            onOpenLanguage = onOpenLanguage,
+            onOpenCache = onOpenCache,
+            onOpenAbout = onOpenAbout,
+        )
+    }
 }
 
 @Composable

@@ -59,4 +59,8 @@
     <string name="conversation_list_filter_archived">查看归档会话</string>
     <string name="conversation_list_action_archive">归档会话</string>
     <string name="conversation_list_action_unarchive">取消归档</string>
+    <string name="adaptive_chat_placeholder_title">选择一个会话</string>
+    <string name="adaptive_chat_placeholder_body">在左侧选择已有会话，或新建一个会话开始聊天。</string>
+    <string name="adaptive_settings_placeholder_title">选择一个设置项</string>
+    <string name="adaptive_settings_placeholder_body">在左侧选择连接、主题、聊天、音频或语言设置继续查看详情。</string>
 </resources>

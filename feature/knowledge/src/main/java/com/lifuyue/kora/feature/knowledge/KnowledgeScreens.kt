@@ -74,6 +74,17 @@ fun KnowledgeOverviewScreen(
     }
 }
 
+@Composable
+internal fun KnowledgeAdaptivePlaceholder() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(stringResource(R.string.knowledge_overview_title), style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.knowledge_overview_open_datasets), style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatasetBrowserScreen(

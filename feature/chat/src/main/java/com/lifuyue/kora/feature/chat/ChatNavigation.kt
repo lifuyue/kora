@@ -120,28 +120,65 @@ private fun ConversationListRoute(
     viewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
-    ConversationListScreen(
-        uiState = uiState.value,
-        onQueryChanged = viewModel::updateQuery,
-        onSelectFolderFilter = viewModel::selectFolder,
-        onSelectTagFilter = viewModel::selectTag,
-        onOpenConversation = { chatId -> onOpenConversation(viewModel.appId, chatId) },
-        onNewConversation = { onNewConversation(viewModel.appId) },
-        onDeleteConversation = viewModel::deleteConversation,
-        onRenameConversation = viewModel::renameConversation,
-        onTogglePin = viewModel::togglePin,
-        onSetArchived = viewModel::setArchived,
-        onClearConversations = viewModel::clearConversations,
-        onCreateFolder = viewModel::createFolder,
-        onRenameFolder = viewModel::renameFolder,
-        onDeleteFolder = viewModel::deleteFolder,
-        onCreateTag = viewModel::createTag,
-        onRenameTag = viewModel::renameTag,
-        onDeleteTag = viewModel::deleteTag,
-        onMoveConversationToFolder = viewModel::moveConversation,
-        onSetConversationTags = viewModel::setConversationTags,
-        onToggleShowArchived = viewModel::toggleShowArchived,
-    )
+    val useDualPane = rememberChatDualPaneEnabled()
+    if (useDualPane && uiState.value.items.isNotEmpty()) {
+        AdaptiveChatScaffold(
+            isExpanded = true,
+            conversationPane = {
+                ConversationListScreen(
+                    uiState = uiState.value,
+                    onQueryChanged = viewModel::updateQuery,
+                    onSelectFolderFilter = viewModel::selectFolder,
+                    onSelectTagFilter = viewModel::selectTag,
+                    onOpenConversation = { chatId -> onOpenConversation(viewModel.appId, chatId) },
+                    onNewConversation = { onNewConversation(viewModel.appId) },
+                    onDeleteConversation = viewModel::deleteConversation,
+                    onRenameConversation = viewModel::renameConversation,
+                    onTogglePin = viewModel::togglePin,
+                    onSetArchived = viewModel::setArchived,
+                    onClearConversations = viewModel::clearConversations,
+                    onCreateFolder = viewModel::createFolder,
+                    onRenameFolder = viewModel::renameFolder,
+                    onDeleteFolder = viewModel::deleteFolder,
+                    onCreateTag = viewModel::createTag,
+                    onRenameTag = viewModel::renameTag,
+                    onDeleteTag = viewModel::deleteTag,
+                    onMoveConversationToFolder = viewModel::moveConversation,
+                    onSetConversationTags = viewModel::setConversationTags,
+                    onToggleShowArchived = viewModel::toggleShowArchived,
+                )
+            },
+            detailPane = {
+                PlaceholderDetailPane(
+                    title = appString("adaptive_chat_placeholder_title"),
+                    body = appString("adaptive_chat_placeholder_body"),
+                )
+            },
+        )
+    } else {
+        ConversationListScreen(
+            uiState = uiState.value,
+            onQueryChanged = viewModel::updateQuery,
+            onSelectFolderFilter = viewModel::selectFolder,
+            onSelectTagFilter = viewModel::selectTag,
+            onOpenConversation = { chatId -> onOpenConversation(viewModel.appId, chatId) },
+            onNewConversation = { onNewConversation(viewModel.appId) },
+            onDeleteConversation = viewModel::deleteConversation,
+            onRenameConversation = viewModel::renameConversation,
+            onTogglePin = viewModel::togglePin,
+            onSetArchived = viewModel::setArchived,
+            onClearConversations = viewModel::clearConversations,
+            onCreateFolder = viewModel::createFolder,
+            onRenameFolder = viewModel::renameFolder,
+            onDeleteFolder = viewModel::deleteFolder,
+            onCreateTag = viewModel::createTag,
+            onRenameTag = viewModel::renameTag,
+            onDeleteTag = viewModel::deleteTag,
+            onMoveConversationToFolder = viewModel::moveConversation,
+            onSetConversationTags = viewModel::setConversationTags,
+            onToggleShowArchived = viewModel::toggleShowArchived,
+        )
+    }
 }
 
 @Composable

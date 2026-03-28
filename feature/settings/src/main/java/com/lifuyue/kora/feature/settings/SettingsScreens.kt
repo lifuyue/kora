@@ -247,6 +247,17 @@ fun SettingsOverviewScreen(
 }
 
 @Composable
+internal fun SettingsAdaptivePlaceholder() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(appString("adaptive_settings_placeholder_title"), style = MaterialTheme.typography.headlineSmall)
+        Text(appString("adaptive_settings_placeholder_body"), style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
 private fun SettingsSection(
     title: String,
     content: @Composable () -> Unit,
