@@ -1,7 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
 import android.annotation.SuppressLint
-import android.graphics.Color as AndroidColor
 import android.text.method.LinkMovementMethod
 import android.view.View
 import android.webkit.WebView
@@ -40,11 +39,12 @@ import coil.request.ImageRequest
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
 import io.noties.markwon.core.MarkwonTheme
+import android.graphics.Color as AndroidColor
 
 private val codeFenceRegex = Regex("```([A-Za-z0-9_+-]*)\\n([\\s\\S]*?)```")
 private val richInlineRegex =
     Regex("""(?s)!\[([^\]]*)]\(([^)]+)\)|\$\$(.+?)\$\$|(?<!\$)\$([^\n$]+?)\$(?!\$)""")
-private const val mermaidFallbackTitle = "Mermaid 图表暂不渲染"
+private const val MERMAID_FALLBACK_TITLE = "Mermaid 图表暂不渲染"
 
 internal sealed interface MarkdownRenderNode {
     data class MarkdownText(val markdown: String) : MarkdownRenderNode
@@ -217,7 +217,10 @@ fun MarkdownMessage(
 }
 
 @Composable
-fun MarkdownText(markdown: String, modifier: Modifier = Modifier) {
+fun MarkdownText(
+    markdown: String,
+    modifier: Modifier = Modifier,
+) {
     MarkdownTextBlock(markdown = markdown, modifier = modifier)
 }
 
@@ -500,7 +503,7 @@ private fun CodeFenceCard(
             }
             if (isMermaidFallback) {
                 Text(
-                    text = mermaidFallbackTitle,
+                    text = MERMAID_FALLBACK_TITLE,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )

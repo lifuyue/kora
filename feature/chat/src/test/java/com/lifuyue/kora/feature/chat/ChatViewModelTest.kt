@@ -125,8 +125,10 @@ private class RecordingChatRepository(
     var continuedChatId: String? = null
     var feedback: MessageFeedback? = null
 
-    override fun observeMessages(appId: String, chatId: String?): Flow<List<ChatMessageUiModel>> =
-        messagesByChat.map { it[chatId].orEmpty() }
+    override fun observeMessages(
+        appId: String,
+        chatId: String?,
+    ): Flow<List<ChatMessageUiModel>> = messagesByChat.map { it[chatId].orEmpty() }
 
     override suspend fun bootstrapChat(appId: String): ChatBootstrap =
         ChatBootstrap(
@@ -134,9 +136,16 @@ private class RecordingChatRepository(
             welcomeText = "欢迎语",
         )
 
-    override suspend fun restoreMessages(appId: String, chatId: String) = Unit
+    override suspend fun restoreMessages(
+        appId: String,
+        chatId: String,
+    ) = Unit
 
-    override suspend fun sendMessage(appId: String, chatId: String?, text: String): String {
+    override suspend fun sendMessage(
+        appId: String,
+        chatId: String?,
+        text: String,
+    ): String {
         if (shouldFailSend) {
             error("发送失败")
         }
@@ -164,25 +173,43 @@ private class RecordingChatRepository(
         return resolvedChatId
     }
 
-    override suspend fun stopStreaming(appId: String, chatId: String) {
+    override suspend fun stopStreaming(
+        appId: String,
+        chatId: String,
+    ) {
         stoppedChatId = chatId
     }
 
-    override suspend fun continueGeneration(appId: String, chatId: String): String {
+    override suspend fun continueGeneration(
+        appId: String,
+        chatId: String,
+    ): String {
         continuedChatId = chatId
         return chatId
     }
 
-    override suspend fun regenerateResponse(appId: String, chatId: String, messageId: String): String {
+    override suspend fun regenerateResponse(
+        appId: String,
+        chatId: String,
+        messageId: String,
+    ): String {
         regeneratedMessageId = messageId
         return chatId
     }
 
-    override suspend fun setFeedback(appId: String, chatId: String, messageId: String, feedback: MessageFeedback) {
+    override suspend fun setFeedback(
+        appId: String,
+        chatId: String,
+        messageId: String,
+        feedback: MessageFeedback,
+    ) {
         this.feedback = feedback
     }
 
-    fun emitMessages(chatId: String, messages: List<ChatMessageUiModel>) {
+    fun emitMessages(
+        chatId: String,
+        messages: List<ChatMessageUiModel>,
+    ) {
         messagesByChat.value =
             messagesByChat.value.toMutableMap().apply {
                 put(chatId, messages)

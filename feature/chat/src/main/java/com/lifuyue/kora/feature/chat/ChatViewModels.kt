@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.core.network.FastGptApi
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import javax.inject.Inject
 
 @HiltViewModel
 class ConversationListViewModel
@@ -34,14 +34,15 @@ class ConversationListViewModel
         private val selectedFolderId = MutableStateFlow<String?>(null)
         private val selectedTagId = MutableStateFlow<String?>(null)
         private val isRefreshing = MutableStateFlow(false)
-        private val filters = combine(query, selectedFolderId, selectedTagId, isRefreshing) { currentQuery, folderId, tagId, refreshing ->
-            ConversationListFilters(
-                query = currentQuery,
-                folderId = folderId,
-                tagId = tagId,
-                isRefreshing = refreshing,
-            )
-        }
+        private val filters =
+            combine(query, selectedFolderId, selectedTagId, isRefreshing) { currentQuery, folderId, tagId, refreshing ->
+                ConversationListFilters(
+                    query = currentQuery,
+                    folderId = folderId,
+                    tagId = tagId,
+                    isRefreshing = refreshing,
+                )
+            }
 
         val uiState: StateFlow<ConversationListUiState> =
             combine(
@@ -103,7 +104,10 @@ class ConversationListViewModel
             viewModelScope.launch { conversationRepository.clearConversations(appId) }
         }
 
-        fun renameConversation(chatId: String, title: String) {
+        fun renameConversation(
+            chatId: String,
+            title: String,
+        ) {
             val trimmed = title.trim()
             if (trimmed.isEmpty()) {
                 return
@@ -111,7 +115,10 @@ class ConversationListViewModel
             viewModelScope.launch { conversationRepository.renameConversation(appId, chatId, trimmed) }
         }
 
-        fun togglePin(chatId: String, pinned: Boolean) {
+        fun togglePin(
+            chatId: String,
+            pinned: Boolean,
+        ) {
             viewModelScope.launch { conversationRepository.togglePinConversation(appId, chatId, pinned) }
         }
 
@@ -123,7 +130,10 @@ class ConversationListViewModel
             viewModelScope.launch { conversationRepository.createFolder(appId, trimmed) }
         }
 
-        fun renameFolder(folderId: String, name: String) {
+        fun renameFolder(
+            folderId: String,
+            name: String,
+        ) {
             val trimmed = name.trim()
             if (trimmed.isEmpty()) {
                 return
@@ -148,7 +158,10 @@ class ConversationListViewModel
             viewModelScope.launch { conversationRepository.createTag(appId, trimmed) }
         }
 
-        fun renameTag(tagId: String, name: String) {
+        fun renameTag(
+            tagId: String,
+            name: String,
+        ) {
             val trimmed = name.trim()
             if (trimmed.isEmpty()) {
                 return
@@ -165,11 +178,17 @@ class ConversationListViewModel
             }
         }
 
-        fun moveConversation(chatId: String, folderId: String?) {
+        fun moveConversation(
+            chatId: String,
+            folderId: String?,
+        ) {
             viewModelScope.launch { conversationRepository.moveConversationToFolder(appId, chatId, folderId) }
         }
 
-        fun setConversationTags(chatId: String, tagIds: List<String>) {
+        fun setConversationTags(
+            chatId: String,
+            tagIds: List<String>,
+        ) {
             viewModelScope.launch { conversationRepository.setConversationTags(appId, chatId, tagIds) }
         }
     }
@@ -296,7 +315,10 @@ class ChatViewModel
             }
         }
 
-        fun updateFeedback(message: ChatMessageUiModel, feedback: MessageFeedback) {
+        fun updateFeedback(
+            message: ChatMessageUiModel,
+            feedback: MessageFeedback,
+        ) {
             viewModelScope.launch {
                 chatRepository.setFeedback(
                     appId = appId,
@@ -331,131 +353,137 @@ private data class ConversationListFilters(
 )
 
 @HiltViewModel
-class AppSelectorViewModel @Inject constructor(
-    private val api: FastGptApi,
-    private val connectionRepository: ConnectionRepository,
-) : ViewModel() {
-    private val mutableState = MutableStateFlow(AppSelectorUiState())
-    val uiState: StateFlow<AppSelectorUiState> = mutableState.asStateFlow()
+class AppSelectorViewModel
+    @Inject
+    constructor(
+        private val api: FastGptApi,
+        private val connectionRepository: ConnectionRepository,
+    ) : ViewModel() {
+        private val mutableState = MutableStateFlow(AppSelectorUiState())
+        val uiState: StateFlow<AppSelectorUiState> = mutableState.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            connectionRepository.snapshot.collect { snapshot ->
-                mutableState.update { it.copy(currentAppId = snapshot.selectedAppId) }
-                refresh()
+        init {
+            viewModelScope.launch {
+                connectionRepository.snapshot.collect { snapshot ->
+                    mutableState.update { it.copy(currentAppId = snapshot.selectedAppId) }
+                    refresh()
+                }
+            }
+        }
+
+        fun refresh() {
+            viewModelScope.launch {
+                runCatching { api.getAppList().data.orEmpty() }
+                    .onSuccess { apps ->
+                        val currentAppId = connectionRepository.snapshot.value.selectedAppId
+                        mutableState.value =
+                            AppSelectorUiState(
+                                currentAppId = currentAppId,
+                                currentAppName = apps.firstOrNull { it.id == currentAppId }?.name.orEmpty(),
+                                items =
+                                    apps.map {
+                                        AppSelectorItemUiModel(
+                                            appId = it.id,
+                                            name = it.name,
+                                            intro = it.intro,
+                                        )
+                                    },
+                            )
+                    }.onFailure { error ->
+                        mutableState.update { it.copy(errorMessage = error.message ?: "加载 App 失败") }
+                    }
+            }
+        }
+
+        fun switchApp(
+            appId: String,
+            onSwitched: (String) -> Unit,
+        ) {
+            viewModelScope.launch {
+                connectionRepository.updateSelectedAppId(appId)
+                onSwitched(appId)
             }
         }
     }
 
-    fun refresh() {
-        viewModelScope.launch {
-            runCatching { api.getAppList().data.orEmpty() }
-                .onSuccess { apps ->
-                    val currentAppId = connectionRepository.snapshot.value.selectedAppId
-                    mutableState.value =
-                        AppSelectorUiState(
-                            currentAppId = currentAppId,
-                            currentAppName = apps.firstOrNull { it.id == currentAppId }?.name.orEmpty(),
-                            items =
-                                apps.map {
-                                    AppSelectorItemUiModel(
-                                        appId = it.id,
-                                        name = it.name,
-                                        intro = it.intro,
-                                    )
-                                },
-                        )
-                }.onFailure { error ->
-                    mutableState.update { it.copy(errorMessage = error.message ?: "加载 App 失败") }
-                }
-        }
-    }
-
-    fun switchApp(appId: String, onSwitched: (String) -> Unit) {
-        viewModelScope.launch {
-            connectionRepository.updateSelectedAppId(appId)
-            onSwitched(appId)
-        }
-    }
-}
-
 @HiltViewModel
-class AppDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val api: FastGptApi,
-) : ViewModel() {
-    private val appId: String = checkNotNull(savedStateHandle["appId"])
-    private val chatId: String? = savedStateHandle["chatId"]
-    private val mutableState = MutableStateFlow(AppDetailUiState(appId = appId))
-    val uiState: StateFlow<AppDetailUiState> = mutableState.asStateFlow()
+class AppDetailViewModel
+    @Inject
+    constructor(
+        savedStateHandle: SavedStateHandle,
+        private val api: FastGptApi,
+    ) : ViewModel() {
+        private val appId: String = checkNotNull(savedStateHandle["appId"])
+        private val chatId: String? = savedStateHandle["chatId"]
+        private val mutableState = MutableStateFlow(AppDetailUiState(appId = appId))
+        val uiState: StateFlow<AppDetailUiState> = mutableState.asStateFlow()
 
-    init {
-        refresh()
-    }
+        init {
+            refresh()
+        }
 
-    fun refresh() {
-        viewModelScope.launch {
-            mutableState.update { it.copy(isLoading = true, errorMessage = null) }
-            runCatching {
-                val apps = api.getAppList().data.orEmpty()
-                val summary = apps.firstOrNull { it.id == appId }
-                val initData = api.initChat(appId = appId, chatId = chatId).data
-                AppDetailUiState(
-                    appId = appId,
-                    appName = summary?.name ?: initData?.app?.readString("name").orEmpty(),
-                    intro = summary?.intro ?: initData?.app?.readString("intro").orEmpty(),
-                    type = summary?.type ?: initData?.app?.readString("type").orEmpty(),
-                    welcomeText = initData?.welcomeText,
-                    sections =
-                        buildList {
-                            initData?.variables?.takeIf { it.isNotEmpty() }?.let { variables ->
-                                add(AppDetailSectionUiModel("变量", listOf("${variables.size} 个变量已配置")))
-                            }
-                            initData?.chatModels?.takeIf { it.isNotEmpty() }?.let { models ->
-                                add(AppDetailSectionUiModel("模型", models.toDisplayItems()))
-                            }
-                            initData?.fileSelectConfig?.takeIf { it.isNotEmpty() }?.let { config ->
-                                add(AppDetailSectionUiModel("附件", config.toDisplayItems()))
-                            }
-                            initData?.ttsConfig?.takeIf { it.isNotEmpty() }?.let { config ->
-                                add(AppDetailSectionUiModel("语音播报", config.toDisplayItems()))
-                            }
-                            initData?.whisperConfig?.takeIf { it.isNotEmpty() }?.let { config ->
-                                add(AppDetailSectionUiModel("语音输入", config.toDisplayItems()))
-                            }
-                            initData?.questionGuide?.let { config ->
-                                add(
-                                    AppDetailSectionUiModel(
-                                        "推荐问题",
-                                        listOf(
-                                            if (config.open) {
-                                                "已开启"
-                                            } else {
-                                                "未开启"
-                                            },
+        fun refresh() {
+            viewModelScope.launch {
+                mutableState.update { it.copy(isLoading = true, errorMessage = null) }
+                runCatching {
+                    val apps = api.getAppList().data.orEmpty()
+                    val summary = apps.firstOrNull { it.id == appId }
+                    val initData = api.initChat(appId = appId, chatId = chatId).data
+                    AppDetailUiState(
+                        appId = appId,
+                        appName = summary?.name ?: initData?.app?.readString("name").orEmpty(),
+                        intro = summary?.intro ?: initData?.app?.readString("intro").orEmpty(),
+                        type = summary?.type ?: initData?.app?.readString("type").orEmpty(),
+                        welcomeText = initData?.welcomeText,
+                        sections =
+                            buildList {
+                                initData?.variables?.takeIf { it.isNotEmpty() }?.let { variables ->
+                                    add(AppDetailSectionUiModel("变量", listOf("${variables.size} 个变量已配置")))
+                                }
+                                initData?.chatModels?.takeIf { it.isNotEmpty() }?.let { models ->
+                                    add(AppDetailSectionUiModel("模型", models.toDisplayItems()))
+                                }
+                                initData?.fileSelectConfig?.takeIf { it.isNotEmpty() }?.let { config ->
+                                    add(AppDetailSectionUiModel("附件", config.toDisplayItems()))
+                                }
+                                initData?.ttsConfig?.takeIf { it.isNotEmpty() }?.let { config ->
+                                    add(AppDetailSectionUiModel("语音播报", config.toDisplayItems()))
+                                }
+                                initData?.whisperConfig?.takeIf { it.isNotEmpty() }?.let { config ->
+                                    add(AppDetailSectionUiModel("语音输入", config.toDisplayItems()))
+                                }
+                                initData?.questionGuide?.let { config ->
+                                    add(
+                                        AppDetailSectionUiModel(
+                                            "推荐问题",
+                                            listOf(
+                                                if (config.open) {
+                                                    "已开启"
+                                                } else {
+                                                    "未开启"
+                                                },
+                                            ),
                                         ),
-                                    ),
-                                )
-                            }
-                        },
-                    isLoading = false,
-                    errorMessage = null,
-                )
-            }.onSuccess { mutableState.value = it }
-                .onFailure { error ->
-                    mutableState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = error.message ?: "加载 App 详情失败",
-                        )
+                                    )
+                                }
+                            },
+                        isLoading = false,
+                        errorMessage = null,
+                    )
+                }.onSuccess { mutableState.value = it }
+                    .onFailure { error ->
+                        mutableState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = error.message ?: "加载 App 详情失败",
+                            )
+                        }
                     }
-                }
+            }
         }
     }
-}
 
-private fun JsonArray.toDisplayItems(): List<String> =
-    mapNotNull { element -> element.toString().trim('"').takeIf { it.isNotBlank() } }
+private fun JsonArray.toDisplayItems(): List<String> = mapNotNull { element -> element.toString().trim('"').takeIf { it.isNotBlank() } }
 
 private fun JsonObject.toDisplayItems(): List<String> =
     entries.mapNotNull { (key, value) ->

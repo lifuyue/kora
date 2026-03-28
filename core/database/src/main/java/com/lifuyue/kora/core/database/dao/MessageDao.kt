@@ -53,7 +53,10 @@ interface MessageDao {
     )
 
     @Query("UPDATE messages SET feedbackType = :feedbackType WHERE dataId = :dataId")
-    fun updateFeedback(dataId: String, feedbackType: Int?)
+    fun updateFeedback(
+        dataId: String,
+        feedbackType: Int?,
+    )
 
     @Query("DELETE FROM messages WHERE dataId = :dataId")
     fun deleteMessage(dataId: String)

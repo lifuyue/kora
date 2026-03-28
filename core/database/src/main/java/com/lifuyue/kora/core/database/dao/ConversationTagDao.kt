@@ -39,7 +39,10 @@ interface ConversationTagDao {
         WHERE tagId = :tagId
         """,
     )
-    fun rename(tagId: String, name: String)
+    fun rename(
+        tagId: String,
+        name: String,
+    )
 
     @Query("DELETE FROM conversation_tags WHERE tagId = :tagId")
     fun delete(tagId: String)

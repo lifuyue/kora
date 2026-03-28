@@ -66,7 +66,7 @@ class MainActivityM3AcceptanceTest {
         composeRule.onNodeWithText("聊天").performClick()
         composeRule.onNodeWithText("暂无会话").assertIsDisplayed()
         composeRule.onNodeWithText("点击右下角的新建会话开始第一轮对话，历史记录会显示在这里。").assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
 
     private fun completeOnboardingAndSaveConnection() {

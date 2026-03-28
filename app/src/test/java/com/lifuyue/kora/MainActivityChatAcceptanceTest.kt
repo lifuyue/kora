@@ -47,9 +47,9 @@ class MainActivityChatAcceptanceTest {
         composeRule.onNodeWithText("暂无会话").assertIsDisplayed()
         waitUntil { repository.hasRefreshed() }
 
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).performClick()
-        composeRule.onNodeWithTag(ChatTestTags.chatInput).assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.chatInput).performTextInput("测试 M4 主流程")
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).performTextInput("测试 M4 主流程")
         composeRule.onNodeWithText("发送").assertIsEnabled()
         composeRule.onNodeWithText("发送").performClick()
 
@@ -70,7 +70,7 @@ class MainActivityChatAcceptanceTest {
         composeRule.onNodeWithText("测试 M4 主流程").assertIsDisplayed()
         composeRule.onNodeWithText("测试 M4 主流程").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(ChatTestTags.chatInput).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertIsDisplayed()
     }
 
     @Test
@@ -78,9 +78,9 @@ class MainActivityChatAcceptanceTest {
         composeRule.onNodeWithText("会话").assertIsDisplayed()
         waitUntil { repository.hasRefreshed() }
 
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).performClick()
-        composeRule.onNodeWithTag(ChatTestTags.chatInput).assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.chatInput).performTextInput("触发错误")
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).performTextInput("触发错误")
         composeRule.onNodeWithText("发送").assertIsEnabled()
         composeRule.onNodeWithText("发送").performClick()
 
@@ -91,7 +91,7 @@ class MainActivityChatAcceptanceTest {
         assertEquals("模拟网络错误", failedAssistant.lastErrorMessage)
         composeRule.onNodeWithText("返回").performClick()
         composeRule.onNodeWithText("模拟网络错误").assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
 
     private fun waitForConversationId(appId: String): String {

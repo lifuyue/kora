@@ -2,11 +2,11 @@ package com.lifuyue.kora.feature.chat
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ChatRole
 import org.junit.Rule
@@ -165,7 +165,7 @@ class ChatScreenTest {
         }
 
         composeRule.onNodeWithTag(ChatTestTags.citationSummary("assistant-1")).performClick()
-        composeRule.onNodeWithTag(ChatTestTags.citationPanel).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CITATION_PANEL).assertIsDisplayed()
         composeRule.onNodeWithText("来源文档").assertIsDisplayed()
         composeRule.onNodeWithText("命中片段").assertIsDisplayed()
     }

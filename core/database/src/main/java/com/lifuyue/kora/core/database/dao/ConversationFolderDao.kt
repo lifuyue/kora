@@ -39,7 +39,10 @@ interface ConversationFolderDao {
         WHERE folderId = :folderId
         """,
     )
-    fun rename(folderId: String, name: String)
+    fun rename(
+        folderId: String,
+        name: String,
+    )
 
     @Query("DELETE FROM conversation_folders WHERE folderId = :folderId")
     fun delete(folderId: String)

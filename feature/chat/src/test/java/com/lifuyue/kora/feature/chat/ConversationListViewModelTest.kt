@@ -171,15 +171,26 @@ private class RecordingConversationRepository : ConversationRepository {
 
     override suspend fun refreshConversations(appId: String) = Unit
 
-    override suspend fun renameConversation(appId: String, chatId: String, title: String) {
+    override suspend fun renameConversation(
+        appId: String,
+        chatId: String,
+        title: String,
+    ) {
         renamedChatId = chatId
     }
 
-    override suspend fun togglePinConversation(appId: String, chatId: String, pinned: Boolean) {
+    override suspend fun togglePinConversation(
+        appId: String,
+        chatId: String,
+        pinned: Boolean,
+    ) {
         this.pinned = pinned
     }
 
-    override suspend fun deleteConversation(appId: String, chatId: String) {
+    override suspend fun deleteConversation(
+        appId: String,
+        chatId: String,
+    ) {
         deletedChatId = chatId
     }
 
@@ -187,21 +198,49 @@ private class RecordingConversationRepository : ConversationRepository {
         cleared = true
     }
 
-    override suspend fun createFolder(appId: String, name: String) = Unit
+    override suspend fun createFolder(
+        appId: String,
+        name: String,
+    ) = Unit
 
-    override suspend fun renameFolder(appId: String, folderId: String, name: String) = Unit
+    override suspend fun renameFolder(
+        appId: String,
+        folderId: String,
+        name: String,
+    ) = Unit
 
-    override suspend fun deleteFolder(appId: String, folderId: String) = Unit
+    override suspend fun deleteFolder(
+        appId: String,
+        folderId: String,
+    ) = Unit
 
-    override suspend fun createTag(appId: String, name: String) = Unit
+    override suspend fun createTag(
+        appId: String,
+        name: String,
+    ) = Unit
 
-    override suspend fun renameTag(appId: String, tagId: String, name: String) = Unit
+    override suspend fun renameTag(
+        appId: String,
+        tagId: String,
+        name: String,
+    ) = Unit
 
-    override suspend fun deleteTag(appId: String, tagId: String) = Unit
+    override suspend fun deleteTag(
+        appId: String,
+        tagId: String,
+    ) = Unit
 
-    override suspend fun moveConversationToFolder(appId: String, chatId: String, folderId: String?) = Unit
+    override suspend fun moveConversationToFolder(
+        appId: String,
+        chatId: String,
+        folderId: String?,
+    ) = Unit
 
-    override suspend fun setConversationTags(appId: String, chatId: String, tagIds: List<String>) = Unit
+    override suspend fun setConversationTags(
+        appId: String,
+        chatId: String,
+        tagIds: List<String>,
+    ) = Unit
 
     fun emit(value: List<ConversationListItemUiModel>) {
         items.value = value

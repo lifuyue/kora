@@ -25,6 +25,28 @@ data class SettingsOverviewUiState(
     val selectedAppSummary: String = "未选择",
 )
 
+data class ChatPreferencesUiState(
+    val streamEnabled: Boolean = true,
+    val autoScroll: Boolean = true,
+    val fontSizeScale: Float = 1f,
+    val showCitationsByDefault: Boolean = true,
+)
+
+data class LanguageSettingsUiState(
+    val selectedLanguageTag: String? = null,
+)
+
+data class CacheSettingsUiState(
+    val cacheSizeLabel: String = "0 B",
+    val isClearing: Boolean = false,
+)
+
+data class AboutUiState(
+    val versionName: String = "",
+    val feedbackUrl: String = "",
+    val licensesUrl: String = "",
+)
+
 data class ThemeAppearanceUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColorEnabled: Boolean = true,

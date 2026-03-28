@@ -14,8 +14,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -130,23 +130,24 @@ fun DatasetBrowserScreen(
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             when (state.status) {
                 KnowledgeLoadState.Empty -> Text("当前筛选下没有数据集。", style = MaterialTheme.typography.bodyMedium)
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.items, key = { it.datasetId }) { item ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(item.name, style = MaterialTheme.typography.titleMedium)
-                                Text(item.intro.ifBlank { item.type }, style = MaterialTheme.typography.bodyMedium)
-                                Text("向量模型：${item.vectorModel.ifBlank { "未标注" }}", style = MaterialTheme.typography.bodySmall)
-                                Text("更新时间：${item.updateTimeLabel}", style = MaterialTheme.typography.bodySmall)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    TextButton(onClick = { onOpenDataset(item.datasetId) }) { Text("Collections") }
-                                    TextButton(onClick = { onOpenSearch(item.datasetId) }) { Text("检索测试") }
-                                    TextButton(onClick = { onDeleteDataset(item.datasetId) }) { Text("删除") }
+                else ->
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(state.items, key = { it.datasetId }) { item ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(item.name, style = MaterialTheme.typography.titleMedium)
+                                    Text(item.intro.ifBlank { item.type }, style = MaterialTheme.typography.bodyMedium)
+                                    Text("向量模型：${item.vectorModel.ifBlank { "未标注" }}", style = MaterialTheme.typography.bodySmall)
+                                    Text("更新时间：${item.updateTimeLabel}", style = MaterialTheme.typography.bodySmall)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(onClick = { onOpenDataset(item.datasetId) }) { Text("Collections") }
+                                        TextButton(onClick = { onOpenSearch(item.datasetId) }) { Text("检索测试") }
+                                        TextButton(onClick = { onDeleteDataset(item.datasetId) }) { Text("删除") }
+                                    }
                                 }
                             }
                         }
                     }
-                }
             }
         }
     }

@@ -13,8 +13,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -27,8 +27,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -93,7 +93,7 @@ fun ChatScreen(
     activeCitationMessage?.let { message ->
         ModalBottomSheet(
             onDismissRequest = { activeCitationMessage = null },
-            modifier = Modifier.testTag(ChatTestTags.citationPanel),
+            modifier = Modifier.testTag(ChatTestTags.CITATION_PANEL),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -195,7 +195,7 @@ fun ChatScreen(
                 label = { Text("输入消息") },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { onSend() }),
-                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.chatInput),
+                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (uiState.canStopGeneration) {

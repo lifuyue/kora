@@ -12,21 +12,28 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+
 object ChatRoutes {
-    const val conversations = "chat/{appId}"
-    const val thread = "chat/thread/{appId}?chatId={chatId}"
-    const val appDetail = "chat/app/{appId}?chatId={chatId}"
+    const val CONVERSATIONS = "chat/{appId}"
+    const val THREAD = "chat/thread/{appId}?chatId={chatId}"
+    const val APP_DETAIL = "chat/app/{appId}?chatId={chatId}"
 
     fun conversations(appId: String): String = "chat/$appId"
 
-    fun thread(appId: String, chatId: String? = null): String =
+    fun thread(
+        appId: String,
+        chatId: String? = null,
+    ): String =
         if (chatId == null) {
             "chat/thread/$appId?chatId="
         } else {
             "chat/thread/$appId?chatId=$chatId"
         }
 
-    fun appDetail(appId: String, chatId: String? = null): String =
+    fun appDetail(
+        appId: String,
+        chatId: String? = null,
+    ): String =
         if (chatId == null) {
             "chat/app/$appId?chatId="
         } else {
@@ -36,7 +43,7 @@ object ChatRoutes {
 
 fun NavGraphBuilder.chatGraph(navController: NavController) {
     composable(
-        route = ChatRoutes.conversations,
+        route = ChatRoutes.CONVERSATIONS,
         arguments = listOf(navArgument("appId") { type = NavType.StringType }),
     ) {
         ConversationListRoute(
@@ -49,7 +56,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController) {
         )
     }
     composable(
-        route = ChatRoutes.thread,
+        route = ChatRoutes.THREAD,
         arguments =
             listOf(
                 navArgument("appId") { type = NavType.StringType },
@@ -63,7 +70,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController) {
         ChatRoute(navController = navController, onBack = { navController.popBackStack() })
     }
     composable(
-        route = ChatRoutes.appDetail,
+        route = ChatRoutes.APP_DETAIL,
         arguments =
             listOf(
                 navArgument("appId") { type = NavType.StringType },
@@ -134,7 +141,7 @@ private fun ChatRoute(
             showAppSelector = false
             appSelectorViewModel.switchApp(appId) { selected ->
                 navController.navigate(ChatRoutes.conversations(selected)) {
-                    popUpTo(ChatRoutes.conversations) { inclusive = false }
+                    popUpTo(ChatRoutes.CONVERSATIONS) { inclusive = false }
                     launchSingleTop = true
                 }
             }

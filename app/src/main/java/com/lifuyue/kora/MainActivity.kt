@@ -15,8 +15,8 @@ import com.lifuyue.kora.navigation.KoraNavGraph
 import com.lifuyue.kora.testing.KoraTestOverrides
 import com.lifuyue.kora.ui.theme.KoraTheme
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {

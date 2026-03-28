@@ -132,16 +132,40 @@ private class FakeKnowledgeRepository(
 
     override suspend fun refreshCollections(datasetId: String) = Unit
 
-    override suspend fun importText(datasetId: String, name: String, text: String, trainingType: String) = Unit
+    override suspend fun importText(
+        datasetId: String,
+        name: String,
+        text: String,
+        trainingType: String,
+    ) = Unit
 
-    override suspend fun importLinks(datasetId: String, urls: List<String>, selector: String?, trainingType: String) = Unit
+    override suspend fun importLinks(
+        datasetId: String,
+        urls: List<String>,
+        selector: String?,
+        trainingType: String,
+    ) = Unit
 
-    override suspend fun importDocument(datasetId: String, uri: Uri, displayName: String, trainingType: String) = Unit
+    override suspend fun importDocument(
+        datasetId: String,
+        uri: Uri,
+        displayName: String,
+        trainingType: String,
+    ) = Unit
 
-    override suspend fun listChunks(datasetId: String, collectionId: String, offset: Int, pageSize: Int): List<ChunkItemUiModel> =
-        chunkPages[offset].orEmpty()
+    override suspend fun listChunks(
+        datasetId: String,
+        collectionId: String,
+        offset: Int,
+        pageSize: Int,
+    ): List<ChunkItemUiModel> = chunkPages[offset].orEmpty()
 
-    override suspend fun updateChunk(dataId: String, question: String, answer: String, forbid: Boolean) = Unit
+    override suspend fun updateChunk(
+        dataId: String,
+        question: String,
+        answer: String,
+        forbid: Boolean,
+    ) = Unit
 
     override suspend fun deleteChunk(dataId: String) = Unit
 

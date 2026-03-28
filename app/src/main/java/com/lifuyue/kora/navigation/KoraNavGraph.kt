@@ -17,13 +17,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -43,6 +42,7 @@ private const val ROUTE_BOOTSTRAP = "bootstrap"
 private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_CONNECTION = "connection"
 private const val ROUTE_SHELL = "shell"
+
 @Composable
 fun KoraNavGraph(
     snapshot: ConnectionSnapshot,
@@ -177,15 +177,13 @@ private enum class ShellDestination(
 }
 
 @Composable
-private fun KoraShell(
-    snapshot: ConnectionSnapshot,
-) {
+private fun KoraShell(snapshot: ConnectionSnapshot) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     var selectedTab by rememberSaveable { mutableStateOf(ShellDestination.Chat) }
     val chatStartRoute =
-        snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.connection
+        snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.CONNECTION
 
     Scaffold(
         bottomBar = {
@@ -198,8 +196,8 @@ private fun KoraShell(
                             val route =
                                 when (destination) {
                                     ShellDestination.Chat -> chatStartRoute
-                                    ShellDestination.Knowledge -> KnowledgeRoutes.overview
-                                    ShellDestination.Settings -> SettingsRoutes.overview
+                                    ShellDestination.Knowledge -> KnowledgeRoutes.OVERVIEW
+                                    ShellDestination.Settings -> SettingsRoutes.OVERVIEW
                                 }
                             navController.navigate(route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -228,9 +226,13 @@ private fun KoraShell(
                     val selectedAppId = snapshot.selectedAppId
                     if (!selectedAppId.isNullOrBlank()) {
                         navController.navigate(ChatRoutes.conversations(selectedAppId)) {
-                            popUpTo(SettingsRoutes.connection) { inclusive = true }
+                            popUpTo(SettingsRoutes.CONNECTION) { inclusive = true }
                         }
                     }
+                },
+                currentAppId = snapshot.selectedAppId,
+                onOpenCurrentApp = { appId ->
+                    navController.navigate(ChatRoutes.appDetail(appId))
                 },
             )
             if (!snapshot.selectedAppId.isNullOrBlank()) {

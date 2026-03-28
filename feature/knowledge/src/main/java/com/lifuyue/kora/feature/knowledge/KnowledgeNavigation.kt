@@ -3,7 +3,6 @@ package com.lifuyue.kora.feature.knowledge
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -14,15 +13,19 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 
 object KnowledgeRoutes {
-    const val overview = "knowledge"
-    const val datasets = "knowledge/datasets"
-    const val collections = "knowledge/datasets/{datasetId}/collections"
-    const val chunks = "knowledge/datasets/{datasetId}/collections/{collectionId}?dataId={dataId}"
-    const val search = "knowledge/datasets/{datasetId}/search-test"
+    const val OVERVIEW = "knowledge"
+    const val DATASETS = "knowledge/datasets"
+    const val COLLECTIONS = "knowledge/datasets/{datasetId}/collections"
+    const val CHUNKS = "knowledge/datasets/{datasetId}/collections/{collectionId}?dataId={dataId}"
+    const val SEARCH = "knowledge/datasets/{datasetId}/search-test"
 
     fun collections(datasetId: String): String = "knowledge/datasets/$datasetId/collections"
 
-    fun chunks(datasetId: String, collectionId: String, dataId: String? = null): String =
+    fun chunks(
+        datasetId: String,
+        collectionId: String,
+        dataId: String? = null,
+    ): String =
         if (dataId.isNullOrBlank()) {
             "knowledge/datasets/$datasetId/collections/$collectionId?dataId="
         } else {
@@ -33,16 +36,16 @@ object KnowledgeRoutes {
 }
 
 fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
-    composable(KnowledgeRoutes.overview) {
+    composable(KnowledgeRoutes.OVERVIEW) {
         val viewModel: KnowledgeOverviewViewModel = hiltViewModel()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         KnowledgeOverviewScreen(
             state = uiState,
-            onOpenDatasets = { navController.navigate(KnowledgeRoutes.datasets) },
+            onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
             onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
         )
     }
-    composable(KnowledgeRoutes.datasets) {
+    composable(KnowledgeRoutes.DATASETS) {
         val viewModel: DatasetBrowserViewModel = hiltViewModel()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         DatasetBrowserScreen(
@@ -60,7 +63,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
         )
     }
     composable(
-        route = KnowledgeRoutes.collections,
+        route = KnowledgeRoutes.COLLECTIONS,
         arguments = listOf(navArgument("datasetId") { type = NavType.StringType }),
     ) {
         val viewModel: CollectionManagementViewModel = hiltViewModel()
@@ -87,7 +90,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
         )
     }
     composable(
-        route = KnowledgeRoutes.chunks,
+        route = KnowledgeRoutes.CHUNKS,
         arguments =
             listOf(
                 navArgument("datasetId") { type = NavType.StringType },
@@ -114,7 +117,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
         )
     }
     composable(
-        route = KnowledgeRoutes.search,
+        route = KnowledgeRoutes.SEARCH,
         arguments = listOf(navArgument("datasetId") { type = NavType.StringType }),
     ) {
         val viewModel: SearchTestViewModel = hiltViewModel()

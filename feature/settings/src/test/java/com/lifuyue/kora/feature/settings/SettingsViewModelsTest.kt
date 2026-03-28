@@ -126,6 +126,82 @@ class SettingsViewModelsTest {
             assertEquals("https://api.fastgpt.in/api", viewModel.uiState.value.serverUrl)
             assertEquals("", viewModel.uiState.value.apiKey)
         }
+
+    @Test
+    fun chatPreferencesViewModel_updatesStoredPreferences() =
+        runTest {
+            val facade =
+                FakeSettingsConnectionFacade(
+                    initialSnapshot =
+                        ConnectionSnapshot(
+                            appearancePreferences =
+                                AppearancePreferences(
+                                    streamEnabled = true,
+                                    autoScroll = true,
+                                    fontSizeScale = 1f,
+                                    showCitationsByDefault = true,
+                                ),
+                        ),
+                )
+            val viewModel = ChatPreferencesViewModel(facade)
+
+            viewModel.updateStreamEnabled(false)
+            viewModel.updateAutoScroll(false)
+            viewModel.updateFontSizeScale(1.25f)
+            viewModel.updateShowCitationsByDefault(false)
+            advanceUntilIdle()
+
+            assertFalse(facade.snapshot.value.appearancePreferences.streamEnabled)
+            assertFalse(facade.snapshot.value.appearancePreferences.autoScroll)
+            assertEquals(1.25f, facade.snapshot.value.appearancePreferences.fontSizeScale)
+            assertFalse(facade.snapshot.value.appearancePreferences.showCitationsByDefault)
+        }
+
+    @Test
+    fun languageSettingsViewModel_updatesStoredLanguageTag() =
+        runTest {
+            val facade = FakeSettingsConnectionFacade()
+            val viewModel = LanguageSettingsViewModel(facade)
+
+            viewModel.updateLanguageTag("en")
+            advanceUntilIdle()
+
+            assertEquals("en", facade.snapshot.value.appearancePreferences.languageTag)
+        }
+
+    @Test
+    fun cacheSettingsViewModel_loadsAndClearsCache() =
+        runTest {
+            val cacheManager = FakeSettingsCacheManager(cacheSizeBytes = 1_536L)
+            val viewModel = CacheSettingsViewModel(cacheManager)
+            advanceUntilIdle()
+
+            assertEquals("1.5 KB", viewModel.uiState.value.cacheSizeLabel)
+
+            viewModel.clearCache()
+            advanceUntilIdle()
+
+            assertTrue(cacheManager.clearRequested)
+            assertEquals("0 B", viewModel.uiState.value.cacheSizeLabel)
+        }
+
+    @Test
+    fun aboutViewModel_exposesAppMetadata() =
+        runTest {
+            val viewModel =
+                AboutViewModel(
+                    appInfoProvider =
+                        FakeAppInfoProvider(
+                            versionName = "1.2.3",
+                            feedbackUrl = "mailto:kora@example.com",
+                            licensesUrl = "https://example.com/licenses",
+                        ),
+                )
+
+            assertEquals("1.2.3", viewModel.uiState.value.versionName)
+            assertEquals("mailto:kora@example.com", viewModel.uiState.value.feedbackUrl)
+            assertEquals("https://example.com/licenses", viewModel.uiState.value.licensesUrl)
+        }
 }
 
 private class FakeSettingsConnectionFacade(
@@ -195,7 +271,64 @@ private class FakeSettingsConnectionFacade(
                         themeMode = themeMode,
                         dynamicColorEnabled = dynamicColorEnabled,
                         oledEnabled = oledEnabled,
+                        streamEnabled = mutableSnapshot.value.appearancePreferences.streamEnabled,
+                        autoScroll = mutableSnapshot.value.appearancePreferences.autoScroll,
+                        fontSizeScale = mutableSnapshot.value.appearancePreferences.fontSizeScale,
+                        showCitationsByDefault = mutableSnapshot.value.appearancePreferences.showCitationsByDefault,
                     ),
             )
     }
+
+    override suspend fun updateChatPreferences(
+        streamEnabled: Boolean,
+        autoScroll: Boolean,
+        fontSizeScale: Float,
+        showCitationsByDefault: Boolean,
+    ) {
+        mutableSnapshot.value =
+            mutableSnapshot.value.copy(
+                appearancePreferences =
+                    mutableSnapshot.value.appearancePreferences.copy(
+                        streamEnabled = streamEnabled,
+                        autoScroll = autoScroll,
+                        fontSizeScale = fontSizeScale,
+                        showCitationsByDefault = showCitationsByDefault,
+                    ),
+            )
+    }
+
+    override suspend fun updateLanguageTag(languageTag: String?) {
+        mutableSnapshot.value =
+            mutableSnapshot.value.copy(
+                appearancePreferences = mutableSnapshot.value.appearancePreferences.copy(languageTag = languageTag),
+            )
+    }
+}
+
+private class FakeSettingsCacheManager(
+    cacheSizeBytes: Long,
+) : SettingsCacheManager {
+    private var currentSizeBytes = cacheSizeBytes
+
+    var clearRequested: Boolean = false
+        private set
+
+    override suspend fun getCacheSizeBytes(): Long = currentSizeBytes
+
+    override suspend fun clearCache() {
+        clearRequested = true
+        currentSizeBytes = 0L
+    }
+}
+
+private class FakeAppInfoProvider(
+    private val versionName: String,
+    private val feedbackUrl: String,
+    private val licensesUrl: String,
+) : AppInfoProvider {
+    override fun versionName(): String = versionName
+
+    override fun feedbackUrl(): String = feedbackUrl
+
+    override fun licensesUrl(): String = licensesUrl
 }

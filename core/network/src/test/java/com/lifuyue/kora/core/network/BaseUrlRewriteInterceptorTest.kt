@@ -62,14 +62,23 @@ class BaseUrlRewriteInterceptorTest {
 
         override fun connectTimeoutMillis(): Int = 0
 
-        override fun withConnectTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) = this
+        override fun withConnectTimeout(
+            timeout: Int,
+            unit: java.util.concurrent.TimeUnit,
+        ) = this
 
         override fun readTimeoutMillis(): Int = 0
 
-        override fun withReadTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) = this
+        override fun withReadTimeout(
+            timeout: Int,
+            unit: java.util.concurrent.TimeUnit,
+        ) = this
 
         override fun writeTimeoutMillis(): Int = 0
 
-        override fun withWriteTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) = this
+        override fun withWriteTimeout(
+            timeout: Int,
+            unit: java.util.concurrent.TimeUnit,
+        ) = this
     }
 }

@@ -12,7 +12,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -29,26 +28,26 @@ class ConversationListScreenTest {
     fun pinnedAndRegularSectionsAreGrouped() {
         composeRule.renderConversationList()
 
-        composeRule.onNodeWithTag("${ChatTestTags.conversationItemPrefix}chat-1").fetchSemanticsNode()
+        composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").fetchSemanticsNode()
         composeRule.onNodeWithText("清空全部").assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationFolderFilter).assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationTagFilter).assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FOLDER_FILTER).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_TAG_FILTER).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
 
     @Test
     fun longPressConversationOpensBottomSheetAndDispatchesActions() {
         composeRule.renderConversationList()
 
-        composeRule.onNodeWithTag("${ChatTestTags.conversationItemPrefix}chat-1").performTouchInput {
+        composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").performTouchInput {
             longClick()
         }
         composeRule.onNodeWithText("会话操作").assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationActionTogglePin, useUnmergedTree = true).fetchSemanticsNode()
-        composeRule.onNodeWithTag(ChatTestTags.conversationActionRename, useUnmergedTree = true).fetchSemanticsNode()
-        composeRule.onNodeWithTag(ChatTestTags.conversationActionMoveFolder, useUnmergedTree = true).fetchSemanticsNode()
-        composeRule.onNodeWithTag(ChatTestTags.conversationActionEditTags, useUnmergedTree = true).fetchSemanticsNode()
-        composeRule.onNodeWithTag(ChatTestTags.conversationActionDelete, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_TOGGLE_PIN, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_RENAME, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_MOVE_FOLDER, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_EDIT_TAGS, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_DELETE, useUnmergedTree = true).fetchSemanticsNode()
     }
 
     @Test
@@ -79,8 +78,8 @@ class ConversationListScreenTest {
         )
 
         composeRule.onNodeWithText("暂无会话").assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationSearch).assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_SEARCH).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
 
     @Test
@@ -89,7 +88,7 @@ class ConversationListScreenTest {
 
         composeRule.renderConversationList(onNewConversation = { invoked = true })
 
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).performClick()
 
         assertTrue(invoked)
     }
@@ -100,7 +99,7 @@ class ConversationListScreenTest {
             uiState = ConversationListUiState(query = "架构", items = sampleConversationItems),
         )
 
-        composeRule.onNodeWithTag(ChatTestTags.conversationSearch).assertTextContains("架构")
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_SEARCH).assertTextContains("架构")
         composeRule.onAllNodesWithText("架构讨论").assertCountEquals(1)
     }
 }

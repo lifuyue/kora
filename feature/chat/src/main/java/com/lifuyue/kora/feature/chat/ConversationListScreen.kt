@@ -105,7 +105,7 @@ fun ConversationListScreen(
                     TextButton(
                         onClick = { showClearAllDialog = true },
                         enabled = uiState.canClear,
-                        modifier = Modifier.testTag(ChatTestTags.conversationClearAll),
+                        modifier = Modifier.testTag(ChatTestTags.CONVERSATION_CLEAR_ALL),
                     ) {
                         Text("清空全部")
                     }
@@ -115,7 +115,7 @@ fun ConversationListScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onNewConversation,
-                modifier = Modifier.testTag(ChatTestTags.conversationFab),
+                modifier = Modifier.testTag(ChatTestTags.CONVERSATION_FAB),
             ) {
                 Text("新建会话")
             }
@@ -138,17 +138,17 @@ fun ConversationListScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .testTag(ChatTestTags.conversationSearch),
+                        .testTag(ChatTestTags.CONVERSATION_SEARCH),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedActionChip(
                     label = uiState.selectedFolderName,
-                    modifier = Modifier.weight(1f).testTag(ChatTestTags.conversationFolderFilter),
+                    modifier = Modifier.weight(1f).testTag(ChatTestTags.CONVERSATION_FOLDER_FILTER),
                     onClick = { activeSheet = ConversationOrganizerSheet.FolderFilter },
                 )
                 OutlinedActionChip(
                     label = uiState.selectedTagName,
-                    modifier = Modifier.weight(1f).testTag(ChatTestTags.conversationTagFilter),
+                    modifier = Modifier.weight(1f).testTag(ChatTestTags.CONVERSATION_TAG_FILTER),
                     onClick = { activeSheet = ConversationOrganizerSheet.TagFilter },
                 )
             }
@@ -191,7 +191,7 @@ fun ConversationListScreen(
     if (selectedConversation != null) {
         ModalBottomSheet(
             onDismissRequest = { selectedChatId = null },
-            modifier = Modifier.testTag(ChatTestTags.conversationActionsSheet),
+            modifier = Modifier.testTag(ChatTestTags.CONVERSATION_ACTIONS_SHEET),
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -213,7 +213,7 @@ fun ConversationListScreen(
                 HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                 SheetAction(
                     label = "重命名",
-                    testTag = ChatTestTags.conversationActionRename,
+                    testTag = ChatTestTags.CONVERSATION_ACTION_RENAME,
                     onClick = {
                         renameChatId = selectedConversation.chatId
                         renameDraft = selectedConversation.title
@@ -222,7 +222,7 @@ fun ConversationListScreen(
                 )
                 SheetAction(
                     label = "移动到文件夹",
-                    testTag = ChatTestTags.conversationActionMoveFolder,
+                    testTag = ChatTestTags.CONVERSATION_ACTION_MOVE_FOLDER,
                     onClick = {
                         organizerChatId = selectedConversation.chatId
                         selectedChatId = null
@@ -231,7 +231,7 @@ fun ConversationListScreen(
                 )
                 SheetAction(
                     label = "编辑标签",
-                    testTag = ChatTestTags.conversationActionEditTags,
+                    testTag = ChatTestTags.CONVERSATION_ACTION_EDIT_TAGS,
                     onClick = {
                         organizerChatId = selectedConversation.chatId
                         editingTagIds = selectedConversation.tags.map { it.tagId }
@@ -242,7 +242,7 @@ fun ConversationListScreen(
                 )
                 SheetAction(
                     label = if (selectedConversation.isPinned) "取消置顶" else "置顶",
-                    testTag = ChatTestTags.conversationActionTogglePin,
+                    testTag = ChatTestTags.CONVERSATION_ACTION_TOGGLE_PIN,
                     onClick = {
                         onTogglePin(selectedConversation.chatId, !selectedConversation.isPinned)
                         selectedChatId = null
@@ -250,7 +250,7 @@ fun ConversationListScreen(
                 )
                 SheetAction(
                     label = "删除",
-                    testTag = ChatTestTags.conversationActionDelete,
+                    testTag = ChatTestTags.CONVERSATION_ACTION_DELETE,
                     onClick = {
                         onDeleteConversation(selectedConversation.chatId)
                         selectedChatId = null
@@ -265,95 +265,97 @@ fun ConversationListScreen(
         when (activeSheet) {
             ConversationOrganizerSheet.FolderFilter,
             ConversationOrganizerSheet.MoveFolder,
-            -> ModalBottomSheet(
-                onDismissRequest = {
-                    activeSheet = null
-                    organizerChatId = null
-                },
-                modifier = Modifier.testTag(ChatTestTags.conversationFolderSheet),
-            ) {
-                FolderSheetContent(
-                    uiState = uiState,
-                    currentFolderId = organizerConversation?.folderId,
-                    activeSheet = checkNotNull(activeSheet),
-                    createDraft = createFolderDraft,
-                    onCreateDraftChanged = { createFolderDraft = it },
-                    onCreateFolder = {
-                        onCreateFolder(createFolderDraft)
-                        createFolderDraft = ""
-                    },
-                    onSelectFolder = { folderId ->
-                        val conversation = organizerConversation
-                        if (activeSheet == ConversationOrganizerSheet.MoveFolder && conversation != null) {
-                            onMoveConversationToFolder(conversation.chatId, folderId)
-                            organizerChatId = null
-                        } else {
-                            onSelectFolderFilter(folderId)
-                        }
+            ->
+                ModalBottomSheet(
+                    onDismissRequest = {
                         activeSheet = null
+                        organizerChatId = null
                     },
-                    onRenameFolder = { folder ->
-                        renameTargetId = folder.folderId
-                        renameTargetType = EditTarget.Folder
-                        renameTargetDraft = folder.name
-                    },
-                    onDeleteFolder = { folderId ->
-                        deleteFolderId = folderId
-                    },
-                )
-            }
+                    modifier = Modifier.testTag(ChatTestTags.CONVERSATION_FOLDER_SHEET),
+                ) {
+                    FolderSheetContent(
+                        uiState = uiState,
+                        currentFolderId = organizerConversation?.folderId,
+                        activeSheet = checkNotNull(activeSheet),
+                        createDraft = createFolderDraft,
+                        onCreateDraftChanged = { createFolderDraft = it },
+                        onCreateFolder = {
+                            onCreateFolder(createFolderDraft)
+                            createFolderDraft = ""
+                        },
+                        onSelectFolder = { folderId ->
+                            val conversation = organizerConversation
+                            if (activeSheet == ConversationOrganizerSheet.MoveFolder && conversation != null) {
+                                onMoveConversationToFolder(conversation.chatId, folderId)
+                                organizerChatId = null
+                            } else {
+                                onSelectFolderFilter(folderId)
+                            }
+                            activeSheet = null
+                        },
+                        onRenameFolder = { folder ->
+                            renameTargetId = folder.folderId
+                            renameTargetType = EditTarget.Folder
+                            renameTargetDraft = folder.name
+                        },
+                        onDeleteFolder = { folderId ->
+                            deleteFolderId = folderId
+                        },
+                    )
+                }
 
             ConversationOrganizerSheet.TagFilter,
             ConversationOrganizerSheet.EditTags,
-            -> ModalBottomSheet(
-                onDismissRequest = {
-                    activeSheet = null
-                    organizerChatId = null
-                },
-                modifier = Modifier.testTag(ChatTestTags.conversationTagSheet),
-            ) {
-                TagSheetContent(
-                    uiState = uiState,
-                    activeSheet = checkNotNull(activeSheet),
-                    createDraft = createTagDraft,
-                    tagSearchQuery = tagSearchQuery,
-                    selectedTagIds = editingTagIds,
-                    onCreateDraftChanged = { createTagDraft = it },
-                    onTagSearchQueryChanged = { tagSearchQuery = it },
-                    onCreateTag = {
-                        onCreateTag(createTagDraft)
-                        createTagDraft = ""
-                    },
-                    onSelectFilterTag = { tagId ->
-                        onSelectTagFilter(tagId)
+            ->
+                ModalBottomSheet(
+                    onDismissRequest = {
                         activeSheet = null
-                    },
-                    onToggleConversationTag = { tagId ->
-                        editingTagIds =
-                            if (editingTagIds.contains(tagId)) {
-                                editingTagIds - tagId
-                            } else {
-                                editingTagIds + tagId
-                            }
-                    },
-                    onSaveConversationTags = {
-                        val conversation = organizerConversation
-                        if (conversation != null) {
-                            onSetConversationTags(conversation.chatId, editingTagIds)
-                        }
                         organizerChatId = null
-                        activeSheet = null
                     },
-                    onRenameTag = { tag ->
-                        renameTargetId = tag.tagId
-                        renameTargetType = EditTarget.Tag
-                        renameTargetDraft = tag.name
-                    },
-                    onDeleteTag = { tagId ->
-                        deleteTagId = tagId
-                    },
-                )
-            }
+                    modifier = Modifier.testTag(ChatTestTags.CONVERSATION_TAG_SHEET),
+                ) {
+                    TagSheetContent(
+                        uiState = uiState,
+                        activeSheet = checkNotNull(activeSheet),
+                        createDraft = createTagDraft,
+                        tagSearchQuery = tagSearchQuery,
+                        selectedTagIds = editingTagIds,
+                        onCreateDraftChanged = { createTagDraft = it },
+                        onTagSearchQueryChanged = { tagSearchQuery = it },
+                        onCreateTag = {
+                            onCreateTag(createTagDraft)
+                            createTagDraft = ""
+                        },
+                        onSelectFilterTag = { tagId ->
+                            onSelectTagFilter(tagId)
+                            activeSheet = null
+                        },
+                        onToggleConversationTag = { tagId ->
+                            editingTagIds =
+                                if (editingTagIds.contains(tagId)) {
+                                    editingTagIds - tagId
+                                } else {
+                                    editingTagIds + tagId
+                                }
+                        },
+                        onSaveConversationTags = {
+                            val conversation = organizerConversation
+                            if (conversation != null) {
+                                onSetConversationTags(conversation.chatId, editingTagIds)
+                            }
+                            organizerChatId = null
+                            activeSheet = null
+                        },
+                        onRenameTag = { tag ->
+                            renameTargetId = tag.tagId
+                            renameTargetType = EditTarget.Tag
+                            renameTargetDraft = tag.name
+                        },
+                        onDeleteTag = { tagId ->
+                            deleteTagId = tagId
+                        },
+                    )
+                }
 
             null -> Unit
         }
@@ -372,7 +374,7 @@ fun ConversationListScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .testTag(ChatTestTags.renameConversationInput),
+                            .testTag(ChatTestTags.RENAME_CONVERSATION_INPUT),
                 )
             },
             confirmButton = {
@@ -554,7 +556,12 @@ private fun FolderSheetContent(
         SheetActionRow(
             title = if (activeSheet == ConversationOrganizerSheet.MoveFolder) "移出文件夹" else "全部文件夹",
             subtitle = "",
-            selected = if (activeSheet == ConversationOrganizerSheet.MoveFolder) currentFolderId == null else uiState.selectedFolderId == null,
+            selected =
+                if (activeSheet == ConversationOrganizerSheet.MoveFolder) {
+                    currentFolderId == null
+                } else {
+                    uiState.selectedFolderId == null
+                },
             onPrimaryAction = { onSelectFolder(null) },
             primaryLabel = if (activeSheet == ConversationOrganizerSheet.MoveFolder) "移出" else "查看",
         )
@@ -562,7 +569,12 @@ private fun FolderSheetContent(
             SheetActionRow(
                 title = folder.name,
                 subtitle = "",
-                selected = if (activeSheet == ConversationOrganizerSheet.MoveFolder) currentFolderId == folder.folderId else uiState.selectedFolderId == folder.folderId,
+                selected =
+                    if (activeSheet == ConversationOrganizerSheet.MoveFolder) {
+                        currentFolderId == folder.folderId
+                    } else {
+                        uiState.selectedFolderId == folder.folderId
+                    },
                 onPrimaryAction = { onSelectFolder(folder.folderId) },
                 primaryLabel = if (activeSheet == ConversationOrganizerSheet.MoveFolder) "移动" else "查看",
                 onRename = { onRenameFolder(folder) },
@@ -699,7 +711,7 @@ private fun ConversationListCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .testTag("${ChatTestTags.conversationItemPrefix}${item.chatId}")
+                .testTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}${item.chatId}")
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
