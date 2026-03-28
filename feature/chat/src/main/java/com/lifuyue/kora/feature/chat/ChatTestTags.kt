@@ -17,8 +17,12 @@ object ChatTestTags {
     const val RENAME_CONVERSATION_INPUT = "rename_conversation_input"
     const val CONVERSATION_ITEM_PREFIX = "conversation_item_"
     const val CHAT_INPUT = "chat_input"
+    const val CHAT_LIST = "chat_list"
+    const val CHAT_SKELETON = "chat_skeleton"
+    const val AUTO_SCROLL_RESUME = "auto_scroll_resume"
     const val CITATION_PANEL = "citation_panel"
     const val CITATION_SUMMARY_PREFIX = "citation_summary_"
+    const val MERMAID_BLOCK_PREFIX = "mermaid_block_"
 
     fun messageCard(messageId: String): String = "message_card_$messageId"
 

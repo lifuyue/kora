@@ -1,11 +1,13 @@
 package com.lifuyue.kora.feature.knowledge
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +42,7 @@ class DatasetBrowserViewModel
     @Inject
     constructor(
         private val repository: KnowledgeRepository,
+        private val strings: KnowledgeStrings,
     ) : ViewModel() {
         private val meta = MutableStateFlow(DatasetBrowserUiState())
 
@@ -53,16 +56,12 @@ class DatasetBrowserViewModel
                                 it.intro.contains(state.query, ignoreCase = true)
                         ) &&
                             (state.selectedTypeFilter == null || it.type == state.selectedTypeFilter) &&
-                            (
-                                state.selectedStatusFilter == null ||
-                                    it.updateTimeLabel == state.selectedStatusFilter ||
-                                    "active" == state.selectedStatusFilter
-                            )
+                            (state.selectedStatusFilter == null || it.status == state.selectedStatusFilter)
                     }
                 state.copy(
                     items = filtered,
                     availableTypes = datasets.map { it.type }.filter { it.isNotBlank() }.distinct(),
-                    availableStatuses = listOf("active"),
+                    availableStatuses = datasets.map { it.status }.filter { it.isNotBlank() }.distinct(),
                     status =
                         when {
                             state.errorMessage != null -> KnowledgeLoadState.Error
@@ -99,7 +98,7 @@ class DatasetBrowserViewModel
                     .onFailure {
                         meta.update { state ->
                             state.copy(
-                                errorMessage = it.message ?: "刷新失败",
+                                errorMessage = it.message ?: strings.refreshFailed(),
                                 status = KnowledgeLoadState.Error,
                             )
                         }
@@ -116,14 +115,22 @@ class DatasetBrowserViewModel
                     .onSuccess {
                         meta.update { it.copy(createName = "") }
                         repository.refreshDatasets(meta.value.query)
-                    }.onFailure { meta.update { state -> state.copy(errorMessage = it.message ?: "创建失败") } }
+                    }.onFailure {
+                        meta.update { state ->
+                            state.copy(errorMessage = it.message ?: strings.createFailed())
+                        }
+                    }
             }
         }
 
         fun deleteDataset(datasetId: String) {
             viewModelScope.launch {
                 runCatching { repository.deleteDataset(datasetId) }
-                    .onFailure { meta.update { state -> state.copy(errorMessage = it.message ?: "删除失败") } }
+                    .onFailure {
+                        meta.update { state ->
+                            state.copy(errorMessage = it.message ?: strings.deleteFailed())
+                        }
+                    }
             }
         }
     }
@@ -134,6 +141,7 @@ class CollectionManagementViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val repository: KnowledgeRepository,
+        private val strings: KnowledgeStrings,
     ) : ViewModel() {
         val datasetId: String = checkNotNull(savedStateHandle["datasetId"])
         private val meta = MutableStateFlow(CollectionManagementUiState(datasetId = datasetId))
@@ -169,7 +177,11 @@ class CollectionManagementViewModel
         fun refresh() {
             viewModelScope.launch {
                 runCatching { repository.refreshCollections(datasetId) }
-                    .onFailure { meta.update { state -> state.copy(errorMessage = it.message ?: "刷新失败") } }
+                    .onFailure {
+                        meta.update { state ->
+                            state.copy(errorMessage = it.message ?: strings.refreshFailed())
+                        }
+                    }
             }
         }
 
@@ -199,7 +211,7 @@ class CollectionManagementViewModel
         ) {
             val errorMessage =
                 if (displayName.isNotBlank() && !displayName.isSupportedDocument()) {
-                    "仅支持 PDF、DOCX、TXT、MD、CSV、HTML"
+                    strings.unsupportedDocument()
                 } else {
                     null
                 }
@@ -214,14 +226,14 @@ class CollectionManagementViewModel
                         CollectionCreateMode.TEXT ->
                             repository.importText(
                                 datasetId = datasetId,
-                                name = meta.value.textDraftName.ifBlank { "文本导入" },
+                                name = meta.value.textDraftName.ifBlank { strings.defaultTextImportName() },
                                 text = meta.value.textDraftValue,
                                 trainingType = "chunk",
                             )
                         CollectionCreateMode.QA ->
                             repository.importText(
                                 datasetId = datasetId,
-                                name = meta.value.textDraftName.ifBlank { "QA 导入" },
+                                name = meta.value.textDraftName.ifBlank { strings.defaultQaImportName() },
                                 text = meta.value.textDraftValue,
                                 trainingType = "qa",
                             )
@@ -234,11 +246,13 @@ class CollectionManagementViewModel
                             )
                         CollectionCreateMode.FILE -> {
                             val uri = checkNotNull(meta.value.selectedDocumentUri)
-                            check(meta.value.selectedDocumentName.isSupportedDocument()) { "仅支持 PDF、DOCX、TXT、MD、CSV、HTML" }
+                            check(meta.value.selectedDocumentName.isSupportedDocument()) {
+                                strings.unsupportedDocument()
+                            }
                             repository.importDocument(
                                 datasetId = datasetId,
                                 uri = uri,
-                                displayName = meta.value.selectedDocumentName.ifBlank { "document" },
+                                displayName = meta.value.selectedDocumentName.ifBlank { strings.defaultDocumentName() },
                                 trainingType = "chunk",
                             )
                         }
@@ -257,7 +271,12 @@ class CollectionManagementViewModel
                         )
                     }
                 }.onFailure { error ->
-                    meta.update { it.copy(isSubmitting = false, errorMessage = error.message ?: "提交失败") }
+                    val message =
+                        when (error) {
+                            SelectedDocumentUnreadableException -> strings.selectedDocumentUnreadable()
+                            else -> error.message ?: strings.submitFailed()
+                        }
+                    meta.update { it.copy(isSubmitting = false, errorMessage = message) }
                 }
             }
         }
@@ -269,6 +288,7 @@ class ChunkViewerViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val repository: KnowledgeRepository,
+        private val strings: KnowledgeStrings,
     ) : ViewModel() {
         companion object {
             private const val PAGE_SIZE = 20
@@ -310,7 +330,7 @@ class ChunkViewerViewModel
                         meta.update { state ->
                             state.copy(
                                 isLoading = false,
-                                errorMessage = it.message ?: "加载失败",
+                                errorMessage = it.message ?: strings.loadFailed(),
                             )
                         }
                     }
@@ -338,7 +358,9 @@ class ChunkViewerViewModel
                         )
                     }
                 }.onFailure { error ->
-                    meta.update { it.copy(isLoading = false, errorMessage = error.message ?: "加载失败") }
+                    meta.update {
+                        it.copy(isLoading = false, errorMessage = error.message ?: strings.loadFailed())
+                    }
                 }
             }
         }
@@ -382,7 +404,11 @@ class ChunkViewerViewModel
                         )
                     }
                     refresh()
-                }.onFailure { meta.update { state -> state.copy(errorMessage = it.message ?: "保存失败") } }
+                }.onFailure {
+                    meta.update { state ->
+                        state.copy(errorMessage = it.message ?: strings.saveFailed())
+                    }
+                }
             }
         }
 
@@ -394,7 +420,11 @@ class ChunkViewerViewModel
             viewModelScope.launch {
                 runCatching { repository.deleteChunk(chunkId) }
                     .onSuccess { refresh() }
-                    .onFailure { meta.update { state -> state.copy(errorMessage = it.message ?: "删除失败") } }
+                    .onFailure {
+                        meta.update { state ->
+                            state.copy(errorMessage = it.message ?: strings.deleteFailed())
+                        }
+                    }
             }
         }
     }
@@ -405,6 +435,7 @@ class SearchTestViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val repository: KnowledgeRepository,
+        private val strings: KnowledgeStrings,
     ) : ViewModel() {
         private val datasetId: String = checkNotNull(savedStateHandle["datasetId"])
         private val mutableState = MutableStateFlow(SearchTestUiState(datasetId = datasetId))
@@ -456,7 +487,7 @@ class SearchTestViewModel
                     mutableState.update {
                         it.copy(
                             isSearching = false,
-                            errorMessage = error.message ?: "检索失败",
+                            errorMessage = error.message ?: strings.searchFailed(),
                             status = KnowledgeLoadState.Error,
                         )
                     }
@@ -469,3 +500,33 @@ private fun String.isSupportedDocument(): Boolean {
     val extension = substringAfterLast('.', "").lowercase()
     return extension in setOf("pdf", "docx", "txt", "md", "csv", "html", "htm")
 }
+
+open class KnowledgeStrings
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) {
+        open fun refreshFailed(): String = context.getString(R.string.knowledge_error_refresh_failed)
+
+        open fun createFailed(): String = context.getString(R.string.knowledge_error_create_failed)
+
+        open fun deleteFailed(): String = context.getString(R.string.knowledge_error_delete_failed)
+
+        open fun selectedDocumentUnreadable(): String = context.getString(R.string.knowledge_selected_document_unreadable)
+
+        open fun unsupportedDocument(): String = context.getString(R.string.knowledge_selected_document_unsupported)
+
+        open fun defaultTextImportName(): String = context.getString(R.string.knowledge_default_text_import_name)
+
+        open fun defaultQaImportName(): String = context.getString(R.string.knowledge_default_qa_import_name)
+
+        open fun defaultDocumentName(): String = context.getString(R.string.knowledge_default_document_name)
+
+        open fun submitFailed(): String = context.getString(R.string.knowledge_error_submit_failed)
+
+        open fun loadFailed(): String = context.getString(R.string.knowledge_error_load_failed)
+
+        open fun saveFailed(): String = context.getString(R.string.knowledge_error_save_failed)
+
+        open fun searchFailed(): String = context.getString(R.string.knowledge_error_search_failed)
+    }

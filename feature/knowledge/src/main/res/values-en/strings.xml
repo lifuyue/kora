@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="knowledge_overview_title">Knowledge</string>
+    <string name="knowledge_overview_current_app">Current app: %1$s</string>
+    <string name="knowledge_overview_no_app_selected">Not selected</string>
+    <plurals name="knowledge_overview_dataset_count">
+        <item quantity="one">%1$d dataset</item>
+        <item quantity="other">%1$d datasets</item>
+    </plurals>
+    <string name="knowledge_overview_open_datasets">Open datasets</string>
+    <string name="knowledge_back">Back</string>
+    <string name="knowledge_refresh">Refresh</string>
+    <string name="knowledge_refreshing">Refreshing</string>
+    <string name="knowledge_create">Create</string>
+    <string name="knowledge_delete">Delete</string>
+    <string name="knowledge_edit">Edit</string>
+    <string name="knowledge_save">Save</string>
+    <string name="knowledge_loading">Loading...</string>
+    <string name="knowledge_load_more">Load more</string>
+    <string name="knowledge_unspecified">Unspecified</string>
+    <string name="knowledge_updated_at">Updated: %1$s</string>
+    <string name="knowledge_name">Name</string>
+    <string name="knowledge_question">Question</string>
+    <string name="knowledge_answer">Answer</string>
+
+    <string name="knowledge_dataset_browser_title">Datasets</string>
+    <string name="knowledge_dataset_search_label">Search datasets</string>
+    <string name="knowledge_dataset_filter_all_types">All types</string>
+    <string name="knowledge_dataset_filter_all_statuses">All statuses</string>
+    <string name="knowledge_dataset_create_name_label">New dataset name</string>
+    <string name="knowledge_dataset_empty">No datasets match the current filters.</string>
+    <string name="knowledge_dataset_vector_model">Vector model: %1$s</string>
+    <string name="knowledge_dataset_summary">%1$s · %2$s</string>
+    <string name="knowledge_error_refresh_failed">Failed to refresh</string>
+    <string name="knowledge_error_create_failed">Failed to create</string>
+    <string name="knowledge_error_delete_failed">Failed to delete</string>
+
+    <string name="knowledge_collections_title">Collections</string>
+    <string name="knowledge_pick_file">Choose file</string>
+    <string name="knowledge_selected_document">Selected: %1$s</string>
+    <string name="knowledge_selected_document_unreadable">Unable to read the selected file</string>
+    <string name="knowledge_selected_document_unsupported">Only PDF, DOCX, TXT, MD, CSV, and HTML are supported</string>
+    <string name="knowledge_default_text_import_name">Text import</string>
+    <string name="knowledge_default_qa_import_name">Q&amp;A import</string>
+    <string name="knowledge_default_document_name">document</string>
+    <string name="knowledge_error_submit_failed">Failed to submit</string>
+    <string name="knowledge_link_urls_label">URL, one per line</string>
+    <string name="knowledge_link_selector_label">Selector (optional)</string>
+    <string name="knowledge_qa_content">Q/A content</string>
+    <string name="knowledge_text_content">Text content</string>
+    <string name="knowledge_submitting">Submitting...</string>
+    <string name="knowledge_create_import">Create import</string>
+    <string name="knowledge_open_search_test">Open search test</string>
+    <string name="knowledge_import_tasks">Import tasks</string>
+    <string name="knowledge_collection_list">Collection list</string>
+    <string name="knowledge_collection_empty">This dataset has no collections yet.</string>
+    <string name="knowledge_collection_mode_file">File</string>
+    <string name="knowledge_collection_mode_link">Link</string>
+    <string name="knowledge_collection_mode_text">Text</string>
+    <string name="knowledge_collection_mode_qa">Q&amp;A</string>
+    <string name="knowledge_import_task_summary">%1$s · %2$s · %3$d%%</string>
+    <string name="knowledge_collection_summary">%1$s · %2$s · %3$s</string>
+
+    <string name="knowledge_chunk_viewer_title">Chunk viewer</string>
+    <string name="knowledge_disable_chunk">Disable this chunk</string>
+    <string name="knowledge_highlighted_hit">Current citation hit</string>
+    <string name="knowledge_chunk_header">Chunk %1$d · %2$s</string>
+    <string name="knowledge_error_load_failed">Failed to load</string>
+    <string name="knowledge_error_save_failed">Failed to save</string>
+
+    <string name="knowledge_label_type_file">File</string>
+    <string name="knowledge_label_type_link">Link</string>
+    <string name="knowledge_label_type_text">Text</string>
+    <string name="knowledge_label_type_qa">Q&amp;A</string>
+    <string name="knowledge_label_type_url">URL</string>
+    <string name="knowledge_label_training_chunk">Chunked</string>
+    <string name="knowledge_label_training_qa">Q&amp;A</string>
+    <string name="knowledge_label_status_active">Active</string>
+    <string name="knowledge_label_status_running">Running</string>
+    <string name="knowledge_label_status_syncing">Syncing</string>
+    <string name="knowledge_label_status_failed">Failed</string>
+    <string name="knowledge_label_status_success">Success</string>
+    <string name="knowledge_label_status_pending">Pending</string>
+    <string name="knowledge_label_status_disabled">Disabled</string>
+
+    <string name="knowledge_search_test_title">Search test</string>
+    <string name="knowledge_search_mode">Search mode</string>
+    <string name="knowledge_similarity">Similarity</string>
+    <string name="knowledge_embedding_weight">Embedding weight</string>
+    <string name="knowledge_use_rerank">Use ReRank</string>
+    <string name="knowledge_searching">Searching...</string>
+    <string name="knowledge_start_search">Start search</string>
+    <string name="knowledge_duration">Duration: %1$s</string>
+    <string name="knowledge_extension_model">Query extension model: %1$s</string>
+    <string name="knowledge_search_empty">No results found.</string>
+    <string name="knowledge_error_search_failed">Failed to search</string>
+    <string name="knowledge_search_result_title_fallback">Matched snippet</string>
+    <string name="knowledge_search_result_snippet_fallback">No preview available</string>
+    <string name="knowledge_score_summary">%1$s · %2$s</string>
+</resources>

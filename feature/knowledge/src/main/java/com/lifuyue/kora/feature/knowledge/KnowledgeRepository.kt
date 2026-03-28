@@ -103,6 +103,8 @@ interface KnowledgeRepository {
     ): Triple<String, String, List<SearchResultUiModel>>
 }
 
+object SelectedDocumentUnreadableException : IllegalStateException()
+
 @Singleton
 class RoomBackedKnowledgeRepository
     @Inject
@@ -121,8 +123,9 @@ class RoomBackedKnowledgeRepository
                         name = entity.name,
                         intro = entity.summaryJson.extractField("intro"),
                         type = entity.type,
+                        status = entity.status,
                         vectorModel = entity.summaryJson.extractField("vectorModel"),
-                        updateTimeLabel = entity.updateTime.toString(),
+                        updateTime = entity.updateTime,
                     )
                 }
             }
@@ -160,7 +163,7 @@ class RoomBackedKnowledgeRepository
                         trainingType = entity.trainingType,
                         status = if (importingNames.contains(entity.name)) "syncing" else entity.status,
                         sourceName = entity.sourceName,
-                        updateTimeLabel = entity.updateTime.toString(),
+                        updateTime = entity.updateTime,
                     )
                 }
             }
@@ -247,7 +250,7 @@ class RoomBackedKnowledgeRepository
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     tempFile.outputStream().use { output -> input.copyTo(output) }
-                } ?: error("无法读取所选文件")
+                } ?: throw SelectedDocumentUnreadableException
                 importTaskDao.upsert(task(taskId, datasetId, "file", displayName, "running", 50))
                 val requestBody = tempFile.asRequestBody("application/octet-stream".toMediaType())
                 api.createLocalFileCollection(
@@ -321,13 +324,11 @@ class RoomBackedKnowledgeRepository
                         datasetId = it.datasetId,
                         collectionId = it.collectionId,
                         dataId = it.dataId,
-                        title = it.sourceName ?: it.q.orEmpty().take(18).ifBlank { "命中片段" },
-                        snippet = listOfNotNull(it.q, it.a).joinToString("\n").ifBlank { "无预览" },
-                        scoreLabel =
-                            listOfNotNull(
-                                it.scoreType,
-                                it.score?.let { score -> String.format("%.3f", score) },
-                            ).joinToString(" · "),
+                        sourceName = it.sourceName.orEmpty(),
+                        question = it.q.orEmpty(),
+                        answer = it.a.orEmpty(),
+                        scoreType = it.scoreType,
+                        score = it.score,
                     )
                 },
             )

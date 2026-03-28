@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -44,7 +45,6 @@ import android.graphics.Color as AndroidColor
 private val codeFenceRegex = Regex("```([A-Za-z0-9_+-]*)\\n([\\s\\S]*?)```")
 private val richInlineRegex =
     Regex("""(?s)!\[([^\]]*)]\(([^)]+)\)|\$\$(.+?)\$\$|(?<!\$)\$([^\n$]+?)\$(?!\$)""")
-private const val MERMAID_FALLBACK_TITLE = "Mermaid 图表暂不渲染"
 
 internal sealed interface MarkdownRenderNode {
     data class MarkdownText(val markdown: String) : MarkdownRenderNode
@@ -407,12 +407,41 @@ private fun buildKatexHtml(
         """.trimIndent()
 }
 
+internal fun buildMermaidHtml(source: String): String {
+    val escaped = escapeHtml(source)
+    return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({ startOnLoad: true, securityLevel: 'loose', theme: 'default' });
+          </script>
+          <style>
+            body {
+              margin: 0;
+              padding: 8px 0;
+              background: transparent;
+            }
+            .mermaid {
+              overflow-x: auto;
+            }
+          </style>
+        </head>
+        <body>
+          <pre class="mermaid">$escaped</pre>
+        </body>
+        </html>
+        """.trimIndent()
+}
+
 private fun escapeHtml(source: String): String =
     buildString(source.length) {
         source.forEach { char ->
             when (char) {
                 '<' -> append("&lt;")
-                '>' -> append("&gt;")
                 '&' -> append("&amp;")
                 '"' -> append("&quot;")
                 '\'' -> append("&#39;")
@@ -494,33 +523,80 @@ private fun CodeFenceCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = if (language.isBlank()) "code" else language,
+                    text = if (language.isBlank()) stringResource(R.string.markdown_code_language_fallback) else language,
                     style = MaterialTheme.typography.labelLarge,
                 )
                 TextButton(onClick = { onCopyCode(code) }) {
-                    Text("复制代码")
+                    Text(stringResource(R.string.markdown_copy_code))
                 }
             }
             if (isMermaidFallback) {
-                Text(
-                    text = MERMAID_FALLBACK_TITLE,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-            }
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                SelectionContainer {
-                    Text(
-                        text = buildHighlightedCode(language = language, code = code),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(12.dp),
-                    )
+                MermaidDiagramBlock(code = code)
+            } else {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    SelectionContainer {
+                        Text(
+                            text = buildHighlightedCode(language = language, code = code),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(12.dp),
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+private fun MermaidDiagramBlock(code: String) {
+    val html = remember(code) { buildMermaidHtml(code) }
+    val fallbackLabel = stringResource(R.string.markdown_mermaid_fallback_title)
+    val testTag = "${ChatTestTags.MERMAID_BLOCK_PREFIX}${code.trim().hashCode()}"
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 120.dp)
+                .testTag(testTag),
+    ) {
+        AndroidView(
+            factory = { context ->
+                runCatching {
+                    WebView(context).apply {
+                        setBackgroundColor(AndroidColor.TRANSPARENT)
+                        webViewClient = WebViewClient()
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                    } as View
+                }.getOrElse {
+                    TextView(context).apply {
+                        textSize = 15f
+                        text = code
+                    }
+                }
+            },
+            update = { view ->
+                when (view) {
+                    is WebView -> {
+                        view.loadDataWithBaseURL(
+                            "https://localhost/",
+                            html,
+                            "text/html",
+                            "utf-8",
+                            null,
+                        )
+                    }
+                    is TextView -> {
+                        view.text = code.ifBlank { fallbackLabel }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

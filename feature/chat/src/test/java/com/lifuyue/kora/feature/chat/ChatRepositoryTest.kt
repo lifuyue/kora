@@ -56,6 +56,7 @@ class ChatRepositoryTest {
                 conversationFolderDao = database.conversationFolderDao(),
                 conversationTagDao = database.conversationTagDao(),
                 messageDao = database.messageDao(),
+                context = ApplicationProvider.getApplicationContext(),
             )
     }
 
@@ -183,6 +184,7 @@ class ChatRepositoryTest {
                     conversationFolderDao = database.conversationFolderDao(),
                     conversationTagDao = database.conversationTagDao(),
                     messageDao = database.messageDao(),
+                    context = ApplicationProvider.getApplicationContext(),
                     responsePlanner =
                         AssistantResponsePlanner {
                             plannerInvocation += 1

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_selected">Selected</string>
+    <string name="settings_summary_not_configured">Not configured</string>
+    <string name="settings_summary_not_selected">Not selected</string>
+
+    <string name="settings_overview_title">Settings</string>
+    <string name="settings_overview_section_connection">Connection and account</string>
+    <string name="settings_overview_section_appearance">Appearance and theme</string>
+    <string name="settings_overview_section_common">General and info</string>
+
+    <string name="settings_connection_title">Connection</string>
+    <string name="settings_connection_server_url_label">Server URL</string>
+    <string name="settings_connection_api_key_label">API Key</string>
+    <string name="settings_connection_test">Test connection</string>
+    <string name="settings_connection_testing">Testing...</string>
+    <string name="settings_connection_save">Save</string>
+    <string name="settings_connection_saving">Saving...</string>
+    <string name="settings_connection_clear">Clear</string>
+    <string name="settings_connection_api_key_summary">Current key summary: %1$s</string>
+    <plurals name="settings_connection_success">
+        <item quantity="one">Connected successfully. Found %1$d app in %2$d ms</item>
+        <item quantity="other">Connected successfully. Found %1$d apps in %2$d ms</item>
+    </plurals>
+    <string name="settings_connection_validation_error">Validation failed: %1$s</string>
+    <string name="settings_connection_auth_error">Authentication failed: %1$s</string>
+    <string name="settings_connection_network_error">Network error: %1$s</string>
+    <string name="settings_connection_server_error">Server error: %1$s</string>
+
+    <string name="settings_current_app_title">Current app</string>
+    <string name="settings_theme_title">Theme</string>
+    <string name="settings_theme_dynamic_color">Dynamic color</string>
+    <string name="settings_theme_oled">OLED dark enhancement</string>
+    <string name="settings_theme_mode_light">Light</string>
+    <string name="settings_theme_mode_dark">Dark</string>
+    <string name="settings_theme_mode_system">Follow system</string>
+    <string name="settings_theme_mode_oled_dark">OLED dark</string>
+
+    <string name="settings_chat_preferences_title">Chat preferences</string>
+    <string name="settings_chat_preferences_summary">Streaming, scrolling, text size, and citations</string>
+    <string name="settings_chat_preferences_stream">Enable streaming output</string>
+    <string name="settings_chat_preferences_auto_scroll">Auto-scroll to bottom</string>
+    <string name="settings_chat_preferences_citations">Show citations by default</string>
+    <string name="settings_chat_preferences_font_scale">Text size %1$d%%</string>
+
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_follow_system">Follow system</string>
+    <string name="settings_language_simplified_chinese">Simplified Chinese</string>
+    <string name="settings_language_english">English</string>
+
+    <string name="settings_storage_title">Storage</string>
+    <string name="settings_storage_summary">Inspect storage usage and clear temporary cache</string>
+    <string name="settings_storage_bucket_database">Database</string>
+    <string name="settings_storage_bucket_preferences">Preferences</string>
+    <string name="settings_storage_bucket_temp_cache">Temp cache</string>
+    <string name="settings_storage_clear">Clear cache</string>
+    <string name="settings_storage_clearing">Clearing...</string>
+
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_summary">Kora Android Client</string>
+    <string name="settings_about_feedback">Feedback</string>
+    <string name="settings_about_licenses">Open-source licenses</string>
+</resources>

@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.settings
 
+import android.text.format.Formatter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -49,18 +53,18 @@ fun ConnectionConfigScreen(
                 .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("连接配置", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.settings_connection_title), style = MaterialTheme.typography.headlineMedium)
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = onBaseUrlChange,
-            label = { Text("Server URL") },
+            label = { Text(stringResource(R.string.settings_connection_server_url_label)) },
             modifier = Modifier.fillMaxWidth().semantics { testTag = "server-url" },
             singleLine = true,
         )
         OutlinedTextField(
             value = state.apiKey,
             onValueChange = onApiKeyChange,
-            label = { Text("API Key") },
+            label = { Text(stringResource(R.string.settings_connection_api_key_label)) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth().semantics { testTag = "api-key" },
             singleLine = true,
@@ -71,20 +75,36 @@ fun ConnectionConfigScreen(
                 enabled = !state.isTesting,
                 modifier = Modifier.semantics { testTag = "test-connection" },
             ) {
-                Text(if (state.isTesting) "测试中..." else "测试连接")
+                Text(
+                    stringResource(
+                        if (state.isTesting) {
+                            R.string.settings_connection_testing
+                        } else {
+                            R.string.settings_connection_test
+                        },
+                    ),
+                )
             }
             Button(
                 onClick = onSave,
                 enabled = state.canSave && !state.isSaving,
                 modifier = Modifier.semantics { testTag = "save-connection" },
             ) {
-                Text(if (state.isSaving) "保存中..." else "保存")
+                Text(
+                    stringResource(
+                        if (state.isSaving) {
+                            R.string.settings_connection_saving
+                        } else {
+                            R.string.settings_connection_save
+                        },
+                    ),
+                )
             }
             Button(
                 onClick = onClear,
                 modifier = Modifier.semantics { testTag = "clear-connection" },
             ) {
-                Text("清除")
+                Text(stringResource(R.string.settings_connection_clear))
             }
         }
         state.testResult?.let {
@@ -92,7 +112,7 @@ fun ConnectionConfigScreen(
         }
         if (state.apiKeyMaskedSummary.isNotBlank()) {
             Text(
-                text = "当前密钥摘要：${state.apiKeyMaskedSummary}",
+                text = stringResource(R.string.settings_connection_api_key_summary, state.apiKeyMaskedSummary),
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -104,11 +124,20 @@ private fun ConnectionTestResultCard(result: ConnectionTestResult) {
     val description =
         when (result) {
             is ConnectionTestResult.Success ->
-                "连接成功，发现 ${result.apps.size} 个 App，耗时 ${result.latencyMs}ms"
-            is ConnectionTestResult.ValidationError -> "校验失败：${result.reason}"
-            is ConnectionTestResult.AuthError -> "认证失败：${result.error.message}"
-            is ConnectionTestResult.NetworkFailure -> "网络错误：${result.message}"
-            is ConnectionTestResult.ServerError -> "服务端错误：${result.error.message}"
+                pluralStringResource(
+                    R.plurals.settings_connection_success,
+                    result.apps.size,
+                    result.apps.size,
+                    result.latencyMs,
+                )
+            is ConnectionTestResult.ValidationError ->
+                stringResource(R.string.settings_connection_validation_error, result.reason)
+            is ConnectionTestResult.AuthError ->
+                stringResource(R.string.settings_connection_auth_error, result.error.message)
+            is ConnectionTestResult.NetworkFailure ->
+                stringResource(R.string.settings_connection_network_error, result.message)
+            is ConnectionTestResult.ServerError ->
+                stringResource(R.string.settings_connection_server_error, result.error.message)
         }
 
     Card(modifier = Modifier.fillMaxWidth().semantics { testTag = "connection-result" }) {
@@ -138,21 +167,21 @@ fun SettingsOverviewScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text("设置", style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(R.string.settings_overview_title), style = MaterialTheme.typography.headlineMedium)
         }
         item {
             SettingsSection(
-                title = "连接与账号",
+                title = stringResource(R.string.settings_overview_section_connection),
                 content = {
                     SettingsEntry(
-                        title = "连接配置",
-                        summary = state.connectionSummary,
+                        title = stringResource(R.string.settings_connection_title),
+                        summary = state.serverBaseUrl ?: stringResource(R.string.settings_summary_not_configured),
                         onClick = onOpenConnection,
                         testTag = "settings-connection",
                     )
                     SettingsEntry(
-                        title = "当前 App",
-                        summary = state.selectedAppSummary,
+                        title = stringResource(R.string.settings_current_app_title),
+                        summary = state.selectedAppId ?: stringResource(R.string.settings_summary_not_selected),
                         onClick = onOpenCurrentApp,
                         testTag = "settings-current-app",
                     )
@@ -161,11 +190,11 @@ fun SettingsOverviewScreen(
         }
         item {
             SettingsSection(
-                title = "外观与主题",
+                title = stringResource(R.string.settings_overview_section_appearance),
                 content = {
                     SettingsEntry(
-                        title = "主题外观",
-                        summary = state.themeSummary,
+                        title = stringResource(R.string.settings_theme_title),
+                        summary = themeModeLabel(state.themeMode),
                         onClick = onOpenTheme,
                         testTag = "settings-theme",
                     )
@@ -174,29 +203,29 @@ fun SettingsOverviewScreen(
         }
         item {
             SettingsSection(
-                title = "常用与信息",
+                title = stringResource(R.string.settings_overview_section_common),
                 content = {
                     SettingsEntry(
-                        title = "聊天偏好",
-                        summary = "流式、滚动、字号与引用",
+                        title = stringResource(R.string.settings_chat_preferences_title),
+                        summary = stringResource(R.string.settings_chat_preferences_summary),
                         onClick = onOpenChatPreferences,
                         testTag = "settings-chat-preferences",
                     )
                     SettingsEntry(
-                        title = "语言",
-                        summary = "跟随系统",
+                        title = stringResource(R.string.settings_language_title),
+                        summary = stringResource(R.string.settings_language_follow_system),
                         onClick = onOpenLanguage,
                         testTag = "settings-language",
                     )
                     SettingsEntry(
-                        title = "缓存",
-                        summary = "查看并清理临时缓存",
+                        title = stringResource(R.string.settings_storage_title),
+                        summary = stringResource(R.string.settings_storage_summary),
                         onClick = onOpenCache,
                         testTag = "settings-cache",
                     )
                     SettingsEntry(
-                        title = "关于",
-                        summary = "Kora Android Client",
+                        title = stringResource(R.string.settings_about_title),
+                        summary = stringResource(R.string.settings_about_summary),
                         onClick = onOpenAbout,
                         testTag = "settings-about",
                     )
@@ -257,7 +286,7 @@ fun ThemeAppearanceScreen(
                 .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("主题外观", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.settings_theme_title), style = MaterialTheme.typography.headlineMedium)
         ThemeMode.entries.forEach { mode ->
             Row(
                 modifier =
@@ -266,13 +295,13 @@ fun ThemeAppearanceScreen(
                         .selectable(selected = state.themeMode == mode, onClick = { onThemeModeChange(mode) }),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(mode.label())
-                Text(if (state.themeMode == mode) "已选中" else "")
+                Text(themeModeLabel(mode))
+                Text(if (state.themeMode == mode) stringResource(R.string.settings_selected) else "")
             }
             HorizontalDivider()
         }
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("动态取色")
+            Text(stringResource(R.string.settings_theme_dynamic_color))
             Switch(
                 checked = state.dynamicColorEnabled,
                 onCheckedChange = onDynamicColorChange,
@@ -280,7 +309,7 @@ fun ThemeAppearanceScreen(
             )
         }
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("OLED 深色增强")
+            Text(stringResource(R.string.settings_theme_oled))
             Switch(
                 checked = state.oledEnabled,
                 onCheckedChange = onOledChange,
@@ -307,9 +336,9 @@ fun ChatPreferencesScreen(
                 .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("聊天偏好", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.settings_chat_preferences_title), style = MaterialTheme.typography.headlineMedium)
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("启用流式输出")
+            Text(stringResource(R.string.settings_chat_preferences_stream))
             Switch(
                 checked = state.streamEnabled,
                 onCheckedChange = onStreamEnabledChange,
@@ -317,7 +346,7 @@ fun ChatPreferencesScreen(
             )
         }
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("自动滚动到底部")
+            Text(stringResource(R.string.settings_chat_preferences_auto_scroll))
             Switch(
                 checked = state.autoScroll,
                 onCheckedChange = onAutoScrollChange,
@@ -325,14 +354,14 @@ fun ChatPreferencesScreen(
             )
         }
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("默认显示引用")
+            Text(stringResource(R.string.settings_chat_preferences_citations))
             Switch(
                 checked = state.showCitationsByDefault,
                 onCheckedChange = onShowCitationsChange,
                 modifier = Modifier.semantics { testTag = "chat-pref-citations" },
             )
         }
-        Text("${"%.0f".format(state.fontSizeScale * 100)}%")
+        Text(stringResource(R.string.settings_chat_preferences_font_scale, (state.fontSizeScale * 100).toInt()))
         Slider(
             value = state.fontSizeScale,
             onValueChange = onFontSizeScaleChange,
@@ -355,22 +384,22 @@ fun LanguageSettingsScreen(
                 .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("语言", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.settings_language_title), style = MaterialTheme.typography.headlineMedium)
         LanguageOption(
             tag = "language-option-system",
-            label = "跟随系统",
+            label = stringResource(R.string.settings_language_follow_system),
             selected = state.selectedLanguageTag == null,
             onClick = { onLanguageTagChange(null) },
         )
         LanguageOption(
             tag = "language-option-zh-CN",
-            label = "简体中文",
+            label = stringResource(R.string.settings_language_simplified_chinese),
             selected = state.selectedLanguageTag == "zh-CN",
             onClick = { onLanguageTagChange("zh-CN") },
         )
         LanguageOption(
             tag = "language-option-en",
-            label = "English",
+            label = stringResource(R.string.settings_language_english),
             selected = state.selectedLanguageTag == "en",
             onClick = { onLanguageTagChange("en") },
         )
@@ -393,7 +422,7 @@ private fun LanguageOption(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(label)
-            Text(if (selected) "已选中" else "")
+            Text(if (selected) stringResource(R.string.settings_selected) else "")
         }
     }
 }
@@ -404,6 +433,7 @@ fun CacheSettingsScreen(
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     Column(
         modifier =
             modifier
@@ -411,15 +441,39 @@ fun CacheSettingsScreen(
                 .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("缓存", style = MaterialTheme.typography.headlineMedium)
-        Text("当前缓存大小")
-        Text(state.cacheSizeLabel, style = MaterialTheme.typography.headlineSmall)
-        Button(
-            onClick = onClearCache,
-            enabled = !state.isClearing,
-            modifier = Modifier.semantics { testTag = "clear-cache" },
-        ) {
-            Text(if (state.isClearing) "清理中..." else "清理缓存")
+        Text(stringResource(R.string.settings_storage_title), style = MaterialTheme.typography.headlineMedium)
+        StorageBucket.entries.forEach { bucket ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(storageBucketLabel(bucket), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            Formatter.formatShortFileSize(context, state.storageBuckets[bucket] ?: 0L),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    if (bucket == StorageBucket.TEMP_CACHE) {
+                        Button(
+                            onClick = onClearCache,
+                            enabled = !state.isClearing,
+                            modifier = Modifier.semantics { testTag = "clear-cache" },
+                        ) {
+                            Text(
+                                stringResource(
+                                    if (state.isClearing) {
+                                        R.string.settings_storage_clearing
+                                    } else {
+                                        R.string.settings_storage_clear
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -438,28 +492,41 @@ fun AboutScreen(
                 .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("关于", style = MaterialTheme.typography.headlineMedium)
-        Text("Kora Android Client", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.settings_about_title), style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.settings_about_summary), style = MaterialTheme.typography.titleLarge)
         Text(state.versionName, style = MaterialTheme.typography.bodyLarge)
         OutlinedButton(
             onClick = onOpenFeedback,
             modifier = Modifier.semantics { testTag = "about-feedback" },
         ) {
-            Text("反馈")
+            Text(stringResource(R.string.settings_about_feedback))
         }
         OutlinedButton(
             onClick = onOpenLicenses,
             modifier = Modifier.semantics { testTag = "about-licenses" },
         ) {
-            Text("开源许可")
+            Text(stringResource(R.string.settings_about_licenses))
         }
     }
 }
 
-private fun ThemeMode.label(): String =
-    when (this) {
-        ThemeMode.LIGHT -> "浅色"
-        ThemeMode.DARK -> "深色"
-        ThemeMode.SYSTEM -> "跟随系统"
-        ThemeMode.OLED_DARK -> "OLED 深色"
-    }
+@Composable
+private fun themeModeLabel(mode: ThemeMode): String =
+    stringResource(
+        when (mode) {
+            ThemeMode.LIGHT -> R.string.settings_theme_mode_light
+            ThemeMode.DARK -> R.string.settings_theme_mode_dark
+            ThemeMode.SYSTEM -> R.string.settings_theme_mode_system
+            ThemeMode.OLED_DARK -> R.string.settings_theme_mode_oled_dark
+        },
+    )
+
+@Composable
+private fun storageBucketLabel(bucket: StorageBucket): String =
+    stringResource(
+        when (bucket) {
+            StorageBucket.DATABASE -> R.string.settings_storage_bucket_database
+            StorageBucket.PREFERENCES -> R.string.settings_storage_bucket_preferences
+            StorageBucket.TEMP_CACHE -> R.string.settings_storage_bucket_temp_cache
+        },
+    )

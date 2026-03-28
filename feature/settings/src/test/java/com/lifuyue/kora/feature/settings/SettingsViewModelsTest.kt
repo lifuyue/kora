@@ -92,9 +92,9 @@ class SettingsViewModelsTest {
             val viewModel = SettingsOverviewViewModel(facade)
             advanceUntilIdle()
 
-            assertEquals("https://fastgpt.example.com/", viewModel.uiState.value.connectionSummary)
-            assertEquals("app-42", viewModel.uiState.value.selectedAppSummary)
-            assertEquals("OLED 深色", viewModel.uiState.value.themeSummary)
+            assertEquals("https://fastgpt.example.com/", viewModel.uiState.value.serverBaseUrl)
+            assertEquals("app-42", viewModel.uiState.value.selectedAppId)
+            assertEquals(ThemeMode.OLED_DARK, viewModel.uiState.value.themeMode)
         }
 
     @Test
@@ -172,17 +172,29 @@ class SettingsViewModelsTest {
     @Test
     fun cacheSettingsViewModel_loadsAndClearsCache() =
         runTest {
-            val cacheManager = FakeSettingsCacheManager(cacheSizeBytes = 1_536L)
+            val cacheManager =
+                FakeSettingsCacheManager(
+                    storageBuckets =
+                        mapOf(
+                            StorageBucket.DATABASE to 2_048L,
+                            StorageBucket.PREFERENCES to 512L,
+                            StorageBucket.TEMP_CACHE to 1_536L,
+                        ),
+                )
             val viewModel = CacheSettingsViewModel(cacheManager)
             advanceUntilIdle()
 
-            assertEquals("1.5 KB", viewModel.uiState.value.cacheSizeLabel)
+            assertEquals(2_048L, viewModel.uiState.value.storageBuckets[StorageBucket.DATABASE])
+            assertEquals(512L, viewModel.uiState.value.storageBuckets[StorageBucket.PREFERENCES])
+            assertEquals(1_536L, viewModel.uiState.value.storageBuckets[StorageBucket.TEMP_CACHE])
 
             viewModel.clearCache()
             advanceUntilIdle()
 
             assertTrue(cacheManager.clearRequested)
-            assertEquals("0 B", viewModel.uiState.value.cacheSizeLabel)
+            assertEquals(0L, viewModel.uiState.value.storageBuckets[StorageBucket.TEMP_CACHE])
+            assertEquals(2_048L, viewModel.uiState.value.storageBuckets[StorageBucket.DATABASE])
+            assertEquals(512L, viewModel.uiState.value.storageBuckets[StorageBucket.PREFERENCES])
         }
 
     @Test
@@ -193,13 +205,13 @@ class SettingsViewModelsTest {
                     appInfoProvider =
                         FakeAppInfoProvider(
                             versionName = "1.2.3",
-                            feedbackUrl = "mailto:kora@example.com",
+                            feedbackUrl = "https://github.com/lifuyue/kora/issues",
                             licensesUrl = "https://example.com/licenses",
                         ),
                 )
 
             assertEquals("1.2.3", viewModel.uiState.value.versionName)
-            assertEquals("mailto:kora@example.com", viewModel.uiState.value.feedbackUrl)
+            assertEquals("https://github.com/lifuyue/kora/issues", viewModel.uiState.value.feedbackUrl)
             assertEquals("https://example.com/licenses", viewModel.uiState.value.licensesUrl)
         }
 }
@@ -306,18 +318,21 @@ private class FakeSettingsConnectionFacade(
 }
 
 private class FakeSettingsCacheManager(
-    cacheSizeBytes: Long,
+    storageBuckets: Map<StorageBucket, Long>,
 ) : SettingsCacheManager {
-    private var currentSizeBytes = cacheSizeBytes
+    private var currentStorageBuckets = storageBuckets.toMap()
 
     var clearRequested: Boolean = false
         private set
 
-    override suspend fun getCacheSizeBytes(): Long = currentSizeBytes
+    override suspend fun getStorageBuckets(): Map<StorageBucket, Long> = currentStorageBuckets
 
     override suspend fun clearCache() {
         clearRequested = true
-        currentSizeBytes = 0L
+        currentStorageBuckets =
+            currentStorageBuckets.toMutableMap().apply {
+                this[StorageBucket.TEMP_CACHE] = 0L
+            }
     }
 }
 

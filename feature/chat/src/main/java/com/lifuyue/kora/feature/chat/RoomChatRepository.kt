@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.Context
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.NetworkError
 import com.lifuyue.kora.core.database.dao.ConversationDao
@@ -67,6 +68,7 @@ class RoomChatRepository
         private val conversationFolderDao: ConversationFolderDao,
         private val conversationTagDao: ConversationTagDao,
         private val messageDao: MessageDao,
+        private val context: Context,
         private val json: Json = NetworkJson.default,
         ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
         private val responsePlanner: AssistantResponsePlanner? = null,
@@ -409,7 +411,7 @@ class RoomChatRepository
                 title =
                     conversationDao.getConversationByChatId(resolvedChatId)?.displayTitle
                         ?: initData?.title?.takeIf { it.isNotBlank() }
-                        ?: prompt.take(18).ifBlank { "新会话" },
+                        ?: prompt.take(18).ifBlank { context.getString(R.string.chat_repository_new_conversation_title) },
                 preview = prompt,
             )
             messageDao.upsertAll(listOf(humanMessage, assistantMessage))
@@ -429,9 +431,10 @@ class RoomChatRepository
         ) {
             streamingJobs.remove(chatId)?.cancel()
             val current = messageDao.getMessagesForChat(chatId).lastOrNull { it.role == ChatRole.AI.name && it.isStreaming } ?: return
+            val stoppedMessage = context.getString(R.string.chat_repository_stopped_message)
             messageDao.updateMessageState(
                 dataId = current.dataId,
-                payloadJson = updateStoredPayload(current.payloadJson, errorMessage = "已停止生成", json = json),
+                payloadJson = updateStoredPayload(current.payloadJson, errorMessage = stoppedMessage, json = json),
                 isStreaming = false,
                 sendStatus = "stopped",
                 errorCode = current.errorCode,
@@ -439,7 +442,7 @@ class RoomChatRepository
             updateConversationPreview(
                 chatId,
                 messageToUiModel(
-                    current.copy(payloadJson = updateStoredPayload(current.payloadJson, errorMessage = "已停止生成", json = json)),
+                    current.copy(payloadJson = updateStoredPayload(current.payloadJson, errorMessage = stoppedMessage, json = json)),
                 ).markdown,
             )
         }
@@ -454,7 +457,7 @@ class RoomChatRepository
                     ?.let(::messageToUiModel)
                     ?.markdown
                     .orEmpty()
-                    .ifBlank { "继续上一个回答" }
+                    .ifBlank { context.getString(R.string.chat_repository_continue_prompt) }
             val assistantMessage =
                 newStreamingAssistantEntity(
                     chatId = chatId,
@@ -462,7 +465,7 @@ class RoomChatRepository
                     createdAt = nextCreatedAt(),
                 )
             messageDao.upsert(assistantMessage)
-            updateConversationPreview(chatId, "继续生成中")
+            updateConversationPreview(chatId, context.getString(R.string.chat_repository_continue_preview))
             startStreaming(appId = appId, chatId = chatId, prompt = prompt, assistantMessageId = assistantMessage.dataId)
             return chatId
         }
@@ -481,7 +484,7 @@ class RoomChatRepository
                     ?.let(::messageToUiModel)
                     ?.markdown
                     .orEmpty()
-                    .ifBlank { "继续上一个回答" }
+                    .ifBlank { context.getString(R.string.chat_repository_continue_prompt) }
 
             api.deleteChatItem(DeleteChatItemRequest(appId = appId, chatId = chatId, contentId = messageId))
             messageDao.deleteMessage(messageId)
@@ -493,7 +496,7 @@ class RoomChatRepository
                     createdAt = nextCreatedAt(),
                 )
             messageDao.upsert(assistantMessage)
-            updateConversationPreview(chatId, "重新生成中")
+            updateConversationPreview(chatId, context.getString(R.string.chat_repository_regenerate_preview))
             startStreaming(appId = appId, chatId = chatId, prompt = prompt, assistantMessageId = assistantMessage.dataId)
             return chatId
         }
@@ -598,7 +601,10 @@ class RoomChatRepository
                                             ),
                                     ),
                                 ).collect { event ->
-                                    val update = event.toAssistantUpdate()
+                                    val update =
+                                        event.toAssistantUpdate(
+                                            malformedMessage = context.getString(R.string.chat_repository_malformed_sse),
+                                        )
                                     if (update.error != null) {
                                         failed = true
                                         persistAssistantState(
@@ -664,9 +670,18 @@ class RoomChatRepository
                             isStreaming = false,
                             sendStatus = "failed",
                             errorCode = networkError?.code,
-                            errorMessage = networkError?.message ?: error.message ?: "流式请求失败",
+                            errorMessage =
+                                networkError?.message
+                                    ?: error.message
+                                    ?: context.getString(R.string.chat_repository_stream_failed),
                         )
-                        updateConversationPreview(chatId, markdown.ifBlank { error.message ?: "流式请求失败" })
+                        updateConversationPreview(
+                            chatId,
+                            markdown.ifBlank {
+                                error.message
+                                    ?: context.getString(R.string.chat_repository_stream_failed)
+                            },
+                        )
                     } finally {
                         streamingJobs.remove(chatId)
                     }
@@ -889,8 +904,10 @@ private data class CitationPayload(
     val collectionId: String? = null,
     val dataId: String? = null,
     val title: String = "",
+    val sourceName: String = "",
     val snippet: String = "",
-    val scoreLabel: String = "",
+    val scoreType: String? = null,
+    val score: Double? = null,
 )
 
 private fun ChatHistoryItemDto.toConversationEntity(
@@ -1021,8 +1038,10 @@ private fun String.toStoredPayload(json: Json): StoredMessagePayload =
                                     collectionId = citation["collectionId"].stringContentOrNull(),
                                     dataId = citation["dataId"].stringContentOrNull(),
                                     title = citation["title"].stringContentOrNull().orEmpty(),
+                                    sourceName = citation["sourceName"].stringContentOrNull().orEmpty(),
                                     snippet = citation["snippet"].stringContentOrNull().orEmpty(),
-                                    scoreLabel = citation["scoreLabel"].stringContentOrNull().orEmpty(),
+                                    scoreType = citation["scoreType"].stringContentOrNull(),
+                                    score = citation["score"]?.jsonPrimitive?.content?.toDoubleOrNull(),
                                 )
                             }
                         }.orEmpty(),
@@ -1049,10 +1068,15 @@ private fun updateStoredPayload(
 
 private fun String.toEpochMillis(): Long = runCatching { Instant.parse(this).toEpochMilli() }.getOrElse { 0L }
 
-private fun SseEventData.toAssistantUpdate(): AssistantUpdate {
+private fun SseEventData.toAssistantUpdate(malformedMessage: String): AssistantUpdate {
     if (isMalformed) {
         return AssistantUpdate(
-            error = NetworkError(code = -1, statusText = "malformed", message = parseExceptionMessage ?: "Malformed SSE payload"),
+            error =
+                NetworkError(
+                    code = -1,
+                    statusText = "malformed",
+                    message = parseExceptionMessage ?: malformedMessage,
+                ),
         )
     }
     if (rawEventName == "error") {
@@ -1139,8 +1163,10 @@ private fun StoredMessagePayload.toJsonString(): String =
                                 it.collectionId?.let { collectionId -> put("collectionId", JsonPrimitive(collectionId)) }
                                 it.dataId?.let { dataId -> put("dataId", JsonPrimitive(dataId)) }
                                 put("title", JsonPrimitive(it.title))
+                                put("sourceName", JsonPrimitive(it.sourceName))
                                 put("snippet", JsonPrimitive(it.snippet))
-                                put("scoreLabel", JsonPrimitive(it.scoreLabel))
+                                it.scoreType?.let { scoreType -> put("scoreType", JsonPrimitive(scoreType)) }
+                                it.score?.let { score -> put("score", JsonPrimitive(score)) }
                             },
                         )
                     },
@@ -1157,8 +1183,10 @@ private fun CitationPayload.toUiModel(): CitationItemUiModel =
         collectionId = collectionId,
         dataId = dataId,
         title = title,
+        sourceName = sourceName,
         snippet = snippet,
-        scoreLabel = scoreLabel,
+        scoreType = scoreType,
+        score = score,
     )
 
 private fun CitationDto.toPayload(): CitationPayload =
@@ -1166,13 +1194,11 @@ private fun CitationDto.toPayload(): CitationPayload =
         datasetId = datasetId,
         collectionId = collectionId,
         dataId = dataId,
-        title = title.ifBlank { sourceName.ifBlank { "引用" } },
+        title = title,
+        sourceName = sourceName.orEmpty(),
         snippet = snippet,
-        scoreLabel =
-            listOfNotNull(
-                scoreType,
-                score?.let { String.format("%.3f", it) },
-            ).joinToString(" · "),
+        scoreType = scoreType,
+        score = score,
     )
 
 private fun JsonArray.extractCitations(): List<CitationDto> {

@@ -69,6 +69,7 @@ class RoomChatRepositoryTest {
                 conversationFolderDao = database.conversationFolderDao(),
                 conversationTagDao = database.conversationTagDao(),
                 messageDao = database.messageDao(),
+                context = context,
                 json = NetworkJson.default,
                 ioDispatcher = mainDispatcherRule.dispatcher,
             )

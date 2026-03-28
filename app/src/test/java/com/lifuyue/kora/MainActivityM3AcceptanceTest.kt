@@ -1,20 +1,29 @@
 package com.lifuyue.kora
 
+import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.core.os.LocaleListCompat
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.testing.MockWebServerRule
 import com.lifuyue.kora.feature.chat.ChatTestTags
 import com.lifuyue.kora.testing.AcceptanceAppHarnessRule
 import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
@@ -31,58 +40,123 @@ class MainActivityM3AcceptanceTest {
     @get:Rule
     val ruleChain: RuleChain = RuleChain.outerRule(serverRule).around(harnessRule).around(composeRule)
 
+    @Before
+    fun setUp() {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    }
+
+    @After
+    fun tearDown() {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    }
+
     @Test
     fun firstLaunchRunsOnboardingRealConnectionAndArrivesAtShell() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         enqueueConnectionSuccess()
 
-        composeRule.onNodeWithText("欢迎使用 Kora").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.onboarding_page_1_title)).assertIsDisplayed()
 
         completeOnboardingAndSaveConnection()
 
         val request = serverRule.takeRequest()
         assertConnectionTestRequest(request)
 
-        composeRule.onNodeWithText("会话").assertIsDisplayed()
-        composeRule.onNodeWithText("聊天").assertIsDisplayed()
-        composeRule.onNodeWithText("知识库").assertIsDisplayed()
-        composeRule.onNodeWithText("设置").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(com.lifuyue.kora.feature.chat.R.string.conversation_list_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.nav_chat)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.nav_knowledge)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.nav_settings)).assertIsDisplayed()
     }
 
     @Test
     fun shellSupportsBottomNavigationAfterRealConnectionSave() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         enqueueConnectionSuccess()
 
         completeOnboardingAndSaveConnection()
 
-        composeRule.onNodeWithText("知识库").performClick()
-        composeRule.onNodeWithText("数据集 0 个").assertIsDisplayed()
-        composeRule.onNodeWithText("进入数据集").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.nav_knowledge)).performClick()
+        composeRule
+            .onNodeWithText(
+                context.resources.getQuantityString(
+                    com.lifuyue.kora.feature.knowledge.R.plurals.knowledge_overview_dataset_count,
+                    0,
+                    0,
+                ),
+            ).assertIsDisplayed()
+        composeRule
+            .onNodeWithText(
+                context.getString(com.lifuyue.kora.feature.knowledge.R.string.knowledge_overview_open_datasets),
+            ).assertIsDisplayed()
 
-        composeRule.onNodeWithText("设置").performClick()
-        composeRule.onNodeWithText("连接配置").assertIsDisplayed()
-        composeRule.onNodeWithText("连接配置").performClick()
-        waitForText("当前密钥摘要")
+        composeRule.onNodeWithText(context.getString(R.string.nav_settings)).performClick()
+        composeRule
+            .onNodeWithText(
+                context.getString(com.lifuyue.kora.feature.settings.R.string.settings_connection_title),
+            ).assertIsDisplayed()
+        composeRule
+            .onNodeWithText(
+                context.getString(com.lifuyue.kora.feature.settings.R.string.settings_connection_title),
+            ).performClick()
+        waitForText(context.getString(com.lifuyue.kora.feature.settings.R.string.settings_connection_api_key_summary, ""))
 
-        composeRule.onNodeWithText("聊天").performClick()
-        composeRule.onNodeWithText("暂无会话").assertIsDisplayed()
-        composeRule.onNodeWithText("点击右下角的新建会话开始第一轮对话，历史记录会显示在这里。").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.nav_chat)).performClick()
+        composeRule
+            .onNodeWithText(
+                context.getString(com.lifuyue.kora.feature.chat.R.string.conversation_list_empty_title),
+            ).assertIsDisplayed()
+        composeRule
+            .onNodeWithText(
+                context.getString(com.lifuyue.kora.feature.chat.R.string.conversation_list_empty_body),
+            ).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
 
-    private fun completeOnboardingAndSaveConnection() {
-        composeRule.onNodeWithText("下一步").performClick()
-        composeRule.onNodeWithText("下一步").performClick()
-        composeRule.onNodeWithText("进入连接配置").performClick()
+    @Test
+    fun changingLanguageInSettingsAppliesEnglishLocaleAtRuntime() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        enqueueConnectionSuccess()
 
+        completeOnboardingAndSaveConnection()
+
+        composeRule.onNodeWithText(context.getString(R.string.nav_settings)).performClick()
+        composeRule
+            .onNodeWithTag("settings-overview-scroll")
+            .performScrollToNode(hasText(context.getString(com.lifuyue.kora.feature.settings.R.string.settings_language_title)))
+        composeRule.onNodeWithText(context.getString(com.lifuyue.kora.feature.settings.R.string.settings_language_title)).performClick()
+        composeRule.onNodeWithTag("language-option-en").performClick()
+
+        waitForText("English")
+
+        composeRule.onNodeWithText("Chat").assertIsDisplayed()
+        composeRule.onNodeWithText("Knowledge").assertIsDisplayed()
+        composeRule.onNodeWithText("Settings").assertIsDisplayed()
+    }
+
+    private fun completeOnboardingAndSaveConnection() {
+        val context = composeRule.activity
+
+        composeRule.onNodeWithText(context.getString(R.string.onboarding_cta_next)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.onboarding_cta_next)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.onboarding_cta_finish)).performClick()
+
+        waitForNodeTag("server-url")
         composeRule.onNodeWithTag("server-url").performTextClearance()
         composeRule.onNodeWithTag("server-url").performTextInput(serverRule.url("/api/").toString())
         composeRule.onNodeWithTag("api-key").performTextInput("fastgpt-secret")
         composeRule.onNodeWithTag("test-connection").performClick()
 
-        waitForText("连接成功，发现 2 个 App")
+        waitForText(
+            context.resources.getQuantityString(
+                com.lifuyue.kora.feature.settings.R.plurals.settings_connection_success,
+                2,
+                2,
+                0,
+            ).substringBeforeLast("，耗时").substringBeforeLast(" in "),
+        )
 
         composeRule.onNodeWithTag("save-connection").performClick()
-        waitForText("会话")
+        waitForText(context.getString(com.lifuyue.kora.feature.chat.R.string.conversation_list_title))
     }
 
     private fun enqueueConnectionSuccess() {
@@ -114,6 +188,12 @@ class MainActivityM3AcceptanceTest {
                 .onAllNodesWithText(text, substring = true, useUnmergedTree = true)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
+        }
+    }
+
+    private fun waitForNodeTag(tag: String) {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
 }

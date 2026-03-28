@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -100,14 +101,14 @@ fun ConversationListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("会话") },
+                title = { Text(stringResource(R.string.conversation_list_title)) },
                 actions = {
                     TextButton(
                         onClick = { showClearAllDialog = true },
                         enabled = uiState.canClear,
                         modifier = Modifier.testTag(ChatTestTags.CONVERSATION_CLEAR_ALL),
                     ) {
-                        Text("清空全部")
+                        Text(stringResource(R.string.conversation_list_clear_all))
                     }
                 },
             )
@@ -117,7 +118,7 @@ fun ConversationListScreen(
                 onClick = onNewConversation,
                 modifier = Modifier.testTag(ChatTestTags.CONVERSATION_FAB),
             ) {
-                Text("新建会话")
+                Text(stringResource(R.string.conversation_list_new_conversation))
             }
         },
     ) { innerPadding ->
@@ -132,8 +133,8 @@ fun ConversationListScreen(
             OutlinedTextField(
                 value = uiState.query,
                 onValueChange = onQueryChanged,
-                label = { Text("搜索会话") },
-                placeholder = { Text("按标题或预览搜索") },
+                label = { Text(stringResource(R.string.conversation_list_search_label)) },
+                placeholder = { Text(stringResource(R.string.conversation_list_search_placeholder)) },
                 singleLine = true,
                 modifier =
                     Modifier
@@ -142,12 +143,12 @@ fun ConversationListScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedActionChip(
-                    label = uiState.selectedFolderName,
+                    label = uiState.selectedFolderName ?: stringResource(R.string.conversation_list_all_folders),
                     modifier = Modifier.weight(1f).testTag(ChatTestTags.CONVERSATION_FOLDER_FILTER),
                     onClick = { activeSheet = ConversationOrganizerSheet.FolderFilter },
                 )
                 OutlinedActionChip(
-                    label = uiState.selectedTagName,
+                    label = uiState.selectedTagName ?: stringResource(R.string.conversation_list_all_tags),
                     modifier = Modifier.weight(1f).testTag(ChatTestTags.CONVERSATION_TAG_FILTER),
                     onClick = { activeSheet = ConversationOrganizerSheet.TagFilter },
                 )
@@ -161,7 +162,7 @@ fun ConversationListScreen(
                 ) {
                     if (uiState.pinnedItems.isNotEmpty()) {
                         item(key = "pinned_header") {
-                            ConversationSectionHeader(title = "置顶会话")
+                            ConversationSectionHeader(title = stringResource(R.string.conversation_list_pinned_section))
                         }
                         items(uiState.pinnedItems, key = { it.chatId }) { item ->
                             ConversationListCard(
@@ -173,7 +174,7 @@ fun ConversationListScreen(
                     }
                     if (uiState.otherItems.isNotEmpty()) {
                         item(key = "all_header") {
-                            ConversationSectionHeader(title = "全部会话")
+                            ConversationSectionHeader(title = stringResource(R.string.conversation_list_all_section))
                         }
                         items(uiState.otherItems, key = { it.chatId }) { item ->
                             ConversationListCard(
@@ -201,7 +202,7 @@ fun ConversationListScreen(
                         .padding(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "会话操作",
+                    text = stringResource(R.string.conversation_list_action_sheet_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -212,7 +213,7 @@ fun ConversationListScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                 SheetAction(
-                    label = "重命名",
+                    label = stringResource(R.string.conversation_list_action_rename),
                     testTag = ChatTestTags.CONVERSATION_ACTION_RENAME,
                     onClick = {
                         renameChatId = selectedConversation.chatId
@@ -221,7 +222,7 @@ fun ConversationListScreen(
                     },
                 )
                 SheetAction(
-                    label = "移动到文件夹",
+                    label = stringResource(R.string.conversation_list_action_move_to_folder),
                     testTag = ChatTestTags.CONVERSATION_ACTION_MOVE_FOLDER,
                     onClick = {
                         organizerChatId = selectedConversation.chatId
@@ -230,7 +231,7 @@ fun ConversationListScreen(
                     },
                 )
                 SheetAction(
-                    label = "编辑标签",
+                    label = stringResource(R.string.conversation_list_action_edit_tags),
                     testTag = ChatTestTags.CONVERSATION_ACTION_EDIT_TAGS,
                     onClick = {
                         organizerChatId = selectedConversation.chatId
@@ -241,7 +242,14 @@ fun ConversationListScreen(
                     },
                 )
                 SheetAction(
-                    label = if (selectedConversation.isPinned) "取消置顶" else "置顶",
+                    label =
+                        stringResource(
+                            if (selectedConversation.isPinned) {
+                                R.string.conversation_list_action_unpin
+                            } else {
+                                R.string.conversation_list_action_pin
+                            },
+                        ),
                     testTag = ChatTestTags.CONVERSATION_ACTION_TOGGLE_PIN,
                     onClick = {
                         onTogglePin(selectedConversation.chatId, !selectedConversation.isPinned)
@@ -249,7 +257,7 @@ fun ConversationListScreen(
                     },
                 )
                 SheetAction(
-                    label = "删除",
+                    label = stringResource(R.string.conversation_list_action_delete),
                     testTag = ChatTestTags.CONVERSATION_ACTION_DELETE,
                     onClick = {
                         onDeleteConversation(selectedConversation.chatId)
@@ -364,12 +372,12 @@ fun ConversationListScreen(
     if (renameChatId != null) {
         AlertDialog(
             onDismissRequest = { renameChatId = null },
-            title = { Text("重命名会话") },
+            title = { Text(stringResource(R.string.conversation_list_dialog_rename_conversation_title)) },
             text = {
                 OutlinedTextField(
                     value = renameDraft,
                     onValueChange = { renameDraft = it },
-                    label = { Text("会话标题") },
+                    label = { Text(stringResource(R.string.conversation_list_dialog_conversation_title_label)) },
                     singleLine = true,
                     modifier =
                         Modifier
@@ -389,12 +397,12 @@ fun ConversationListScreen(
                     },
                     enabled = renameDraft.trim().isNotEmpty(),
                 ) {
-                    Text("保存")
+                    Text(stringResource(R.string.conversation_list_action_rename))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { renameChatId = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.conversation_list_cancel))
                 }
             },
         )
@@ -407,13 +415,31 @@ fun ConversationListScreen(
                 renameTargetType = null
             },
             title = {
-                Text(if (renameTargetType == EditTarget.Folder) "重命名文件夹" else "重命名标签")
+                Text(
+                    stringResource(
+                        if (renameTargetType == EditTarget.Folder) {
+                            R.string.conversation_list_dialog_rename_folder_title
+                        } else {
+                            R.string.conversation_list_dialog_rename_tag_title
+                        },
+                    ),
+                )
             },
             text = {
                 OutlinedTextField(
                     value = renameTargetDraft,
                     onValueChange = { renameTargetDraft = it },
-                    label = { Text(if (renameTargetType == EditTarget.Folder) "文件夹名称" else "标签名称") },
+                    label = {
+                        Text(
+                            stringResource(
+                                if (renameTargetType == EditTarget.Folder) {
+                                    R.string.conversation_list_dialog_folder_name_label
+                                } else {
+                                    R.string.conversation_list_dialog_tag_name_label
+                                },
+                            ),
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -435,7 +461,7 @@ fun ConversationListScreen(
                         renameTargetType = null
                     },
                 ) {
-                    Text("保存")
+                    Text(stringResource(R.string.conversation_list_action_rename))
                 }
             },
             dismissButton = {
@@ -445,7 +471,7 @@ fun ConversationListScreen(
                         renameTargetType = null
                     },
                 ) {
-                    Text("取消")
+                    Text(stringResource(R.string.conversation_list_cancel))
                 }
             },
         )
@@ -454,8 +480,8 @@ fun ConversationListScreen(
     if (deleteFolderId != null) {
         AlertDialog(
             onDismissRequest = { deleteFolderId = null },
-            title = { Text("删除文件夹？") },
-            text = { Text("会保留其中会话，只移除文件夹关系。") },
+            title = { Text(stringResource(R.string.conversation_list_dialog_delete_folder_title)) },
+            text = { Text(stringResource(R.string.conversation_list_dialog_delete_folder_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -463,12 +489,12 @@ fun ConversationListScreen(
                         deleteFolderId = null
                     },
                 ) {
-                    Text("确认删除")
+                    Text(stringResource(R.string.conversation_list_confirm_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deleteFolderId = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.conversation_list_cancel))
                 }
             },
         )
@@ -477,8 +503,8 @@ fun ConversationListScreen(
     if (deleteTagId != null) {
         AlertDialog(
             onDismissRequest = { deleteTagId = null },
-            title = { Text("删除标签？") },
-            text = { Text("会保留原会话，只移除该标签关系。") },
+            title = { Text(stringResource(R.string.conversation_list_dialog_delete_tag_title)) },
+            text = { Text(stringResource(R.string.conversation_list_dialog_delete_tag_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -486,12 +512,12 @@ fun ConversationListScreen(
                         deleteTagId = null
                     },
                 ) {
-                    Text("确认删除")
+                    Text(stringResource(R.string.conversation_list_confirm_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deleteTagId = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.conversation_list_cancel))
                 }
             },
         )
@@ -500,8 +526,8 @@ fun ConversationListScreen(
     if (showClearAllDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllDialog = false },
-            title = { Text("清空所有会话？") },
-            text = { Text("该操作会移除当前应用下的全部会话记录。") },
+            title = { Text(stringResource(R.string.conversation_list_dialog_clear_all_title)) },
+            text = { Text(stringResource(R.string.conversation_list_dialog_clear_all_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -509,12 +535,12 @@ fun ConversationListScreen(
                         showClearAllDialog = false
                     },
                 ) {
-                    Text("确认清空")
+                    Text(stringResource(R.string.conversation_list_confirm_clear))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllDialog = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.conversation_list_cancel))
                 }
             },
         )
@@ -538,23 +564,36 @@ private fun FolderSheetContent(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
     ) {
         Text(
-            if (activeSheet == ConversationOrganizerSheet.MoveFolder) "移动到文件夹" else "文件夹",
+            stringResource(
+                if (activeSheet == ConversationOrganizerSheet.MoveFolder) {
+                    R.string.conversation_list_move_folder_sheet_title
+                } else {
+                    R.string.conversation_list_folder_sheet_title
+                },
+            ),
             style = MaterialTheme.typography.titleLarge,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = createDraft,
                 onValueChange = onCreateDraftChanged,
-                label = { Text("新建文件夹") },
+                label = { Text(stringResource(R.string.conversation_list_new_folder_label)) },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
             Button(onClick = onCreateFolder, enabled = createDraft.trim().isNotEmpty()) {
-                Text("添加")
+                Text(stringResource(R.string.conversation_list_add))
             }
         }
         SheetActionRow(
-            title = if (activeSheet == ConversationOrganizerSheet.MoveFolder) "移出文件夹" else "全部文件夹",
+            title =
+                stringResource(
+                    if (activeSheet == ConversationOrganizerSheet.MoveFolder) {
+                        R.string.conversation_list_remove_from_folder
+                    } else {
+                        R.string.conversation_list_all_folders
+                    },
+                ),
             subtitle = "",
             selected =
                 if (activeSheet == ConversationOrganizerSheet.MoveFolder) {
@@ -563,7 +602,14 @@ private fun FolderSheetContent(
                     uiState.selectedFolderId == null
                 },
             onPrimaryAction = { onSelectFolder(null) },
-            primaryLabel = if (activeSheet == ConversationOrganizerSheet.MoveFolder) "移出" else "查看",
+            primaryLabel =
+                stringResource(
+                    if (activeSheet == ConversationOrganizerSheet.MoveFolder) {
+                        R.string.conversation_list_remove
+                    } else {
+                        R.string.conversation_list_view
+                    },
+                ),
         )
         uiState.folders.forEach { folder ->
             SheetActionRow(
@@ -576,7 +622,14 @@ private fun FolderSheetContent(
                         uiState.selectedFolderId == folder.folderId
                     },
                 onPrimaryAction = { onSelectFolder(folder.folderId) },
-                primaryLabel = if (activeSheet == ConversationOrganizerSheet.MoveFolder) "移动" else "查看",
+                primaryLabel =
+                    stringResource(
+                        if (activeSheet == ConversationOrganizerSheet.MoveFolder) {
+                            R.string.conversation_list_move
+                        } else {
+                            R.string.conversation_list_view
+                        },
+                    ),
                 onRename = { onRenameFolder(folder) },
                 onDelete = { onDeleteFolder(folder.folderId) },
             )
@@ -609,35 +662,41 @@ private fun TagSheetContent(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
     ) {
         Text(
-            if (activeSheet == ConversationOrganizerSheet.EditTags) "编辑标签" else "标签",
+            stringResource(
+                if (activeSheet == ConversationOrganizerSheet.EditTags) {
+                    R.string.conversation_list_edit_tags_title
+                } else {
+                    R.string.conversation_list_tag_sheet_title
+                },
+            ),
             style = MaterialTheme.typography.titleLarge,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = createDraft,
                 onValueChange = onCreateDraftChanged,
-                label = { Text("新建标签") },
+                label = { Text(stringResource(R.string.conversation_list_new_tag_label)) },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
             Button(onClick = onCreateTag, enabled = createDraft.trim().isNotEmpty()) {
-                Text("添加")
+                Text(stringResource(R.string.conversation_list_add))
             }
         }
         OutlinedTextField(
             value = tagSearchQuery,
             onValueChange = onTagSearchQueryChanged,
-            label = { Text("搜索标签") },
+            label = { Text(stringResource(R.string.conversation_list_search_tags_label)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         if (activeSheet == ConversationOrganizerSheet.TagFilter) {
             SheetActionRow(
-                title = "全部标签",
+                title = stringResource(R.string.conversation_list_all_tags),
                 subtitle = "",
                 selected = uiState.selectedTagId == null,
                 onPrimaryAction = { onSelectFilterTag(null) },
-                primaryLabel = "查看",
+                primaryLabel = stringResource(R.string.conversation_list_view),
             )
         }
         visibleTags.forEach { tag ->
@@ -655,7 +714,7 @@ private fun TagSheetContent(
                     subtitle = tag.colorToken,
                     selected = uiState.selectedTagId == tag.tagId,
                     onPrimaryAction = { onSelectFilterTag(tag.tagId) },
-                    primaryLabel = "查看",
+                    primaryLabel = stringResource(R.string.conversation_list_view),
                     onRename = { onRenameTag(tag) },
                     onDelete = { onDeleteTag(tag.tagId) },
                 )
@@ -663,7 +722,7 @@ private fun TagSheetContent(
         }
         if (activeSheet == ConversationOrganizerSheet.EditTags) {
             Button(onClick = onSaveConversationTags, modifier = Modifier.fillMaxWidth()) {
-                Text("保存标签")
+                Text(stringResource(R.string.conversation_list_save_tags))
             }
         }
     }
@@ -677,12 +736,12 @@ private fun EmptyConversationState(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
         ) {
             Text(
-                text = "暂无会话",
+                text = stringResource(R.string.conversation_list_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "点击右下角的新建会话开始第一轮对话，历史记录会显示在这里。",
+                text = stringResource(R.string.conversation_list_empty_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary,
             )
@@ -729,7 +788,7 @@ private fun ConversationListCard(
                 )
                 if (item.isPinned) {
                     Text(
-                        text = "置顶",
+                        text = stringResource(R.string.conversation_list_pinned_badge),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -794,8 +853,8 @@ private fun TagSelectionRow(
                 content = tag.contentColor(),
             )
         }
-        TextButton(onClick = onRename) { Text("重命名") }
-        TextButton(onClick = onDelete) { Text("删除") }
+        TextButton(onClick = onRename) { Text(stringResource(R.string.conversation_list_action_rename)) }
+        TextButton(onClick = onDelete) { Text(stringResource(R.string.conversation_list_action_delete)) }
     }
 }
 
@@ -824,11 +883,15 @@ private fun SheetActionRow(
                 }
             }
             if (selected) {
-                Text("当前", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    stringResource(R.string.conversation_list_current_badge),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
             TextButton(onClick = onPrimaryAction) { Text(primaryLabel) }
-            onRename?.let { TextButton(onClick = it) { Text("重命名") } }
-            onDelete?.let { TextButton(onClick = it) { Text("删除") } }
+            onRename?.let { TextButton(onClick = it) { Text(stringResource(R.string.conversation_list_action_rename)) } }
+            onDelete?.let { TextButton(onClick = it) { Text(stringResource(R.string.conversation_list_action_delete)) } }
         }
         HorizontalDivider()
     }

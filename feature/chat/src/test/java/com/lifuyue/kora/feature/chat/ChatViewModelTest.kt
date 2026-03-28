@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.ContextWrapper
 import androidx.lifecycle.SavedStateHandle
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.testing.MainDispatcherRule
@@ -23,10 +24,12 @@ class ChatViewModelTest {
     fun sendUsesRepositoryAndClearsComposer() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
+            val strings = FakeChatStrings()
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
                     chatRepository = repository,
+                    strings = strings,
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
 
@@ -46,10 +49,12 @@ class ChatViewModelTest {
     fun sendFailureShowsInlineError() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository(shouldFailSend = true)
+            val strings = FakeChatStrings()
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
                     chatRepository = repository,
+                    strings = strings,
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
 
@@ -58,7 +63,7 @@ class ChatViewModelTest {
             advanceUntilIdle()
 
             val state = viewModel.uiState.value
-            assertEquals("发送失败", state.errorMessage)
+            assertEquals(strings.sendFailed(), state.errorMessage)
             assertEquals("失败案例", state.input)
             collectJob.cancel()
         }
@@ -71,6 +76,7 @@ class ChatViewModelTest {
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
                     chatRepository = repository,
+                    strings = FakeChatStrings(),
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             val message =
@@ -102,6 +108,7 @@ class ChatViewModelTest {
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
                     chatRepository = repository,
+                    strings = FakeChatStrings(),
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
 
@@ -111,6 +118,22 @@ class ChatViewModelTest {
             assertEquals("chat-1", repository.continuedChatId)
             collectJob.cancel()
         }
+}
+
+private class FakeChatStrings : ChatStrings(context = ContextWrapper(null)) {
+    override fun restoreFailed(): String = "恢复历史失败"
+
+    override fun bootstrapFailed(): String = "初始化会话失败"
+
+    override fun sendFailed(): String = "发送失败"
+
+    override fun continueFailed(): String = "继续生成失败"
+
+    override fun regenerateFailed(): String = "重新生成失败"
+
+    override fun loadAppsFailed(): String = "加载 App 失败"
+
+    override fun loadAppDetailFailed(): String = "加载 App 详情失败"
 }
 
 private class RecordingChatRepository(
@@ -147,7 +170,7 @@ private class RecordingChatRepository(
         text: String,
     ): String {
         if (shouldFailSend) {
-            error("发送失败")
+            throw IllegalStateException()
         }
         sentText = text
         val resolvedChatId = chatId ?: "chat-1"

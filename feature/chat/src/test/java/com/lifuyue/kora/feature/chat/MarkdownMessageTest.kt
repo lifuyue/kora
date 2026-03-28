@@ -53,4 +53,12 @@ class MarkdownMessageTest {
             },
         )
     }
+
+    @Test
+    fun buildMermaidHtmlBootstrapsRuntime() {
+        val html = buildMermaidHtml("graph TD;A-->B;")
+
+        assertTrue(html.contains("mermaid.initialize"))
+        assertTrue(html.contains("graph TD;A-->B;"))
+    }
 }

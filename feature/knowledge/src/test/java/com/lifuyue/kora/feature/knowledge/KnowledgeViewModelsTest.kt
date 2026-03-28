@@ -1,11 +1,14 @@
 package com.lifuyue.kora.feature.knowledge
 
+import android.content.ContextWrapper
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -47,6 +50,7 @@ class KnowledgeViewModelsTest {
                                 ),
                         ),
                 )
+            val strings = FakeKnowledgeStrings()
 
             val viewModel =
                 ChunkViewerViewModel(
@@ -59,6 +63,7 @@ class KnowledgeViewModelsTest {
                             ),
                         ),
                     repository = repository,
+                    strings = strings,
                 )
 
             advanceUntilIdle()
@@ -86,17 +91,21 @@ class KnowledgeViewModelsTest {
                                     datasetId = "dataset-1",
                                     collectionId = "collection-1",
                                     dataId = "data-1",
-                                    title = "命中",
-                                    snippet = "片段",
-                                    scoreLabel = "semantic · 0.98",
+                                    sourceName = "命中",
+                                    question = "片段问题",
+                                    answer = "片段",
+                                    scoreType = "semantic",
+                                    score = 0.98,
                                 ),
                             ),
                         ),
                 )
+            val strings = FakeKnowledgeStrings()
             val viewModel =
                 SearchTestViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("datasetId" to "dataset-1")),
                     repository = repository,
+                    strings = strings,
                 )
 
             viewModel.updateQuery("hello")
@@ -107,13 +116,98 @@ class KnowledgeViewModelsTest {
             assertEquals("rewrite-model", viewModel.uiState.value.extensionInfo)
             assertEquals(1, viewModel.uiState.value.results.size)
         }
+
+    @Test
+    fun datasetBrowserFiltersByRawStatusField() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository =
+                FakeKnowledgeRepository(
+                    datasets =
+                        listOf(
+                            DatasetListItemUiModel(
+                                datasetId = "dataset-active",
+                                name = "Active",
+                                intro = "",
+                                type = "qa",
+                                status = "active",
+                                vectorModel = "",
+                                updateTime = 1L,
+                            ),
+                            DatasetListItemUiModel(
+                                datasetId = "dataset-disabled",
+                                name = "Disabled",
+                                intro = "",
+                                type = "text",
+                                status = "disabled",
+                                vectorModel = "",
+                                updateTime = 2L,
+                            ),
+                        ),
+                )
+            val viewModel = DatasetBrowserViewModel(repository = repository, strings = FakeKnowledgeStrings())
+            val collector = backgroundScope.launch { viewModel.uiState.collect {} }
+
+            advanceUntilIdle()
+            viewModel.selectStatusFilter("disabled")
+            advanceUntilIdle()
+
+            assertEquals(listOf("dataset-disabled"), viewModel.uiState.value.items.map { it.datasetId })
+            assertTrue(viewModel.uiState.value.availableStatuses.containsAll(listOf("active", "disabled")))
+            collector.cancel()
+        }
+
+    @Test
+    fun searchFailureUsesResourceFallbackMessage() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val strings = FakeKnowledgeStrings()
+            val repository = FakeKnowledgeRepository(searchFailure = IllegalStateException())
+            val viewModel =
+                SearchTestViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("datasetId" to "dataset-1")),
+                    repository = repository,
+                    strings = strings,
+                )
+
+            viewModel.search()
+            advanceUntilIdle()
+
+            assertEquals(strings.searchFailed(), viewModel.uiState.value.errorMessage)
+        }
+}
+
+private class FakeKnowledgeStrings : KnowledgeStrings(context = ContextWrapper(null)) {
+    override fun refreshFailed(): String = "刷新失败"
+
+    override fun createFailed(): String = "创建失败"
+
+    override fun deleteFailed(): String = "删除失败"
+
+    override fun selectedDocumentUnreadable(): String = "无法读取所选文件"
+
+    override fun unsupportedDocument(): String = "仅支持 PDF、DOCX、TXT、MD、CSV、HTML"
+
+    override fun defaultTextImportName(): String = "文本导入"
+
+    override fun defaultQaImportName(): String = "QA 导入"
+
+    override fun defaultDocumentName(): String = "document"
+
+    override fun submitFailed(): String = "提交失败"
+
+    override fun loadFailed(): String = "加载失败"
+
+    override fun saveFailed(): String = "保存失败"
+
+    override fun searchFailed(): String = "检索失败"
 }
 
 private class FakeKnowledgeRepository(
+    datasets: List<DatasetListItemUiModel> = emptyList(),
     private val chunkPages: Map<Int, List<ChunkItemUiModel>> = emptyMap(),
     private val searchResults: Triple<String, String, List<SearchResultUiModel>> = Triple("", "", emptyList()),
+    private val searchFailure: Throwable? = null,
 ) : KnowledgeRepository {
-    private val datasetFlow = MutableStateFlow(emptyList<DatasetListItemUiModel>())
+    private val datasetFlow = MutableStateFlow(datasets)
 
     override fun observeDatasets(): Flow<List<DatasetListItemUiModel>> = datasetFlow
 
@@ -176,5 +270,5 @@ private class FakeKnowledgeRepository(
         similarity: Double?,
         embeddingWeight: Double?,
         usingReRank: Boolean,
-    ): Triple<String, String, List<SearchResultUiModel>> = searchResults
+    ): Triple<String, String, List<SearchResultUiModel>> = searchFailure?.let { throw it } ?: searchResults
 }

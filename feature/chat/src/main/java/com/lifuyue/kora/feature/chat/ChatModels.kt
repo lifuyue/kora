@@ -31,8 +31,10 @@ data class CitationItemUiModel(
     val collectionId: String? = null,
     val dataId: String? = null,
     val title: String,
+    val sourceName: String = "",
     val snippet: String,
-    val scoreLabel: String = "",
+    val scoreType: String? = null,
+    val score: Double? = null,
 )
 
 @Immutable
@@ -102,11 +104,11 @@ data class ConversationListUiState(
     val canClear: Boolean
         get() = items.isNotEmpty()
 
-    val selectedFolderName: String
-        get() = folders.firstOrNull { it.folderId == selectedFolderId }?.name ?: "全部文件夹"
+    val selectedFolderName: String?
+        get() = folders.firstOrNull { it.folderId == selectedFolderId }?.name
 
-    val selectedTagName: String
-        get() = tags.firstOrNull { it.tagId == selectedTagId }?.name ?: "全部标签"
+    val selectedTagName: String?
+        get() = tags.firstOrNull { it.tagId == selectedTagId }?.name
 }
 
 @Immutable
@@ -118,6 +120,8 @@ data class ChatUiState(
     val isSending: Boolean = false,
     val errorMessage: String? = null,
     val messages: List<ChatMessageUiModel> = emptyList(),
+    val autoScrollEnabled: Boolean = true,
+    val isInitialLoading: Boolean = false,
 ) {
     val canStopGeneration: Boolean
         get() = messages.any { it.isStreaming }
