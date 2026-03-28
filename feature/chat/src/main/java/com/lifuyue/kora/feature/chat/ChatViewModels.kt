@@ -988,6 +988,11 @@ class AppDetailViewModel
                                     )
                                 }
                             },
+                        showAnalyticsEntry =
+                            runCatching {
+                                api.getAppAnalytics(appId = appId, range = AnalyticsRange.Last7Days.raw)
+                                true
+                            }.getOrDefault(false),
                         isLoading = false,
                         errorMessage = null,
                     )

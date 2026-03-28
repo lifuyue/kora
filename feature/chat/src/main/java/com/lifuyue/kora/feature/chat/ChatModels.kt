@@ -299,6 +299,30 @@ data class AppDetailUiState(
     val type: String = "",
     val welcomeText: String? = null,
     val sections: List<AppDetailSectionUiModel> = emptyList(),
+    val showAnalyticsEntry: Boolean = false,
     val isLoading: Boolean = true,
+    val errorMessage: String? = null,
+)
+
+enum class AnalyticsRange(val raw: String) {
+    Last7Days("7d"),
+    Last30Days("30d"),
+    Last90Days("90d"),
+}
+
+enum class AnalyticsStatus {
+    Loading,
+    Success,
+    Empty,
+    Error,
+}
+
+data class AppAnalyticsUiState(
+    val range: AnalyticsRange = AnalyticsRange.Last7Days,
+    val requestCount: Int = 0,
+    val conversationCount: Int = 0,
+    val inputTokens: Long = 0L,
+    val outputTokens: Long = 0L,
+    val status: AnalyticsStatus = AnalyticsStatus.Loading,
     val errorMessage: String? = null,
 )

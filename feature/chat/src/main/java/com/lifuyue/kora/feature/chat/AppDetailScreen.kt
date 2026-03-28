@@ -24,6 +24,7 @@ fun AppDetailScreen(
     uiState: AppDetailUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
+    onOpenAnalytics: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -59,6 +60,11 @@ fun AppDetailScreen(
                         uiState.welcomeText ?: "当前 App 未提供欢迎语",
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    if (uiState.showAnalyticsEntry) {
+                        TextButton(onClick = onOpenAnalytics) {
+                            Text("查看统计")
+                        }
+                    }
                 }
             }
             when {

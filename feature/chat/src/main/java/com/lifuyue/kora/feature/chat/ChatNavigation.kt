@@ -95,7 +95,21 @@ fun NavGraphBuilder.chatGraph(navController: NavController) {
                 },
             ),
     ) {
-        AppDetailRoute(onBack = { navController.popBackStack() })
+        AppDetailRoute(
+            onBack = { navController.popBackStack() },
+            onOpenAnalytics = { appId -> navController.navigate(ChatRoutes.appAnalytics(appId)) },
+        )
+    }
+    composable(
+        route = ChatRoutes.APP_ANALYTICS,
+        arguments = listOf(navArgument("appId") { type = NavType.StringType }),
+    ) {
+        val viewModel: AppAnalyticsViewModel = hiltViewModel()
+        val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+        AppAnalyticsScreen(
+            uiState = uiState.value,
+            onRangeChanged = viewModel::updateRange,
+        )
     }
 }
 
@@ -249,6 +263,7 @@ private fun ChatRoute(
 @Composable
 private fun AppDetailRoute(
     onBack: () -> Unit,
+    onOpenAnalytics: (String) -> Unit,
     viewModel: AppDetailViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
@@ -256,6 +271,7 @@ private fun AppDetailRoute(
         uiState = uiState.value,
         onBack = onBack,
         onRefresh = viewModel::refresh,
+        onOpenAnalytics = { onOpenAnalytics(uiState.value.appId) },
     )
 }
 
