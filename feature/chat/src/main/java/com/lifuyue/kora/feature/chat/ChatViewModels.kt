@@ -210,6 +210,7 @@ class ChatViewModel
         private val chatAudioPreferencesSource: ChatAudioPreferencesSource,
         private val speechRecognitionEngine: SpeechRecognitionEngine,
         private val ttsPlaybackController: TtsPlaybackController,
+        private val conversationExportManager: ConversationExportManager,
         private val strings: ChatStrings,
     ) : ViewModel() {
         private val appId: String = checkNotNull(savedStateHandle["appId"])
@@ -219,6 +220,7 @@ class ChatViewModel
         private val attachments = MutableStateFlow<List<AttachmentDraftUiModel>>(emptyList())
         private val attachmentConfig = MutableStateFlow(ChatAttachmentConfig())
         private val speechInputState = MutableStateFlow(SpeechInputUiState())
+        private val shareExportState = MutableStateFlow(ShareExportUiState())
         private val uploadJobs = linkedMapOf<String, Job>()
         private var speechSession: SpeechRecognitionSession? = null
         private var speechSessionToken = 0L
@@ -270,6 +272,7 @@ class ChatViewModel
                 attachmentConfig,
                 speechInputState,
                 ttsPlaybackController.state,
+                shareExportState,
             ) { values ->
                 val currentInput = values[0] as String
                 val meta = values[1] as ChatMetaState
@@ -278,6 +281,7 @@ class ChatViewModel
                 val currentAttachmentConfig = values[4] as ChatAttachmentConfig
                 val currentSpeechInputState = values[5] as SpeechInputUiState
                 val currentTtsPlaybackState = values[6] as TtsPlaybackUiState
+                val currentShareExportState = values[7] as ShareExportUiState
                 val pendingInteractiveCard =
                     messages.lastOrNull { it.interactiveCard?.status == InteractiveCardStatus.Pending }?.interactiveCard
                 ChatUiState(
@@ -294,6 +298,7 @@ class ChatViewModel
                     pendingInteractiveCard = pendingInteractiveCard,
                     speechInputState = currentSpeechInputState,
                     ttsPlaybackState = currentTtsPlaybackState,
+                    shareExportState = currentShareExportState,
                 )
             }.stateIn(
                 viewModelScope,
@@ -307,6 +312,7 @@ class ChatViewModel
                     attachmentConfig = attachmentConfig.value,
                     speechInputState = speechInputState.value,
                     ttsPlaybackState = ttsPlaybackController.state.value,
+                    shareExportState = shareExportState.value,
                 ),
             )
 
@@ -423,6 +429,69 @@ class ChatViewModel
 
         fun onHostStopped() {
             ttsPlaybackController.stop()
+        }
+
+        fun selectShareRange(
+            startMessageId: String,
+            endMessageId: String,
+        ) {
+            shareExportState.update {
+                it.copy(
+                    selection = MessageRangeSelection(startMessageId = startMessageId, endMessageId = endMessageId),
+                )
+            }
+        }
+
+        fun previewShareExport(format: ConversationExportFormat) {
+            val resolvedChatId = chatId.value ?: return
+            viewModelScope.launch {
+                val selection = shareExportState.value.selection
+                runCatching {
+                    chatRepository.buildShareExportPreview(
+                        appId = appId,
+                        chatId = resolvedChatId,
+                        selection = selection,
+                        format = format,
+                    )
+                }.onSuccess { preview ->
+                    shareExportState.update {
+                        it.copy(
+                            exportFormat = format,
+                            previewText = preview,
+                        )
+                    }
+                }.onFailure { error ->
+                    metaState.update {
+                        it.copy(errorMessage = error.message ?: strings.sendFailed())
+                    }
+                }
+            }
+        }
+
+        fun exportConversation(format: ConversationExportFormat) {
+            val title = metaState.value.welcomeText ?: "Conversation"
+            val messages =
+                uiState.value.messages.mapIndexed { index, message ->
+                    ExportConversationMessage(
+                        messageId = message.messageId,
+                        role = message.role,
+                        markdown = message.markdown,
+                        createdAt = index.toLong(),
+                    )
+                }
+            viewModelScope.launch {
+                runCatching {
+                    conversationExportManager.export(
+                        conversationTitle = title,
+                        format = format,
+                        messages = messages,
+                    )
+                }.onFailure { error ->
+                    metaState.update {
+                        it.copy(errorMessage = error.message ?: strings.sendFailed())
+                    }
+                }
+            }
         }
 
         private fun isCurrentSpeechSession(sessionId: Long): Boolean = activeSpeechSessionId == sessionId

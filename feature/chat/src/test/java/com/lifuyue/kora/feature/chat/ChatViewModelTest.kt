@@ -535,6 +535,46 @@ class ChatViewModelTest {
             assertEquals(TtsPlaybackStatus.Stopped, viewModel.uiState.value.ttsPlaybackState.status)
             collectJob.cancel()
         }
+
+    @Test
+    fun selectShareRangeUpdatesShareExportState() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val viewModel = createViewModel(repository = repository, chatId = "chat-1")
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            viewModel.selectShareRange(startMessageId = "m1", endMessageId = "m3")
+            advanceUntilIdle()
+
+            assertEquals(
+                MessageRangeSelection(startMessageId = "m1", endMessageId = "m3"),
+                viewModel.uiState.value.shareExportState.selection,
+            )
+            collectJob.cancel()
+        }
+
+    @Test
+    fun previewShareExportLoadsRepositoryPreviewText() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository =
+                RecordingChatRepository(
+                    shareExportPreview = "Human: Hello\n\nAI: Hi there",
+                )
+            val viewModel = createViewModel(repository = repository, chatId = "chat-1")
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            viewModel.selectShareRange(startMessageId = "m1", endMessageId = "m2")
+            viewModel.previewShareExport(ConversationExportFormat.Txt)
+            advanceUntilIdle()
+
+            assertEquals("Human: Hello\n\nAI: Hi there", viewModel.uiState.value.shareExportState.previewText)
+            assertEquals(ConversationExportFormat.Txt, repository.lastShareExportFormat)
+            assertEquals(
+                MessageRangeSelection("m1", "m2"),
+                repository.lastShareExportSelection,
+            )
+            collectJob.cancel()
+        }
 }
 
 private class FakeChatStrings : ChatStrings(context = ApplicationProvider.getApplicationContext()) {
@@ -660,6 +700,7 @@ private fun createViewModel(
     audioPreferencesSource: ChatAudioPreferencesSource = FakeChatAudioPreferencesSource(),
     speechRecognitionEngine: SpeechRecognitionEngine = FakeSpeechRecognitionEngine(),
     ttsPlaybackController: TtsPlaybackController = FakeTtsPlaybackController(),
+    exportManager: ConversationExportManager = AndroidConversationExportManager(ApplicationProvider.getApplicationContext()),
 ): ChatViewModel =
     ChatViewModel(
         savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to chatId)),
@@ -668,6 +709,7 @@ private fun createViewModel(
         chatAudioPreferencesSource = audioPreferencesSource,
         speechRecognitionEngine = speechRecognitionEngine,
         ttsPlaybackController = ttsPlaybackController,
+        conversationExportManager = exportManager,
         strings = strings,
     )
 
@@ -685,6 +727,7 @@ private class RecordingChatRepository(
                 size = attachment.sizeBytes ?: 0L,
             )
         },
+    private val shareExportPreview: String = "",
 ) : ChatRepository {
     private val messagesByChat =
         MutableStateFlow<Map<String, List<ChatMessageUiModel>>>(emptyMap())
@@ -698,6 +741,8 @@ private class RecordingChatRepository(
     var submittedInteractiveCard: InteractiveCardUiModel? = null
     var submittedInteractiveValue: String? = null
     var uploadAttempts: Int = 0
+    var lastShareExportSelection: MessageRangeSelection? = null
+    var lastShareExportFormat: ConversationExportFormat? = null
 
     override fun observeMessages(
         appId: String,
@@ -803,6 +848,17 @@ private class RecordingChatRepository(
         submittedInteractiveCard = card
         submittedInteractiveValue = value
         return chatId
+    }
+
+    override suspend fun buildShareExportPreview(
+        appId: String,
+        chatId: String,
+        selection: MessageRangeSelection?,
+        format: ConversationExportFormat,
+    ): String {
+        lastShareExportSelection = selection
+        lastShareExportFormat = format
+        return shareExportPreview
     }
 
     fun emitMessages(
