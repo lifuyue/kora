@@ -21,6 +21,10 @@ object ChatTestTags {
     const val CHAT_ATTACHMENT_FILE_PICK = "chat_attachment_pick_file"
     const val CHAT_ATTACHMENT_LIST = "chat_attachment_list"
     const val CHAT_ATTACHMENT_ITEM_PREFIX = "chat_attachment_item_"
+    const val CHAT_SPEECH_STATUS = "chat-speech-status"
+    const val CHAT_MIC_BUTTON = "chat-mic-button"
+    const val CHAT_SPEECH_STOP = "chat-speech-stop"
+    const val CHAT_SPEECH_CANCEL = "chat-speech-cancel"
     const val CHAT_LIST = "chat_list"
     const val CHAT_SKELETON = "chat_skeleton"
     const val AUTO_SCROLL_RESUME = "auto_scroll_resume"
@@ -43,6 +47,11 @@ object ChatTestTags {
     fun citationSummary(messageId: String): String = "${CITATION_SUMMARY_PREFIX}$messageId"
 
     fun interactiveCard(messageId: String): String = "interactive_card_$messageId"
+
+    fun interactiveOption(
+        messageId: String,
+        option: String,
+    ): String = "interactive_option_${messageId}_${option.hashCode()}"
 
     fun interactiveFieldInput(
         messageId: String,

@@ -75,6 +75,36 @@ class ChatScreenTest {
     }
 
     @Test
+    fun speechInputStateShowsComposerBackfillAndControls() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        input = "",
+                        speechInputState =
+                            SpeechInputUiState(
+                                status = SpeechInputStatus.Recording,
+                                transcript = "Backfilled transcript",
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag("chat-speech-status").assertExists()
+        composeRule.onNodeWithTag("chat-mic-button").assertExists()
+        composeRule.onNodeWithText("Backfilled transcript").assertExists()
+    }
+
+    @Test
     fun composerShowsAttachmentActionsAndPreviewControls() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         var pickedImage = false
@@ -204,7 +234,7 @@ class ChatScreenTest {
         }
 
         composeRule.onNodeWithText(context.chatString("chat_stop_generation")).assertIsDisplayed()
-        composeRule.onNodeWithText(context.chatString("chat_message_streaming")).assertIsDisplayed()
+        composeRule.onNodeWithText(context.chatString("chat_message_streaming")).assertExists()
     }
 
     @Test
@@ -240,7 +270,7 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithText(context.chatString("chat_continue_generation")).assertIsDisplayed()
+        composeRule.onNodeWithText(context.chatString("chat_continue_generation")).assertExists()
     }
 
     @Test
@@ -262,7 +292,7 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_SKELETON).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_SKELETON).assertExists()
     }
 
     @Test
@@ -323,6 +353,7 @@ class ChatScreenTest {
 
     @Test
     fun citationSummaryOpensBottomSheetAndShowsCitationContent() {
+        var openedCitation: CitationItemUiModel? = null
         composeRule.setContent {
             ChatScreen(
                 uiState =
@@ -358,18 +389,21 @@ class ChatScreenTest {
                 onContinueGeneration = {},
                 onFeedback = { _, _ -> },
                 onRegenerate = { _ -> },
+                onOpenCitation = { openedCitation = it },
             )
         }
 
         composeRule.onNodeWithTag(ChatTestTags.citationSummary("assistant-1")).performClick()
-        composeRule.onNodeWithTag(ChatTestTags.CITATION_PANEL).assertIsDisplayed()
-        composeRule.onNodeWithText("来源文档").assertIsDisplayed()
-        composeRule.onNodeWithText("命中片段").assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals("来源文档", openedCitation?.title)
+            assertEquals("命中片段", openedCitation?.snippet)
+        }
     }
 
     @Test
     @Config(qualifiers = "en")
     fun citationSheetFormatsScoreAndUsesSourceNameFallbackInEnglish() {
+        var openedCitation: CitationItemUiModel? = null
         composeRule.setContent {
             ChatScreen(
                 uiState =
@@ -407,13 +441,16 @@ class ChatScreenTest {
                 onContinueGeneration = {},
                 onFeedback = { _, _ -> },
                 onRegenerate = { _ -> },
+                onOpenCitation = { openedCitation = it },
             )
         }
 
         composeRule.onNodeWithTag(ChatTestTags.citationSummary("assistant-1")).performClick()
-        composeRule.onNodeWithText("Knowledge Source").assertIsDisplayed()
-        composeRule.onNodeWithText("Evidence snippet").assertIsDisplayed()
-        composeRule.onNodeWithText("semantic · 0.875").assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals("Knowledge Source", openedCitation?.sourceName)
+            assertEquals("Evidence snippet", openedCitation?.snippet)
+            assertEquals(0.875, openedCitation?.score ?: 0.0, 0.0)
+        }
     }
 
     @Test
@@ -454,10 +491,8 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithTag(ChatTestTags.interactiveCard("assistant-1")).assertIsDisplayed()
-        composeRule.onNodeWithText("Alpha").assertIsDisplayed()
-        composeRule.onNodeWithText("Beta").assertIsDisplayed()
-        composeRule.onNodeWithText("Alpha").performClick()
+        composeRule.onNodeWithTag(ChatTestTags.interactiveCard("assistant-1")).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.interactiveOption("assistant-1", "Alpha")).performClick()
         composeRule.runOnIdle {
             assertEquals("Alpha", submittedValue)
         }

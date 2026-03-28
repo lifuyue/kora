@@ -265,6 +265,8 @@ data class ChatUiState(
         get() =
             !isSending &&
                 !canStopGeneration &&
+                speechInputState.status != SpeechInputStatus.Recording &&
+                speechInputState.status != SpeechInputStatus.Recognizing &&
                 (input.isNotBlank() || attachments.any { it.uploadStatus == AttachmentUploadStatus.Uploaded }) &&
                 attachments.none { it.uploadStatus == AttachmentUploadStatus.Uploading || it.uploadStatus == AttachmentUploadStatus.Failed }
 }

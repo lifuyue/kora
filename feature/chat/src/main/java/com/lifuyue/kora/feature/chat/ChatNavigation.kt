@@ -1,6 +1,8 @@
 package com.lifuyue.kora.feature.chat
 
+import android.Manifest
 import android.net.Uri
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -8,12 +10,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.core.content.ContextCompat
 import androidx.navigation.navArgument
 
 object ChatRoutes {
@@ -130,6 +134,15 @@ private fun ChatRoute(
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val appSelectorUiState = appSelectorViewModel.uiState.collectAsStateWithLifecycle()
     var showAppSelector by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val recordAudioPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                viewModel.startSpeechInput()
+            } else {
+                viewModel.onSpeechPermissionDenied()
+            }
+        }
     val imagePickerLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
             if (!uris.isNullOrEmpty()) {
@@ -148,6 +161,15 @@ private fun ChatRoute(
         showAppSelector = showAppSelector,
         onBack = onBack,
         onInputChanged = viewModel::updateInput,
+        onStartSpeechInput = {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                viewModel.startSpeechInput()
+            } else {
+                recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        },
+        onStopSpeechInput = viewModel::stopSpeechInput,
+        onCancelSpeechInput = viewModel::cancelSpeechInput,
         onSend = viewModel::send,
         onPickImage = {
             val state = uiState.value

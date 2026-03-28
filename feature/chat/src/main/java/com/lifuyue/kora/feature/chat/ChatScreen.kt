@@ -61,6 +61,9 @@ fun ChatScreen(
     showAppSelector: Boolean = false,
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
+    onStartSpeechInput: () -> Unit = {},
+    onStopSpeechInput: () -> Unit = {},
+    onCancelSpeechInput: () -> Unit = {},
     onSend: () -> Unit,
     onPickImage: () -> Unit = {},
     onPickFile: () -> Unit = {},
@@ -256,9 +259,7 @@ fun ChatScreen(
                             onRegenerate = { onRegenerate(message) },
                             onFeedback = { feedback -> onFeedback(message, feedback) },
                             onSuggestedQuestion = onSuggestedQuestion,
-                            onOpenCitation = {
-                                activeCitationMessage = message
-                            },
+                            onOpenCitation = onOpenCitation,
                             onUpdateInteractiveDraft = onUpdateInteractiveDraft,
                             onSubmitInteractiveResponse = onSubmitInteractiveResponse,
                         )
@@ -295,6 +296,18 @@ fun ChatScreen(
                     onCancelAttachmentUpload = onCancelAttachmentUpload,
                 )
             }
+            if (
+                uiState.speechInputState.status != SpeechInputStatus.Idle ||
+                uiState.speechInputState.transcript.isNotBlank() ||
+                !uiState.speechInputState.errorMessage.isNullOrBlank()
+            ) {
+                SpeechInputComposer(
+                    state = uiState.speechInputState,
+                    onStart = onStartSpeechInput,
+                    onStop = onStopSpeechInput,
+                    onCancel = onCancelSpeechInput,
+                )
+            }
             OutlinedTextField(
                 value = uiState.input,
                 onValueChange = onInputChanged,
@@ -304,6 +317,26 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
+                        uiState.speechInputState.status == SpeechInputStatus.Recognizing
+                    ) {
+                        onStopSpeechInput
+                    } else {
+                        onStartSpeechInput
+                    },
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
+                ) {
+                    Text(
+                        when (uiState.speechInputState.status) {
+                            SpeechInputStatus.Recording,
+                            SpeechInputStatus.Recognizing,
+                            -> appString("chat_speech_stop")
+                            SpeechInputStatus.Error -> appString("chat_speech_retry")
+                            SpeechInputStatus.Idle -> appString("chat_speech_start")
+                        },
+                    )
+                }
                 if (uiState.canStopGeneration) {
                     OutlinedButton(onClick = onStopGenerating) {
                         Text(stringResource(R.string.chat_stop_generation))
@@ -322,6 +355,73 @@ fun ChatScreen(
                             },
                         ),
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpeechInputComposer(
+    state: SpeechInputUiState,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_SPEECH_STATUS),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+                Text(
+                    text =
+                        when (state.status) {
+                        SpeechInputStatus.Recording -> appString("chat_speech_recording")
+                        SpeechInputStatus.Recognizing -> appString("chat_speech_recognizing")
+                        SpeechInputStatus.Error -> state.errorMessage ?: appString("chat_error_speech_failed")
+                        SpeechInputStatus.Idle -> appString("chat_speech_start")
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            if (state.transcript.isNotBlank()) {
+                Text(text = state.transcript, style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                when (state.status) {
+                    SpeechInputStatus.Recording,
+                    SpeechInputStatus.Recognizing,
+                    -> {
+                        OutlinedButton(
+                            onClick = onStop,
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_SPEECH_STOP),
+                        ) {
+                            Text(appString("chat_speech_stop"))
+                        }
+                        TextButton(
+                            onClick = onCancel,
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_SPEECH_CANCEL),
+                        ) {
+                            Text(appString("chat_speech_cancel"))
+                        }
+                    }
+                    SpeechInputStatus.Error,
+                    SpeechInputStatus.Idle,
+                    -> {
+                        OutlinedButton(
+                            onClick = onStart,
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
+                        ) {
+                            Text(
+                                if (state.status == SpeechInputStatus.Error) {
+                                    appString("chat_speech_retry")
+                                } else {
+                                    appString("chat_speech_start")
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -749,14 +849,15 @@ private fun InteractiveCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.wrapContentWidth(Alignment.Start),
                 ) {
-                    card.options.forEach { option ->
-                        OutlinedButton(
-                            onClick = { onSubmit(message, option) },
-                            enabled = canEdit,
-                        ) {
-                            Text(option)
+                        card.options.forEach { option ->
+                            OutlinedButton(
+                                onClick = { onSubmit(message, option) },
+                                enabled = canEdit,
+                                modifier = Modifier.testTag(ChatTestTags.interactiveOption(messageId, option)),
+                            ) {
+                                Text(option)
+                            }
                         }
-                    }
                 }
             }
             if (card.fields.isNotEmpty()) {

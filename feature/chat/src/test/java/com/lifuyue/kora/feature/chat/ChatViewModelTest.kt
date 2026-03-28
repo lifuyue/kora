@@ -2,7 +2,9 @@ package com.lifuyue.kora.feature.chat
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
+import com.lifuyue.kora.core.common.AudioPreferences
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CompletableDeferred
@@ -35,10 +37,8 @@ class ChatViewModelTest {
             val repository = RecordingChatRepository()
             val strings = FakeChatStrings()
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
+                createViewModel(
+                    repository = repository,
                     strings = strings,
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -61,10 +61,8 @@ class ChatViewModelTest {
             val repository = RecordingChatRepository(shouldFailSend = true)
             val strings = FakeChatStrings()
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
+                createViewModel(
+                    repository = repository,
                     strings = strings,
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
@@ -84,11 +82,9 @@ class ChatViewModelTest {
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
+                    chatId = "chat-1",
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             repository.emitMessages(
@@ -122,11 +118,9 @@ class ChatViewModelTest {
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
+                    chatId = "chat-1",
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             val message =
@@ -155,11 +149,9 @@ class ChatViewModelTest {
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
+                    chatId = "chat-1",
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
 
@@ -183,11 +175,8 @@ class ChatViewModelTest {
                     ),
             )
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             advanceUntilIdle()
@@ -243,11 +232,8 @@ class ChatViewModelTest {
                     },
                 )
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             advanceUntilIdle()
@@ -287,11 +273,8 @@ class ChatViewModelTest {
                         ),
                 )
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             advanceUntilIdle()
@@ -311,11 +294,8 @@ class ChatViewModelTest {
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             advanceUntilIdle()
@@ -334,11 +314,9 @@ class ChatViewModelTest {
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
+                    chatId = "chat-1",
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             val card =
@@ -372,11 +350,9 @@ class ChatViewModelTest {
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
             val viewModel =
-                ChatViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
-                    context = ApplicationProvider.getApplicationContext(),
-                    chatRepository = repository,
-                    strings = FakeChatStrings(),
+                createViewModel(
+                    repository = repository,
+                    chatId = "chat-1",
                 )
             val collectJob = launch { viewModel.uiState.collect {} }
             val message =
@@ -403,6 +379,103 @@ class ChatViewModelTest {
             assertEquals("Alpha", repository.submittedInteractiveValue)
             collectJob.cancel()
         }
+
+    @Test
+    fun speechInputStateBackfillsDraftAndAutoSendsFinalTranscript() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val audioPreferencesSource =
+                FakeChatAudioPreferencesSource(
+                    AudioPreferences(
+                        speechToTextEngine = SpeechToTextEngine.System,
+                        autoSendTranscripts = true,
+                    ),
+                )
+            val speechEngine = FakeSpeechRecognitionEngine()
+            val viewModel =
+                createViewModel(
+                    repository = repository,
+                    audioPreferencesSource = audioPreferencesSource,
+                    speechRecognitionEngine = speechEngine,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            viewModel.updateInput("draft")
+            viewModel.startSpeechInput()
+            advanceUntilIdle()
+            assertEquals(SpeechInputStatus.Recording, viewModel.uiState.value.speechInputState.status)
+            assertEquals(SpeechToTextEngine.System, speechEngine.lastSpeechToTextEngine)
+
+            speechEngine.emitPartial("partial transcript")
+            advanceUntilIdle()
+            assertEquals("partial transcript", viewModel.uiState.value.input)
+            assertEquals("partial transcript", viewModel.uiState.value.speechInputState.transcript)
+
+            speechEngine.emitFinal("final transcript")
+            advanceUntilIdle()
+
+            assertEquals("final transcript", repository.sentText)
+            assertEquals("", viewModel.uiState.value.input)
+            assertEquals(SpeechInputStatus.Idle, viewModel.uiState.value.speechInputState.status)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun speechInputStateStopAndCancelRestoreDraft() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val audioPreferencesSource = FakeChatAudioPreferencesSource()
+            val speechEngine = FakeSpeechRecognitionEngine()
+            val viewModel =
+                createViewModel(
+                    repository = repository,
+                    audioPreferencesSource = audioPreferencesSource,
+                    speechRecognitionEngine = speechEngine,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            viewModel.updateInput("draft")
+            viewModel.startSpeechInput()
+            advanceUntilIdle()
+            speechEngine.emitPartial("live transcript")
+            advanceUntilIdle()
+
+            viewModel.stopSpeechInput()
+            advanceUntilIdle()
+            assertTrue(speechEngine.lastSession?.stopCalled == true)
+            assertEquals(SpeechInputStatus.Recognizing, viewModel.uiState.value.speechInputState.status)
+
+            viewModel.cancelSpeechInput()
+            advanceUntilIdle()
+            assertTrue(speechEngine.lastSession?.cancelCalled == true)
+            assertEquals("draft", viewModel.uiState.value.input)
+            assertEquals(SpeechInputStatus.Idle, viewModel.uiState.value.speechInputState.status)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun speechPermissionDeniedShowsErrorMessageAndRestoresDraft() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val viewModel =
+                createViewModel(
+                    repository = repository,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            viewModel.updateInput("draft")
+            viewModel.startSpeechInput()
+            advanceUntilIdle()
+            viewModel.onSpeechPermissionDenied()
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value.speechInputState
+            assertEquals(SpeechInputStatus.Error, state.status)
+            assertEquals("draft", state.transcript)
+            assertEquals("需要麦克风权限", state.errorMessage)
+            assertEquals("draft", viewModel.uiState.value.input)
+            collectJob.cancel()
+        }
 }
 
 private class FakeChatStrings : ChatStrings(context = ApplicationProvider.getApplicationContext()) {
@@ -425,7 +498,86 @@ private class FakeChatStrings : ChatStrings(context = ApplicationProvider.getApp
     override fun attachmentLimitReached(maxFiles: Int): String = "最多只能添加 $maxFiles 个附件"
 
     override fun attachmentUploadFailed(): String = "附件上传失败"
+
+    override fun speechPermissionRequired(): String = "需要麦克风权限"
+
+    override fun speechUnavailable(): String = "语音识别不可用"
+
+    override fun speechFailed(): String = "语音识别失败"
 }
+
+private class FakeChatAudioPreferencesSource(
+    private var preferences: AudioPreferences = AudioPreferences(),
+) : ChatAudioPreferencesSource {
+    override fun currentAudioPreferences(): AudioPreferences = preferences
+}
+
+private class FakeSpeechRecognitionEngine : SpeechRecognitionEngine {
+    var lastSpeechToTextEngine: SpeechToTextEngine? = null
+        private set
+    var lastSession: FakeSpeechRecognitionSession? = null
+        private set
+
+    private var onPartialTranscript: ((String) -> Unit)? = null
+    private var onFinalTranscript: ((String) -> Unit)? = null
+    private var onError: ((SpeechRecognitionError) -> Unit)? = null
+
+    override fun start(
+        speechToTextEngine: SpeechToTextEngine,
+        onPartialTranscript: (String) -> Unit,
+        onFinalTranscript: (String) -> Unit,
+        onError: (SpeechRecognitionError) -> Unit,
+    ): SpeechRecognitionSession {
+        lastSpeechToTextEngine = speechToTextEngine
+        this.onPartialTranscript = onPartialTranscript
+        this.onFinalTranscript = onFinalTranscript
+        this.onError = onError
+        return FakeSpeechRecognitionSession().also { lastSession = it }
+    }
+
+    fun emitPartial(value: String) {
+        onPartialTranscript?.invoke(value)
+    }
+
+    fun emitFinal(value: String) {
+        onFinalTranscript?.invoke(value)
+    }
+
+    fun emitError(error: SpeechRecognitionError) {
+        onError?.invoke(error)
+    }
+}
+
+private class FakeSpeechRecognitionSession : SpeechRecognitionSession {
+    var stopCalled: Boolean = false
+        private set
+    var cancelCalled: Boolean = false
+        private set
+
+    override fun stop() {
+        stopCalled = true
+    }
+
+    override fun cancel() {
+        cancelCalled = true
+    }
+}
+
+private fun createViewModel(
+    repository: ChatRepository = RecordingChatRepository(),
+    chatId: String? = null,
+    strings: ChatStrings = FakeChatStrings(),
+    audioPreferencesSource: ChatAudioPreferencesSource = FakeChatAudioPreferencesSource(),
+    speechRecognitionEngine: SpeechRecognitionEngine = FakeSpeechRecognitionEngine(),
+): ChatViewModel =
+    ChatViewModel(
+        savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to chatId)),
+        context = ApplicationProvider.getApplicationContext(),
+        chatRepository = repository,
+        chatAudioPreferencesSource = audioPreferencesSource,
+        speechRecognitionEngine = speechRecognitionEngine,
+        strings = strings,
+    )
 
 private class RecordingChatRepository(
     private val shouldFailSend: Boolean = false,

@@ -18,8 +18,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -118,6 +121,33 @@ class SettingsScreensTest {
     }
 
     @Test
+    fun settingsOverviewIncludesAudioEntry() {
+        var openedAudio = false
+        composeRule.setContent {
+            SettingsOverviewScreen(
+                state = SettingsOverviewUiState(),
+                onOpenConnection = {},
+                onOpenCurrentApp = {},
+                onOpenTheme = {},
+                onOpenChatPreferences = {},
+                onOpenAudio = { openedAudio = true },
+                onOpenLanguage = {},
+                onOpenCache = {},
+                onOpenAbout = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithTag("settings-overview-scroll")
+            .performScrollToNode(hasTestTag("settings-audio"))
+        composeRule.onNodeWithTag("settings-audio").assertExists()
+        composeRule.onNodeWithText(ApplicationProvider.getApplicationContext<Context>().appString("settings_audio_title")).performClick()
+        composeRule.runOnIdle {
+            assertTrue(openedAudio)
+        }
+    }
+
+    @Test
     fun themeScreenDisplaysSwitchesAndSelection() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
@@ -163,6 +193,35 @@ class SettingsScreensTest {
         composeRule
             .onNodeWithText(context.getString(R.string.settings_chat_preferences_font_scale, 120))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun audioSettingsScreenShowsPersistedControls() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            AudioSettingsScreen(
+                state =
+                    AudioSettingsUiState(
+                        speechToTextEngine = SpeechToTextEngine.WhisperApp,
+                        autoSendTranscripts = true,
+                        textToSpeechEngine = TextToSpeechEngine.AppManaged,
+                        speechRate = 1.5f,
+                        defaultVoiceName = "Voice A",
+                    ),
+                onSpeechToTextEngineChange = {},
+                onAutoSendTranscriptsChange = {},
+                onTextToSpeechEngineChange = {},
+                onSpeechRateChange = {},
+                onDefaultVoiceNameChange = {},
+            )
+        }
+
+        composeRule.onNodeWithText(context.appString("settings_audio_title")).assertExists()
+        composeRule.onNodeWithTag("audio-stt-whisper").assertExists()
+        composeRule.onNodeWithTag("audio-auto-send").assertIsOn()
+        composeRule.onNodeWithTag("audio-tts-app-managed").assertExists()
+        composeRule.onNodeWithTag("audio-speech-rate").assertExists()
+        composeRule.onNodeWithTag("audio-default-voice").assertExists()
     }
 
     @Test
