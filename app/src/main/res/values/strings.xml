@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kora</string>
-    <string name="onboarding_title">欢迎使用 Kora</string>
-    <string name="onboarding_body">这是 M1 阶段的 Compose + Hilt 应用入口壳，后续会接入设置、聊天与知识库模块。</string>
-    <string name="onboarding_continue">继续</string>
-    <string name="onboarding_step_intro_title">连接你的 FastGPT</string>
-    <string name="onboarding_step_intro_body">Kora 会使用你的 FastGPT 服务完成流式聊天、会话恢复和设置同步。</string>
-    <string name="onboarding_step_ready_title">准备开始</string>
-    <string name="onboarding_step_ready_body">下一步会进入连接配置。连通成功后会自动选择第一个可用 App 并进入主界面。</string>
-    <string name="onboarding_connection_pending">连接配置正在集成。</string>
+    <string name="bootstrap_restoring">正在恢复 Kora</string>
+    <string name="onboarding_page_1_title">欢迎使用 Kora</string>
+    <string name="onboarding_page_1_body">在手机上配置 FastGPT 连接，进入流式聊天与会话管理。</string>
+    <string name="onboarding_page_2_title">核心体验</string>
+    <string name="onboarding_page_2_body">M3 提供引导、设置与主题，M4 打通流式聊天、Markdown 与会话恢复。</string>
+    <string name="onboarding_page_3_title">下一步</string>
+    <string name="onboarding_page_3_body">测试连接成功后会自动选中第一个可用 App，并进入主界面。</string>
+    <string name="onboarding_page_indicator">%1$d/%2$d</string>
+    <string name="onboarding_cta_next">下一步</string>
+    <string name="onboarding_cta_finish">进入连接配置</string>
     <string name="nav_chat">聊天</string>
     <string name="nav_knowledge">知识库</string>
     <string name="nav_settings">设置</string>
-    <string name="knowledge_placeholder">知识库将在 M5 实现。</string>
 </resources>

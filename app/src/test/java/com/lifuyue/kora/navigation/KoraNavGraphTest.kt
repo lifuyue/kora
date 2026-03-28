@@ -1,15 +1,22 @@
 package com.lifuyue.kora.navigation
 
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.core.os.LocaleListCompat
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lifuyue.kora.KoraApplication
+import com.lifuyue.kora.R
 import com.lifuyue.kora.core.common.AppearancePreferences
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.common.ThemeMode
+import org.junit.After
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,19 +28,42 @@ class KoraNavGraphTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    @Before
+    fun setUp() {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    }
+
+    @After
+    fun tearDown() {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    }
+
     @Test
     fun onboardingIsShownWhenNotCompleted() {
+        val context = ApplicationProvider.getApplicationContext<KoraApplication>()
+        val title = context.getString(R.string.onboarding_page_1_title)
+        val indicator = context.getString(R.string.onboarding_page_indicator, 1, 3)
+
         composeRule.setContent {
             KoraNavGraph(snapshot = ConnectionSnapshot())
         }
 
-        composeRule.onNodeWithText("欢迎使用 Kora").assertIsDisplayed()
-        composeRule.onNodeWithText("1/3").assertIsDisplayed()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runCatching {
+                composeRule.onNodeWithText(title).assertIsDisplayed()
+            }.isSuccess
+        }
+
+        composeRule.onNodeWithText(title).assertIsDisplayed()
+        composeRule.onNodeWithText(indicator).assertIsDisplayed()
     }
 
     @Test
     fun finishingOnboardingTriggersCompletionCallback() {
         var completed = false
+        val context = ApplicationProvider.getApplicationContext<KoraApplication>()
+        val next = context.getString(R.string.onboarding_cta_next)
+        val finish = context.getString(R.string.onboarding_cta_finish)
 
         composeRule.setContent {
             KoraNavGraph(
@@ -45,9 +75,15 @@ class KoraNavGraphTest {
             )
         }
 
-        composeRule.onNodeWithText("下一步").performClick()
-        composeRule.onNodeWithText("下一步").performClick()
-        composeRule.onNodeWithText("进入连接配置").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runCatching {
+                composeRule.onNodeWithText(next).assertIsDisplayed()
+            }.isSuccess
+        }
+
+        composeRule.onNodeWithText(next).performClick()
+        composeRule.onNodeWithText(next).performClick()
+        composeRule.onNodeWithText(finish).performClick()
 
         composeRule.onNodeWithText("Fake Connection").assertIsDisplayed()
         assertTrue(completed)

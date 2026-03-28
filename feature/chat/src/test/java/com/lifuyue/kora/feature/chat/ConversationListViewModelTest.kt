@@ -106,10 +106,57 @@ class ConversationListViewModelTest {
             assertEquals(listOf("chat-2"), state.otherItems.map { it.chatId })
             collectJob.cancel()
         }
+
+    @Test
+    fun folderAndTagFiltersAreCombinedWithQuery() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingConversationRepository()
+            repository.folders.value = listOf(ConversationFolderUiModel(folderId = "folder-1", name = "工作"))
+            repository.tags.value = listOf(ConversationTagUiModel(tagId = "tag-1", name = "Kotlin", colorToken = "sky"))
+            repository.emit(
+                listOf(
+                    ConversationListItemUiModel(
+                        chatId = "chat-1",
+                        appId = "app-1",
+                        title = "Kotlin 方案",
+                        preview = "实现细节",
+                        folderId = "folder-1",
+                        folderName = "工作",
+                        tags = listOf(ConversationTagUiModel(tagId = "tag-1", name = "Kotlin", colorToken = "sky")),
+                    ),
+                    ConversationListItemUiModel(
+                        chatId = "chat-2",
+                        appId = "app-1",
+                        title = "旅行计划",
+                        preview = "路线",
+                    ),
+                ),
+            )
+            val viewModel =
+                ConversationListViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1")),
+                    conversationRepository = repository,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            advanceUntilIdle()
+            viewModel.selectFolder("folder-1")
+            viewModel.selectTag("tag-1")
+            viewModel.updateQuery("Kotlin")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(listOf("chat-1"), state.items.map { it.chatId })
+            assertEquals("工作", state.selectedFolderName)
+            assertEquals("Kotlin", state.selectedTagName)
+            collectJob.cancel()
+        }
 }
 
 private class RecordingConversationRepository : ConversationRepository {
     private val items = MutableStateFlow<List<ConversationListItemUiModel>>(emptyList())
+    val folders = MutableStateFlow<List<ConversationFolderUiModel>>(emptyList())
+    val tags = MutableStateFlow<List<ConversationTagUiModel>>(emptyList())
 
     var renamedChatId: String? = null
     var pinned: Boolean = false
@@ -118,23 +165,82 @@ private class RecordingConversationRepository : ConversationRepository {
 
     override fun observeConversations(appId: String): Flow<List<ConversationListItemUiModel>> = items
 
+    override fun observeFolders(appId: String): Flow<List<ConversationFolderUiModel>> = folders
+
+    override fun observeTags(appId: String): Flow<List<ConversationTagUiModel>> = tags
+
     override suspend fun refreshConversations(appId: String) = Unit
 
-    override suspend fun renameConversation(appId: String, chatId: String, title: String) {
+    override suspend fun renameConversation(
+        appId: String,
+        chatId: String,
+        title: String,
+    ) {
         renamedChatId = chatId
     }
 
-    override suspend fun togglePinConversation(appId: String, chatId: String, pinned: Boolean) {
+    override suspend fun togglePinConversation(
+        appId: String,
+        chatId: String,
+        pinned: Boolean,
+    ) {
         this.pinned = pinned
     }
 
-    override suspend fun deleteConversation(appId: String, chatId: String) {
+    override suspend fun deleteConversation(
+        appId: String,
+        chatId: String,
+    ) {
         deletedChatId = chatId
     }
 
     override suspend fun clearConversations(appId: String) {
         cleared = true
     }
+
+    override suspend fun createFolder(
+        appId: String,
+        name: String,
+    ) = Unit
+
+    override suspend fun renameFolder(
+        appId: String,
+        folderId: String,
+        name: String,
+    ) = Unit
+
+    override suspend fun deleteFolder(
+        appId: String,
+        folderId: String,
+    ) = Unit
+
+    override suspend fun createTag(
+        appId: String,
+        name: String,
+    ) = Unit
+
+    override suspend fun renameTag(
+        appId: String,
+        tagId: String,
+        name: String,
+    ) = Unit
+
+    override suspend fun deleteTag(
+        appId: String,
+        tagId: String,
+    ) = Unit
+
+    override suspend fun moveConversationToFolder(
+        appId: String,
+        chatId: String,
+        folderId: String?,
+    ) = Unit
+
+    override suspend fun setConversationTags(
+        appId: String,
+        chatId: String,
+        tagIds: List<String>,
+    ) = Unit
 
     fun emit(value: List<ConversationListItemUiModel>) {
         items.value = value

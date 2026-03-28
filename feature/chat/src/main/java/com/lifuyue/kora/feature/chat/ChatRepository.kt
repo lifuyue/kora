@@ -1,42 +1,128 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.Context
+import com.lifuyue.kora.core.database.dao.ConversationDao
+import com.lifuyue.kora.core.database.dao.ConversationFolderDao
+import com.lifuyue.kora.core.database.dao.ConversationTagDao
+import com.lifuyue.kora.core.database.dao.MessageDao
+import com.lifuyue.kora.core.network.AppQuestionGuideConfigDto
+import com.lifuyue.kora.core.network.FastGptApi
+import com.lifuyue.kora.core.network.SseStreamClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
-import com.lifuyue.kora.core.database.dao.ConversationDao
-import com.lifuyue.kora.core.database.dao.MessageDao
-import com.lifuyue.kora.core.network.FastGptApi
-import com.lifuyue.kora.core.network.SseStreamClient
+import javax.inject.Singleton
 
 interface ConversationRepository {
     fun observeConversations(appId: String): Flow<List<ConversationListItemUiModel>>
 
+    fun observeFolders(appId: String): Flow<List<ConversationFolderUiModel>>
+
+    fun observeTags(appId: String): Flow<List<ConversationTagUiModel>>
+
     suspend fun refreshConversations(appId: String)
 
-    suspend fun renameConversation(appId: String, chatId: String, title: String)
+    suspend fun renameConversation(
+        appId: String,
+        chatId: String,
+        title: String,
+    )
 
-    suspend fun togglePinConversation(appId: String, chatId: String, pinned: Boolean)
+    suspend fun togglePinConversation(
+        appId: String,
+        chatId: String,
+        pinned: Boolean,
+    )
 
-    suspend fun deleteConversation(appId: String, chatId: String)
+    suspend fun deleteConversation(
+        appId: String,
+        chatId: String,
+    )
 
     suspend fun clearConversations(appId: String)
+
+    suspend fun createFolder(
+        appId: String,
+        name: String,
+    )
+
+    suspend fun renameFolder(
+        appId: String,
+        folderId: String,
+        name: String,
+    )
+
+    suspend fun deleteFolder(
+        appId: String,
+        folderId: String,
+    )
+
+    suspend fun createTag(
+        appId: String,
+        name: String,
+    )
+
+    suspend fun renameTag(
+        appId: String,
+        tagId: String,
+        name: String,
+    )
+
+    suspend fun deleteTag(
+        appId: String,
+        tagId: String,
+    )
+
+    suspend fun moveConversationToFolder(
+        appId: String,
+        chatId: String,
+        folderId: String?,
+    )
+
+    suspend fun setConversationTags(
+        appId: String,
+        chatId: String,
+        tagIds: List<String>,
+    )
 }
 
 interface ChatRepository {
-    fun observeMessages(appId: String, chatId: String?): Flow<List<ChatMessageUiModel>>
+    fun observeMessages(
+        appId: String,
+        chatId: String?,
+    ): Flow<List<ChatMessageUiModel>>
 
-    suspend fun restoreMessages(appId: String, chatId: String)
+    suspend fun bootstrapChat(appId: String): ChatBootstrap
 
-    suspend fun sendMessage(appId: String, chatId: String?, text: String): String
+    suspend fun restoreMessages(
+        appId: String,
+        chatId: String,
+    )
 
-    suspend fun stopStreaming(appId: String, chatId: String)
+    suspend fun sendMessage(
+        appId: String,
+        chatId: String?,
+        text: String,
+    ): String
 
-    suspend fun continueGeneration(appId: String, chatId: String): String
+    suspend fun stopStreaming(
+        appId: String,
+        chatId: String,
+    )
 
-    suspend fun regenerateResponse(appId: String, chatId: String, messageId: String): String
+    suspend fun continueGeneration(
+        appId: String,
+        chatId: String,
+    ): String
+
+    suspend fun regenerateResponse(
+        appId: String,
+        chatId: String,
+        messageId: String,
+    ): String
 
     suspend fun setFeedback(
         appId: String,
@@ -45,6 +131,13 @@ interface ChatRepository {
         feedback: MessageFeedback,
     )
 }
+
+data class ChatBootstrap(
+    val chatId: String,
+    val title: String = "",
+    val welcomeText: String? = null,
+    val questionGuide: AppQuestionGuideConfigDto? = null,
+)
 
 data class AssistantResponseRequest(
     val appId: String,
@@ -73,18 +166,23 @@ object ChatRepositoryModule {
         api: FastGptApi,
         sseStreamClient: SseStreamClient,
         conversationDao: ConversationDao,
+        conversationFolderDao: ConversationFolderDao,
+        conversationTagDao: ConversationTagDao,
         messageDao: MessageDao,
+        @ApplicationContext context: Context,
     ): RoomChatRepository =
         RoomChatRepository(
             api = api,
             sseStreamClient = sseStreamClient,
             conversationDao = conversationDao,
+            conversationFolderDao = conversationFolderDao,
+            conversationTagDao = conversationTagDao,
             messageDao = messageDao,
+            context = context,
         )
 
     @Provides
-    fun provideChatRepository(repository: RoomChatRepository): ChatRepository =
-        ChatTestOverrides.chatRepository ?: repository
+    fun provideChatRepository(repository: RoomChatRepository): ChatRepository = ChatTestOverrides.chatRepository ?: repository
 
     @Provides
     fun provideConversationRepository(repository: RoomChatRepository): ConversationRepository =

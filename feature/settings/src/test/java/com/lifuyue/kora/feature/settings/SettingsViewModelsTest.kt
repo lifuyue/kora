@@ -92,9 +92,9 @@ class SettingsViewModelsTest {
             val viewModel = SettingsOverviewViewModel(facade)
             advanceUntilIdle()
 
-            assertEquals("https://fastgpt.example.com/", viewModel.uiState.value.connectionSummary)
-            assertEquals("app-42", viewModel.uiState.value.selectedAppSummary)
-            assertEquals("OLED 深色", viewModel.uiState.value.themeSummary)
+            assertEquals("https://fastgpt.example.com/", viewModel.uiState.value.serverBaseUrl)
+            assertEquals("app-42", viewModel.uiState.value.selectedAppId)
+            assertEquals(ThemeMode.OLED_DARK, viewModel.uiState.value.themeMode)
         }
 
     @Test
@@ -125,6 +125,94 @@ class SettingsViewModelsTest {
 
             assertEquals("https://api.fastgpt.in/api", viewModel.uiState.value.serverUrl)
             assertEquals("", viewModel.uiState.value.apiKey)
+        }
+
+    @Test
+    fun chatPreferencesViewModel_updatesStoredPreferences() =
+        runTest {
+            val facade =
+                FakeSettingsConnectionFacade(
+                    initialSnapshot =
+                        ConnectionSnapshot(
+                            appearancePreferences =
+                                AppearancePreferences(
+                                    streamEnabled = true,
+                                    autoScroll = true,
+                                    fontSizeScale = 1f,
+                                    showCitationsByDefault = true,
+                                ),
+                        ),
+                )
+            val viewModel = ChatPreferencesViewModel(facade)
+
+            viewModel.updateStreamEnabled(false)
+            viewModel.updateAutoScroll(false)
+            viewModel.updateFontSizeScale(1.25f)
+            viewModel.updateShowCitationsByDefault(false)
+            advanceUntilIdle()
+
+            assertFalse(facade.snapshot.value.appearancePreferences.streamEnabled)
+            assertFalse(facade.snapshot.value.appearancePreferences.autoScroll)
+            assertEquals(1.25f, facade.snapshot.value.appearancePreferences.fontSizeScale)
+            assertFalse(facade.snapshot.value.appearancePreferences.showCitationsByDefault)
+        }
+
+    @Test
+    fun languageSettingsViewModel_updatesStoredLanguageTag() =
+        runTest {
+            val facade = FakeSettingsConnectionFacade()
+            val viewModel = LanguageSettingsViewModel(facade)
+
+            viewModel.updateLanguageTag("en")
+            advanceUntilIdle()
+
+            assertEquals("en", facade.snapshot.value.appearancePreferences.languageTag)
+        }
+
+    @Test
+    fun cacheSettingsViewModel_loadsAndClearsCache() =
+        runTest {
+            val cacheManager =
+                FakeSettingsCacheManager(
+                    storageBuckets =
+                        mapOf(
+                            StorageBucket.DATABASE to 2_048L,
+                            StorageBucket.PREFERENCES to 512L,
+                            StorageBucket.TEMP_CACHE to 1_536L,
+                        ),
+                )
+            val viewModel = CacheSettingsViewModel(cacheManager)
+            advanceUntilIdle()
+
+            assertEquals(2_048L, viewModel.uiState.value.storageBuckets[StorageBucket.DATABASE])
+            assertEquals(512L, viewModel.uiState.value.storageBuckets[StorageBucket.PREFERENCES])
+            assertEquals(1_536L, viewModel.uiState.value.storageBuckets[StorageBucket.TEMP_CACHE])
+
+            viewModel.clearCache()
+            advanceUntilIdle()
+
+            assertTrue(cacheManager.clearRequested)
+            assertEquals(0L, viewModel.uiState.value.storageBuckets[StorageBucket.TEMP_CACHE])
+            assertEquals(2_048L, viewModel.uiState.value.storageBuckets[StorageBucket.DATABASE])
+            assertEquals(512L, viewModel.uiState.value.storageBuckets[StorageBucket.PREFERENCES])
+        }
+
+    @Test
+    fun aboutViewModel_exposesAppMetadata() =
+        runTest {
+            val viewModel =
+                AboutViewModel(
+                    appInfoProvider =
+                        FakeAppInfoProvider(
+                            versionName = "1.2.3",
+                            feedbackUrl = "https://github.com/lifuyue/kora/issues",
+                            licensesUrl = "https://example.com/licenses",
+                        ),
+                )
+
+            assertEquals("1.2.3", viewModel.uiState.value.versionName)
+            assertEquals("https://github.com/lifuyue/kora/issues", viewModel.uiState.value.feedbackUrl)
+            assertEquals("https://example.com/licenses", viewModel.uiState.value.licensesUrl)
         }
 }
 
@@ -178,6 +266,11 @@ private class FakeSettingsConnectionFacade(
         mutableSnapshot.value = ConnectionSnapshot()
     }
 
+    override suspend fun updateSelectedAppId(selectedAppId: String) {
+        savedSelectedAppId = selectedAppId
+        mutableSnapshot.value = mutableSnapshot.value.copy(selectedAppId = selectedAppId)
+    }
+
     override suspend fun updateAppearance(
         themeMode: ThemeMode,
         dynamicColorEnabled: Boolean,
@@ -190,7 +283,67 @@ private class FakeSettingsConnectionFacade(
                         themeMode = themeMode,
                         dynamicColorEnabled = dynamicColorEnabled,
                         oledEnabled = oledEnabled,
+                        streamEnabled = mutableSnapshot.value.appearancePreferences.streamEnabled,
+                        autoScroll = mutableSnapshot.value.appearancePreferences.autoScroll,
+                        fontSizeScale = mutableSnapshot.value.appearancePreferences.fontSizeScale,
+                        showCitationsByDefault = mutableSnapshot.value.appearancePreferences.showCitationsByDefault,
                     ),
             )
     }
+
+    override suspend fun updateChatPreferences(
+        streamEnabled: Boolean,
+        autoScroll: Boolean,
+        fontSizeScale: Float,
+        showCitationsByDefault: Boolean,
+    ) {
+        mutableSnapshot.value =
+            mutableSnapshot.value.copy(
+                appearancePreferences =
+                    mutableSnapshot.value.appearancePreferences.copy(
+                        streamEnabled = streamEnabled,
+                        autoScroll = autoScroll,
+                        fontSizeScale = fontSizeScale,
+                        showCitationsByDefault = showCitationsByDefault,
+                    ),
+            )
+    }
+
+    override suspend fun updateLanguageTag(languageTag: String?) {
+        mutableSnapshot.value =
+            mutableSnapshot.value.copy(
+                appearancePreferences = mutableSnapshot.value.appearancePreferences.copy(languageTag = languageTag),
+            )
+    }
+}
+
+private class FakeSettingsCacheManager(
+    storageBuckets: Map<StorageBucket, Long>,
+) : SettingsCacheManager {
+    private var currentStorageBuckets = storageBuckets.toMap()
+
+    var clearRequested: Boolean = false
+        private set
+
+    override suspend fun getStorageBuckets(): Map<StorageBucket, Long> = currentStorageBuckets
+
+    override suspend fun clearCache() {
+        clearRequested = true
+        currentStorageBuckets =
+            currentStorageBuckets.toMutableMap().apply {
+                this[StorageBucket.TEMP_CACHE] = 0L
+            }
+    }
+}
+
+private class FakeAppInfoProvider(
+    private val versionName: String,
+    private val feedbackUrl: String,
+    private val licensesUrl: String,
+) : AppInfoProvider {
+    override fun versionName(): String = versionName
+
+    override fun feedbackUrl(): String = feedbackUrl
+
+    override fun licensesUrl(): String = licensesUrl
 }

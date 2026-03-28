@@ -61,6 +61,10 @@ class ConnectionRepository
             themeMode: ThemeMode = mutableSnapshot.value.appearancePreferences.themeMode,
             dynamicColorEnabled: Boolean = mutableSnapshot.value.appearancePreferences.dynamicColorEnabled,
             oledEnabled: Boolean = mutableSnapshot.value.appearancePreferences.oledEnabled,
+            streamEnabled: Boolean = mutableSnapshot.value.appearancePreferences.streamEnabled,
+            autoScroll: Boolean = mutableSnapshot.value.appearancePreferences.autoScroll,
+            fontSizeScale: Float = mutableSnapshot.value.appearancePreferences.fontSizeScale,
+            showCitationsByDefault: Boolean = mutableSnapshot.value.appearancePreferences.showCitationsByDefault,
             languageTag: String? = mutableSnapshot.value.appearancePreferences.languageTag,
         ) {
             val normalizedBaseUrl = ConnectionValidator.normalizeServerBaseUrl(serverBaseUrl)
@@ -74,6 +78,10 @@ class ConnectionRepository
             preferencesStore.updateThemeMode(themeMode)
             preferencesStore.updateDynamicColorEnabled(dynamicColorEnabled)
             preferencesStore.updateOledEnabled(oledEnabled)
+            preferencesStore.updateStreamEnabled(streamEnabled)
+            preferencesStore.updateAutoScroll(autoScroll)
+            preferencesStore.updateFontSizeScale(fontSizeScale)
+            preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
             preferencesStore.updateLanguageTag(languageTag)
 
             publishSnapshot(
@@ -87,6 +95,10 @@ class ConnectionRepository
                             themeMode = themeMode,
                             dynamicColorEnabled = dynamicColorEnabled,
                             oledEnabled = oledEnabled,
+                            streamEnabled = streamEnabled,
+                            autoScroll = autoScroll,
+                            fontSizeScale = fontSizeScale,
+                            showCitationsByDefault = showCitationsByDefault,
                             languageTag = languageTag,
                         ),
                 ),
@@ -97,11 +109,35 @@ class ConnectionRepository
             themeMode: ThemeMode,
             dynamicColorEnabled: Boolean,
             oledEnabled: Boolean,
+            streamEnabled: Boolean = mutableSnapshot.value.appearancePreferences.streamEnabled,
+            autoScroll: Boolean = mutableSnapshot.value.appearancePreferences.autoScroll,
+            fontSizeScale: Float = mutableSnapshot.value.appearancePreferences.fontSizeScale,
+            showCitationsByDefault: Boolean = mutableSnapshot.value.appearancePreferences.showCitationsByDefault,
             languageTag: String? = mutableSnapshot.value.appearancePreferences.languageTag,
         ) {
             preferencesStore.updateThemeMode(themeMode)
             preferencesStore.updateDynamicColorEnabled(dynamicColorEnabled)
             preferencesStore.updateOledEnabled(oledEnabled)
+            preferencesStore.updateStreamEnabled(streamEnabled)
+            preferencesStore.updateAutoScroll(autoScroll)
+            preferencesStore.updateFontSizeScale(fontSizeScale)
+            preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
+            preferencesStore.updateLanguageTag(languageTag)
+        }
+
+        suspend fun updateChatPreferences(
+            streamEnabled: Boolean,
+            autoScroll: Boolean,
+            fontSizeScale: Float,
+            showCitationsByDefault: Boolean,
+        ) {
+            preferencesStore.updateStreamEnabled(streamEnabled)
+            preferencesStore.updateAutoScroll(autoScroll)
+            preferencesStore.updateFontSizeScale(fontSizeScale)
+            preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
+        }
+
+        suspend fun updateLanguageTag(languageTag: String?) {
             preferencesStore.updateLanguageTag(languageTag)
         }
 
@@ -110,6 +146,15 @@ class ConnectionRepository
             publishSnapshot(
                 mutableSnapshot.value.copy(
                     onboardingCompleted = onboardingCompleted,
+                ),
+            )
+        }
+
+        suspend fun updateSelectedAppId(selectedAppId: String) {
+            preferencesStore.updateSelectedAppId(selectedAppId)
+            publishSnapshot(
+                mutableSnapshot.value.copy(
+                    selectedAppId = selectedAppId,
                 ),
             )
         }
@@ -208,6 +253,10 @@ class ConnectionRepository
                         themeMode = preferences.themeMode,
                         dynamicColorEnabled = preferences.dynamicColorEnabled,
                         oledEnabled = preferences.oledEnabled,
+                        streamEnabled = preferences.streamEnabled,
+                        autoScroll = preferences.autoScroll,
+                        fontSizeScale = preferences.fontSizeScale,
+                        showCitationsByDefault = preferences.showCitationsByDefault,
                         languageTag = preferences.languageTag,
                     ),
             )

@@ -1,9 +1,11 @@
 package com.lifuyue.kora.feature.settings
 
+import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
@@ -20,6 +22,7 @@ class ConnectionConfigScreenTest {
 
     @Test
     fun saveEnabledStateAndStatusAreRendered() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             ConnectionConfigScreen(
                 state =
@@ -42,7 +45,9 @@ class ConnectionConfigScreenTest {
             )
         }
 
-        composeRule.onNodeWithText("连接成功，发现 1 个 App，耗时 120ms").assertIsDisplayed()
-        composeRule.onNodeWithText("保存").assertIsEnabled()
+        composeRule
+            .onNodeWithText(context.resources.getQuantityString(R.plurals.settings_connection_success, 1, 1, 120))
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_connection_save)).assertIsEnabled()
     }
 }

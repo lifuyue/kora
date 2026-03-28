@@ -8,9 +8,9 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.flow.StateFlow
 
 interface SettingsConnectionFacade {
     val snapshot: StateFlow<ConnectionSnapshot>
@@ -27,6 +27,8 @@ interface SettingsConnectionFacade {
         onboardingCompleted: Boolean,
     )
 
+    suspend fun updateSelectedAppId(selectedAppId: String)
+
     suspend fun clearConnection()
 
     suspend fun updateAppearance(
@@ -34,57 +36,88 @@ interface SettingsConnectionFacade {
         dynamicColorEnabled: Boolean,
         oledEnabled: Boolean,
     )
+
+    suspend fun updateChatPreferences(
+        streamEnabled: Boolean,
+        autoScroll: Boolean,
+        fontSizeScale: Float,
+        showCitationsByDefault: Boolean,
+    )
+
+    suspend fun updateLanguageTag(languageTag: String?)
 }
 
 @Singleton
-class ConnectionRepositorySettingsFacade @Inject constructor(
-    private val connectionRepository: ConnectionRepository,
-) : SettingsConnectionFacade {
-    override val snapshot: StateFlow<ConnectionSnapshot> = connectionRepository.snapshot
+class ConnectionRepositorySettingsFacade
+    @Inject
+    constructor(
+        private val connectionRepository: ConnectionRepository,
+    ) : SettingsConnectionFacade {
+        override val snapshot: StateFlow<ConnectionSnapshot> = connectionRepository.snapshot
 
-    override suspend fun testConnection(
-        serverBaseUrl: String,
-        apiKey: String,
-    ): ConnectionTestResult = connectionRepository.testConnection(serverBaseUrl, apiKey)
+        override suspend fun testConnection(
+            serverBaseUrl: String,
+            apiKey: String,
+        ): ConnectionTestResult = connectionRepository.testConnection(serverBaseUrl, apiKey)
 
-    override suspend fun saveConnection(
-        serverBaseUrl: String,
-        apiKey: String,
-        selectedAppId: String,
-        onboardingCompleted: Boolean,
-    ) {
-        connectionRepository.saveConnection(
-            serverBaseUrl = serverBaseUrl,
-            apiKey = apiKey,
-            selectedAppId = selectedAppId,
-            onboardingCompleted = onboardingCompleted,
-        )
+        override suspend fun saveConnection(
+            serverBaseUrl: String,
+            apiKey: String,
+            selectedAppId: String,
+            onboardingCompleted: Boolean,
+        ) {
+            connectionRepository.saveConnection(
+                serverBaseUrl = serverBaseUrl,
+                apiKey = apiKey,
+                selectedAppId = selectedAppId,
+                onboardingCompleted = onboardingCompleted,
+            )
+        }
+
+        override suspend fun updateSelectedAppId(selectedAppId: String) {
+            connectionRepository.updateSelectedAppId(selectedAppId)
+        }
+
+        override suspend fun clearConnection() {
+            connectionRepository.clearConnection()
+        }
+
+        override suspend fun updateAppearance(
+            themeMode: ThemeMode,
+            dynamicColorEnabled: Boolean,
+            oledEnabled: Boolean,
+        ) {
+            connectionRepository.updateAppearance(
+                themeMode = themeMode,
+                dynamicColorEnabled = dynamicColorEnabled,
+                oledEnabled = oledEnabled,
+            )
+        }
+
+        override suspend fun updateChatPreferences(
+            streamEnabled: Boolean,
+            autoScroll: Boolean,
+            fontSizeScale: Float,
+            showCitationsByDefault: Boolean,
+        ) {
+            connectionRepository.updateChatPreferences(
+                streamEnabled = streamEnabled,
+                autoScroll = autoScroll,
+                fontSizeScale = fontSizeScale,
+                showCitationsByDefault = showCitationsByDefault,
+            )
+        }
+
+        override suspend fun updateLanguageTag(languageTag: String?) {
+            connectionRepository.updateLanguageTag(languageTag)
+        }
     }
-
-    override suspend fun clearConnection() {
-        connectionRepository.clearConnection()
-    }
-
-    override suspend fun updateAppearance(
-        themeMode: ThemeMode,
-        dynamicColorEnabled: Boolean,
-        oledEnabled: Boolean,
-    ) {
-        connectionRepository.updateAppearance(
-            themeMode = themeMode,
-            dynamicColorEnabled = dynamicColorEnabled,
-            oledEnabled = oledEnabled,
-        )
-    }
-}
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class SettingsFacadeModule {
     @Binds
-    abstract fun bindSettingsConnectionFacade(
-        facade: ConnectionRepositorySettingsFacade,
-    ): SettingsConnectionFacade
+    abstract fun bindSettingsConnectionFacade(facade: ConnectionRepositorySettingsFacade): SettingsConnectionFacade
 }
 
 internal fun redactApiKey(apiKey: String?): String {

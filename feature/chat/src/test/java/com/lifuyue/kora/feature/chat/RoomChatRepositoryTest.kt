@@ -5,7 +5,6 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.database.KoraDatabase
-import com.lifuyue.kora.core.network.ChatCompletionRequest
 import com.lifuyue.kora.core.network.FastGptApi
 import com.lifuyue.kora.core.network.MutableConnectionProvider
 import com.lifuyue.kora.core.network.NetworkJson
@@ -67,7 +66,10 @@ class RoomChatRepositoryTest {
                 api = api,
                 sseStreamClient = sseClient,
                 conversationDao = database.conversationDao(),
+                conversationFolderDao = database.conversationFolderDao(),
+                conversationTagDao = database.conversationTagDao(),
                 messageDao = database.messageDao(),
+                context = context,
                 json = NetworkJson.default,
                 ioDispatcher = mainDispatcherRule.dispatcher,
             )

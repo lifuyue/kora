@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kora</string>
+    <string name="bootstrap_restoring">Restoring Kora</string>
+    <string name="onboarding_page_1_title">Welcome to Kora</string>
+    <string name="onboarding_page_1_body">Configure your FastGPT connection on mobile and jump into streaming chat with conversation management.</string>
+    <string name="onboarding_page_2_title">Core experience</string>
+    <string name="onboarding_page_2_body">M3 delivers onboarding, settings, and themes. M4 adds streaming chat, Markdown, and conversation restore.</string>
+    <string name="onboarding_page_3_title">Next</string>
+    <string name="onboarding_page_3_body">After a successful connection test, Kora selects the first available app and enters the main shell.</string>
+    <string name="onboarding_page_indicator">%1$d/%2$d</string>
+    <string name="onboarding_cta_next">Next</string>
+    <string name="onboarding_cta_finish">Go to connection setup</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_knowledge">Knowledge</string>
+    <string name="nav_settings">Settings</string>
+</resources>

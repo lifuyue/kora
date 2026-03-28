@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.Context
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
@@ -10,11 +11,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -29,51 +28,97 @@ class ConversationListScreenTest {
 
     @Test
     fun pinnedAndRegularSectionsAreGrouped() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.renderConversationList()
 
-        composeRule.onNodeWithText("置顶会话").assertIsDisplayed()
-        composeRule.onNodeWithText("全部会话").assertIsDisplayed()
-        composeRule.onNodeWithText("架构讨论").assertIsDisplayed()
-        composeRule.onNodeWithText("周报整理").assertIsDisplayed()
-        composeRule.onNodeWithText("清空全部").assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).assertIsDisplayed()
+        composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").fetchSemanticsNode()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_clear_all)).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FOLDER_FILTER).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_TAG_FILTER).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
 
     @Test
     fun longPressConversationOpensBottomSheetAndDispatchesActions() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.renderConversationList()
 
-        composeRule.onNodeWithTag("${ChatTestTags.conversationItemPrefix}chat-1").performTouchInput {
+        composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").performTouchInput {
             longClick()
         }
-        composeRule.onNodeWithText("会话操作").assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationActionTogglePin, useUnmergedTree = true).fetchSemanticsNode()
-        composeRule.onNodeWithTag(ChatTestTags.conversationActionRename, useUnmergedTree = true).fetchSemanticsNode()
-        composeRule.onNodeWithTag(ChatTestTags.conversationActionDelete, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_action_sheet_title)).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_TOGGLE_PIN, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_RENAME, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_MOVE_FOLDER, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_EDIT_TAGS, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_DELETE, useUnmergedTree = true).fetchSemanticsNode()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun conversationActionsAndDialogsLocalizeInEnglish() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        var cleared = false
+        composeRule.renderConversationList(
+            uiState =
+                ConversationListUiState(
+                    items = sampleConversationItems,
+                    folders = listOf(ConversationFolderUiModel(folderId = "folder-1", name = "Work")),
+                    tags = listOf(ConversationTagUiModel(tagId = "tag-1", name = "Kotlin", colorToken = "sky")),
+                ),
+            onClearConversations = { cleared = true },
+        )
+
+        composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").performTouchInput {
+            longClick()
+        }
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_action_sheet_title)).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_RENAME, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_MOVE_FOLDER, useUnmergedTree = true).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_move_folder_sheet_title)).fetchSemanticsNode()
+
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_TAG_FILTER).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_tag_sheet_title)).fetchSemanticsNode()
+
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_clear_all)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_dialog_clear_all_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_confirm_clear)).performClick()
+
+        assertTrue(cleared)
+    }
+
+    @Test
+    fun conversationCardShowsFolderAndTagMeta() {
+        composeRule.renderConversationList()
+
+        composeRule.onNodeWithText("工作").assertIsDisplayed()
+        composeRule.onNodeWithText("Kotlin").assertIsDisplayed()
     }
 
     @Test
     fun clearAllUsesExplicitConfirmation() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         var cleared = false
 
         composeRule.renderConversationList(onClearConversations = { cleared = true })
 
-        composeRule.onNodeWithText("清空全部").performClick()
-        composeRule.onNodeWithText("清空所有会话？").assertIsDisplayed()
-        composeRule.onNodeWithText("确认清空").performClick()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_clear_all)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_dialog_clear_all_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_confirm_clear)).performClick()
 
         assertTrue(cleared)
     }
 
     @Test
     fun emptyStateStillShowsSearchAndCreateEntry() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.renderConversationList(
             uiState = ConversationListUiState(items = emptyList()),
         )
 
-        composeRule.onNodeWithText("暂无会话").assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationSearch).assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_empty_title)).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_SEARCH).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
 
     @Test
@@ -82,7 +127,7 @@ class ConversationListScreenTest {
 
         composeRule.renderConversationList(onNewConversation = { invoked = true })
 
-        composeRule.onNodeWithTag(ChatTestTags.conversationFab).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).performClick()
 
         assertTrue(invoked)
     }
@@ -93,31 +138,66 @@ class ConversationListScreenTest {
             uiState = ConversationListUiState(query = "架构", items = sampleConversationItems),
         )
 
-        composeRule.onNodeWithTag(ChatTestTags.conversationSearch).assertTextContains("架构")
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_SEARCH).assertTextContains("架构")
         composeRule.onAllNodesWithText("架构讨论").assertCountEquals(1)
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun filterChipsUseResourceFallbackLabelsInEnglish() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeRule.renderConversationList(
+            uiState = ConversationListUiState(items = sampleConversationItems),
+        )
+
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FOLDER_FILTER)
+            .assertTextContains(context.getString(R.string.conversation_list_all_folders))
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_TAG_FILTER)
+            .assertTextContains(context.getString(R.string.conversation_list_all_tags))
     }
 }
 
 private fun ComposeContentTestRule.renderConversationList(
     uiState: ConversationListUiState = ConversationListUiState(items = sampleConversationItems),
     onQueryChanged: (String) -> Unit = {},
+    onSelectFolderFilter: (String?) -> Unit = {},
+    onSelectTagFilter: (String?) -> Unit = {},
     onOpenConversation: (String) -> Unit = {},
     onNewConversation: () -> Unit = {},
     onDeleteConversation: (String) -> Unit = {},
     onRenameConversation: (String, String) -> Unit = { _, _ -> },
     onTogglePin: (String, Boolean) -> Unit = { _, _ -> },
     onClearConversations: () -> Unit = {},
+    onCreateFolder: (String) -> Unit = {},
+    onRenameFolder: (String, String) -> Unit = { _, _ -> },
+    onDeleteFolder: (String) -> Unit = {},
+    onCreateTag: (String) -> Unit = {},
+    onRenameTag: (String, String) -> Unit = { _, _ -> },
+    onDeleteTag: (String) -> Unit = {},
+    onMoveConversationToFolder: (String, String?) -> Unit = { _, _ -> },
+    onSetConversationTags: (String, List<String>) -> Unit = { _, _ -> },
 ) {
     setContent {
         ConversationListScreen(
             uiState = uiState,
             onQueryChanged = onQueryChanged,
+            onSelectFolderFilter = onSelectFolderFilter,
+            onSelectTagFilter = onSelectTagFilter,
             onOpenConversation = onOpenConversation,
             onNewConversation = onNewConversation,
             onDeleteConversation = onDeleteConversation,
             onRenameConversation = onRenameConversation,
             onTogglePin = onTogglePin,
             onClearConversations = onClearConversations,
+            onCreateFolder = onCreateFolder,
+            onRenameFolder = onRenameFolder,
+            onDeleteFolder = onDeleteFolder,
+            onCreateTag = onCreateTag,
+            onRenameTag = onRenameTag,
+            onDeleteTag = onDeleteTag,
+            onMoveConversationToFolder = onMoveConversationToFolder,
+            onSetConversationTags = onSetConversationTags,
         )
     }
 }
@@ -129,6 +209,9 @@ private val sampleConversationItems =
             appId = "app-1",
             title = "架构讨论",
             preview = "最新内容",
+            folderId = "folder-1",
+            folderName = "工作",
+            tags = listOf(ConversationTagUiModel(tagId = "tag-1", name = "Kotlin", colorToken = "sky")),
             isPinned = true,
         ),
         ConversationListItemUiModel(

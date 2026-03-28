@@ -1,60 +1,104 @@
 package com.lifuyue.kora.feature.settings
 
+import android.content.Context
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 
 object SettingsRoutes {
-    const val overview = "settings"
-    const val connection = "settings/connection"
-    const val theme = "settings/theme"
+    const val OVERVIEW = "settings"
+    const val CONNECTION = "settings/connection"
+    const val THEME = "settings/theme"
+    const val CHAT_PREFERENCES = "settings/chat-preferences"
+    const val LANGUAGE = "settings/language"
+    const val CACHE = "settings/cache"
+    const val ABOUT = "settings/about"
 }
 
 fun NavGraphBuilder.settingsGraph(
     navController: NavController,
     onConnectionSaved: () -> Unit,
+    currentAppId: String? = null,
+    onOpenCurrentApp: ((String) -> Unit)? = null,
 ) {
-    composable(SettingsRoutes.overview) {
+    composable(SettingsRoutes.OVERVIEW) {
         SettingsOverviewRoute(
-            onOpenConnection = { navController.navigate(SettingsRoutes.connection) },
-            onOpenTheme = { navController.navigate(SettingsRoutes.theme) },
+            onOpenConnection = { navController.navigate(SettingsRoutes.CONNECTION) },
+            onOpenCurrentApp = {
+                val appId = currentAppId
+                if (!appId.isNullOrBlank()) {
+                    onOpenCurrentApp?.invoke(appId)
+                }
+            },
+            onOpenTheme = { navController.navigate(SettingsRoutes.THEME) },
+            onOpenChatPreferences = { navController.navigate(SettingsRoutes.CHAT_PREFERENCES) },
+            onOpenLanguage = { navController.navigate(SettingsRoutes.LANGUAGE) },
+            onOpenCache = { navController.navigate(SettingsRoutes.CACHE) },
+            onOpenAbout = { navController.navigate(SettingsRoutes.ABOUT) },
         )
     }
-    composable(SettingsRoutes.connection) {
-        ConnectionConfigRoute(
-            viewModel = hiltViewModel(),
-            onConnectionSaved = onConnectionSaved,
-        )
+    composable(SettingsRoutes.CONNECTION) {
+        ConnectionConfigRoute(onConnectionSaved = onConnectionSaved)
     }
-    composable(SettingsRoutes.theme) {
-        ThemeAppearanceRoute(
-            viewModel = hiltViewModel(),
-            onBack = { navController.popBackStack() },
-        )
+    composable(SettingsRoutes.THEME) {
+        ThemeAppearanceRoute(onBack = { navController.popBackStack() })
+    }
+    composable(SettingsRoutes.CHAT_PREFERENCES) {
+        ChatPreferencesRoute()
+    }
+    composable(SettingsRoutes.LANGUAGE) {
+        LanguageSettingsRoute()
+    }
+    composable(SettingsRoutes.CACHE) {
+        CacheSettingsRoute()
+    }
+    composable(SettingsRoutes.ABOUT) {
+        AboutRoute()
     }
 }
 
 @Composable
 fun SettingsOverviewRoute(
     onOpenConnection: () -> Unit,
+    onOpenCurrentApp: () -> Unit,
     onOpenTheme: () -> Unit,
-    viewModel: SettingsOverviewViewModel = hiltViewModel(),
+    onOpenChatPreferences: () -> Unit,
+    onOpenLanguage: () -> Unit,
+    onOpenCache: () -> Unit,
+    onOpenAbout: () -> Unit,
+    viewModel: SettingsOverviewViewModel = settingsViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     SettingsOverviewScreen(
         state = uiState,
         onOpenConnection = onOpenConnection,
+        onOpenCurrentApp = onOpenCurrentApp,
         onOpenTheme = onOpenTheme,
+        onOpenChatPreferences = onOpenChatPreferences,
+        onOpenLanguage = onOpenLanguage,
+        onOpenCache = onOpenCache,
+        onOpenAbout = onOpenAbout,
     )
 }
 
 @Composable
 fun ConnectionConfigRoute(
-    viewModel: ConnectionConfigViewModel = hiltViewModel(),
+    viewModel: ConnectionConfigViewModel = settingsViewModel(),
     onConnectionSaved: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,7 +114,7 @@ fun ConnectionConfigRoute(
 
 @Composable
 fun ThemeAppearanceRoute(
-    viewModel: ThemeAppearanceViewModel = hiltViewModel(),
+    viewModel: ThemeAppearanceViewModel = settingsViewModel(),
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -80,4 +124,104 @@ fun ThemeAppearanceRoute(
         onDynamicColorChange = viewModel::updateDynamicColorEnabled,
         onOledChange = viewModel::updateOledEnabled,
     )
+}
+
+@Composable
+fun ChatPreferencesRoute(
+    viewModel: ChatPreferencesViewModel =
+        settingsViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    ChatPreferencesScreen(
+        state = uiState,
+        onStreamEnabledChange = viewModel::updateStreamEnabled,
+        onAutoScrollChange = viewModel::updateAutoScroll,
+        onShowCitationsChange = viewModel::updateShowCitationsByDefault,
+        onFontSizeScaleChange = viewModel::updateFontSizeScale,
+    )
+}
+
+@Composable
+fun LanguageSettingsRoute(
+    viewModel: LanguageSettingsViewModel =
+        settingsViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    LanguageSettingsScreen(
+        state = uiState,
+        onLanguageTagChange = viewModel::updateLanguageTag,
+    )
+}
+
+@Composable
+fun CacheSettingsRoute(
+    viewModel: CacheSettingsViewModel =
+        settingsViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    CacheSettingsScreen(
+        state = uiState,
+        onClearCache = viewModel::clearCache,
+    )
+}
+
+@Composable
+fun AboutRoute(
+    viewModel: AboutViewModel =
+        settingsViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
+    AboutScreen(
+        state = uiState,
+        onOpenFeedback = { uriHandler.openUri(uiState.feedbackUrl) },
+        onOpenLicenses = { uriHandler.openUri(uiState.licensesUrl) },
+    )
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+internal interface SettingsViewModelEntryPoint {
+    fun connectionRepository(): ConnectionRepository
+
+    @ApplicationContext
+    fun applicationContext(): Context
+}
+
+@Composable
+private inline fun <reified T : ViewModel> settingsViewModel(): T {
+    val context = LocalContext.current.applicationContext
+    val factory =
+        remember(context) {
+            val entryPoint =
+                EntryPointAccessors.fromApplication(
+                    context,
+                    SettingsViewModelEntryPoint::class.java,
+                )
+            val settingsConnectionFacade = ConnectionRepositorySettingsFacade(entryPoint.connectionRepository())
+            val settingsCacheManager = AndroidSettingsCacheManager(entryPoint.applicationContext())
+            val appInfoProvider = AndroidAppInfoProvider(entryPoint.applicationContext())
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <VM : ViewModel> create(modelClass: Class<VM>): VM =
+                    when (modelClass) {
+                        ConnectionConfigViewModel::class.java ->
+                            ConnectionConfigViewModel(settingsConnectionFacade) as VM
+                        SettingsOverviewViewModel::class.java ->
+                            SettingsOverviewViewModel(settingsConnectionFacade) as VM
+                        ThemeAppearanceViewModel::class.java ->
+                            ThemeAppearanceViewModel(settingsConnectionFacade) as VM
+                        ChatPreferencesViewModel::class.java ->
+                            ChatPreferencesViewModel(settingsConnectionFacade) as VM
+                        LanguageSettingsViewModel::class.java ->
+                            LanguageSettingsViewModel(settingsConnectionFacade) as VM
+                        CacheSettingsViewModel::class.java ->
+                            CacheSettingsViewModel(settingsCacheManager) as VM
+                        AboutViewModel::class.java ->
+                            AboutViewModel(appInfoProvider) as VM
+                        else -> throw IllegalArgumentException("Unsupported settings ViewModel: ${modelClass.name}")
+                    }
+            }
+        }
+    return viewModel(factory = factory)
 }

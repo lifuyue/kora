@@ -17,22 +17,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.lifuyue.kora.R
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatRoutes
 import com.lifuyue.kora.feature.chat.chatGraph
+import com.lifuyue.kora.feature.knowledge.KnowledgeRoutes
+import com.lifuyue.kora.feature.knowledge.knowledgeGraph
 import com.lifuyue.kora.feature.settings.SettingsRoutes
 import com.lifuyue.kora.feature.settings.settingsGraph
 import kotlinx.coroutines.launch
@@ -41,7 +44,6 @@ private const val ROUTE_BOOTSTRAP = "bootstrap"
 private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_CONNECTION = "connection"
 private const val ROUTE_SHELL = "shell"
-private const val ROUTE_KNOWLEDGE = "knowledge"
 
 @Composable
 fun KoraNavGraph(
@@ -114,7 +116,7 @@ private fun BootstrapRoute(
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("正在恢复 Kora", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.bootstrap_restoring), style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -125,9 +127,9 @@ private fun OnboardingRoute(
 ) {
     val pages =
         listOf(
-            "欢迎使用 Kora" to "在手机上配置 FastGPT 连接，进入流式聊天与会话管理。",
-            "核心体验" to "M3 提供引导、设置与主题，M4 打通流式聊天、Markdown 与会话恢复。",
-            "下一步" to "测试连接成功后会自动选中第一个可用 App，并进入主界面。",
+            stringResource(R.string.onboarding_page_1_title) to stringResource(R.string.onboarding_page_1_body),
+            stringResource(R.string.onboarding_page_2_title) to stringResource(R.string.onboarding_page_2_body),
+            stringResource(R.string.onboarding_page_3_title) to stringResource(R.string.onboarding_page_3_body),
         )
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
@@ -137,7 +139,7 @@ private fun OnboardingRoute(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Text(
-            text = "${pagerState.currentPage + 1}/${pages.size}",
+            text = stringResource(R.string.onboarding_page_indicator, pagerState.currentPage + 1, pages.size),
             style = MaterialTheme.typography.labelLarge,
         )
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
@@ -163,34 +165,41 @@ private fun OnboardingRoute(
                 }
             },
         ) {
-            Text(if (pagerState.currentPage == pages.lastIndex) "进入连接配置" else "下一步")
+            Text(
+                stringResource(
+                    if (pagerState.currentPage == pages.lastIndex) {
+                        R.string.onboarding_cta_finish
+                    } else {
+                        R.string.onboarding_cta_next
+                    },
+                ),
+            )
         }
     }
 }
 
 private enum class ShellDestination(
-    val label: String,
+    val labelRes: Int,
 ) {
-    Chat("聊天"),
-    Knowledge("知识库"),
-    Settings("设置"),
+    Chat(R.string.nav_chat),
+    Knowledge(R.string.nav_knowledge),
+    Settings(R.string.nav_settings),
 }
 
 @Composable
-private fun KoraShell(
-    snapshot: ConnectionSnapshot,
-) {
+private fun KoraShell(snapshot: ConnectionSnapshot) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     var selectedTab by rememberSaveable { mutableStateOf(ShellDestination.Chat) }
     val chatStartRoute =
-        snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.connection
+        snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.CONNECTION
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 ShellDestination.entries.forEach { destination ->
+                    val label = stringResource(destination.labelRes)
                     NavigationBarItem(
                         selected = selectedTab == destination,
                         onClick = {
@@ -198,8 +207,8 @@ private fun KoraShell(
                             val route =
                                 when (destination) {
                                     ShellDestination.Chat -> chatStartRoute
-                                    ShellDestination.Knowledge -> ROUTE_KNOWLEDGE
-                                    ShellDestination.Settings -> SettingsRoutes.overview
+                                    ShellDestination.Knowledge -> KnowledgeRoutes.OVERVIEW
+                                    ShellDestination.Settings -> SettingsRoutes.OVERVIEW
                                 }
                             navController.navigate(route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -209,8 +218,8 @@ private fun KoraShell(
                                 restoreState = true
                             }
                         },
-                        icon = { Text(destination.label.take(1)) },
-                        label = { Text(destination.label) },
+                        icon = { Text(label.take(1)) },
+                        label = { Text(label) },
                     )
                 }
             }
@@ -221,18 +230,20 @@ private fun KoraShell(
             startDestination = chatStartRoute,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(ROUTE_KNOWLEDGE) {
-                KnowledgeGraphPlaceholder()
-            }
+            knowledgeGraph(navController = navController)
             settingsGraph(
                 navController = navController,
                 onConnectionSaved = {
                     val selectedAppId = snapshot.selectedAppId
                     if (!selectedAppId.isNullOrBlank()) {
                         navController.navigate(ChatRoutes.conversations(selectedAppId)) {
-                            popUpTo(SettingsRoutes.connection) { inclusive = true }
+                            popUpTo(SettingsRoutes.CONNECTION) { inclusive = true }
                         }
                     }
+                },
+                currentAppId = snapshot.selectedAppId,
+                onOpenCurrentApp = { appId ->
+                    navController.navigate(ChatRoutes.appDetail(appId))
                 },
             )
             if (!snapshot.selectedAppId.isNullOrBlank()) {
@@ -243,17 +254,10 @@ private fun KoraShell(
         LaunchedEffect(currentRoute) {
             selectedTab =
                 when {
-                    currentRoute == ROUTE_KNOWLEDGE -> ShellDestination.Knowledge
+                    currentRoute?.startsWith("knowledge") == true -> ShellDestination.Knowledge
                     currentRoute?.startsWith("settings") == true -> ShellDestination.Settings
                     else -> ShellDestination.Chat
                 }
         }
-    }
-}
-
-@Composable
-private fun KnowledgeGraphPlaceholder() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("知识库将在 M5 接入。", style = MaterialTheme.typography.titleMedium)
     }
 }

@@ -32,6 +32,10 @@ data class AppearancePreferences(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColorEnabled: Boolean = true,
     val oledEnabled: Boolean = false,
+    val streamEnabled: Boolean = true,
+    val autoScroll: Boolean = true,
+    val fontSizeScale: Float = 1f,
+    val showCitationsByDefault: Boolean = true,
     val languageTag: String? = null,
 )
 

@@ -7,7 +7,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.flow.MutableStateFlow
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatMessageUiModel
@@ -15,6 +14,7 @@ import com.lifuyue.kora.feature.chat.ChatScreen
 import com.lifuyue.kora.feature.chat.MessageDeliveryState
 import com.lifuyue.kora.feature.chat.MessageFeedback
 import com.lifuyue.kora.testing.KoraTestOverrides
+import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val EXTRA_OPEN_DEMO_CHAT = "com.lifuyue.kora.extra.OPEN_DEMO_CHAT"
 private const val DEMO_APP_ID = "demo-app"

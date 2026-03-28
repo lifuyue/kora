@@ -1,31 +1,34 @@
 package com.lifuyue.kora
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import com.lifuyue.kora.i18n.AppLocaleController
 import com.lifuyue.kora.navigation.KoraNavGraph
 import com.lifuyue.kora.testing.KoraTestOverrides
 import com.lifuyue.kora.ui.theme.KoraTheme
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var connectionRepository: ConnectionRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installDebugDemoOverrides(intent)
+        AppLocaleController.apply(connectionRepository.snapshot.value.appearancePreferences.languageTag)
         enableEdgeToEdge()
         setContent {
             KoraApp(connectionRepository = connectionRepository)
@@ -40,6 +43,11 @@ private fun KoraApp(connectionRepository: ConnectionRepository) {
     val scope = rememberCoroutineScope()
     val connectionRouteOverride = KoraTestOverrides.connectionRouteOverride
     val shellRouteOverride = KoraTestOverrides.shellRouteOverride
+    val languageTag = snapshot.appearancePreferences.languageTag
+
+    LaunchedEffect(languageTag) {
+        AppLocaleController.apply(languageTag)
+    }
 
     KoraTheme(
         themeMode = snapshot.appearancePreferences.themeMode,

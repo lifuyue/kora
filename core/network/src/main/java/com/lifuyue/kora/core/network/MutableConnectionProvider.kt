@@ -13,8 +13,7 @@ class MutableConnectionProvider(
 ) : BaseUrlProvider, ApiKeyProvider, ConnectionSnapshotProvider {
     private val snapshotRef = AtomicReference(initialSnapshot)
 
-    override fun getBaseUrl(): String =
-        snapshotRef.get().serverBaseUrl ?: ConnectionConfig.normalizeBaseUrl("https://localhost")
+    override fun getBaseUrl(): String = snapshotRef.get().serverBaseUrl ?: ConnectionConfig.normalizeBaseUrl("https://localhost")
 
     override fun getApiKey(): String? = snapshotRef.get().apiKey
 

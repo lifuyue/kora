@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="knowledge_overview_title">知识库</string>
+    <string name="knowledge_overview_current_app">当前 App：%1$s</string>
+    <string name="knowledge_overview_no_app_selected">未选择</string>
+    <plurals name="knowledge_overview_dataset_count">
+        <item quantity="other">数据集 %1$d 个</item>
+    </plurals>
+    <string name="knowledge_overview_open_datasets">进入数据集</string>
+    <string name="knowledge_back">返回</string>
+    <string name="knowledge_refresh">刷新</string>
+    <string name="knowledge_refreshing">刷新中</string>
+    <string name="knowledge_create">创建</string>
+    <string name="knowledge_delete">删除</string>
+    <string name="knowledge_edit">编辑</string>
+    <string name="knowledge_save">保存</string>
+    <string name="knowledge_loading">加载中...</string>
+    <string name="knowledge_load_more">加载更多</string>
+    <string name="knowledge_unspecified">未标注</string>
+    <string name="knowledge_updated_at">更新时间：%1$s</string>
+    <string name="knowledge_name">名称</string>
+    <string name="knowledge_question">问题</string>
+    <string name="knowledge_answer">答案</string>
+
+    <string name="knowledge_dataset_browser_title">数据集</string>
+    <string name="knowledge_dataset_search_label">搜索数据集</string>
+    <string name="knowledge_dataset_filter_all_types">全部类型</string>
+    <string name="knowledge_dataset_filter_all_statuses">全部状态</string>
+    <string name="knowledge_dataset_create_name_label">新数据集名称</string>
+    <string name="knowledge_dataset_empty">当前筛选下没有数据集。</string>
+    <string name="knowledge_dataset_vector_model">向量模型：%1$s</string>
+    <string name="knowledge_dataset_summary">%1$s · %2$s</string>
+    <string name="knowledge_error_refresh_failed">刷新失败</string>
+    <string name="knowledge_error_create_failed">创建失败</string>
+    <string name="knowledge_error_delete_failed">删除失败</string>
+
+    <string name="knowledge_collections_title">Collections</string>
+    <string name="knowledge_pick_file">选择文件</string>
+    <string name="knowledge_selected_document">已选择：%1$s</string>
+    <string name="knowledge_selected_document_unreadable">无法读取所选文件</string>
+    <string name="knowledge_selected_document_unsupported">仅支持 PDF、DOCX、TXT、MD、CSV、HTML</string>
+    <string name="knowledge_default_text_import_name">文本导入</string>
+    <string name="knowledge_default_qa_import_name">QA 导入</string>
+    <string name="knowledge_default_document_name">document</string>
+    <string name="knowledge_error_submit_failed">提交失败</string>
+    <string name="knowledge_link_urls_label">URL，每行一个</string>
+    <string name="knowledge_link_selector_label">Selector（可选）</string>
+    <string name="knowledge_qa_content">Q/A 内容</string>
+    <string name="knowledge_text_content">文本内容</string>
+    <string name="knowledge_submitting">提交中...</string>
+    <string name="knowledge_create_import">创建导入</string>
+    <string name="knowledge_open_search_test">进入检索测试</string>
+    <string name="knowledge_import_tasks">导入任务</string>
+    <string name="knowledge_collection_list">Collection 列表</string>
+    <string name="knowledge_collection_empty">当前数据集还没有 collection。</string>
+    <string name="knowledge_collection_mode_file">文件</string>
+    <string name="knowledge_collection_mode_link">链接</string>
+    <string name="knowledge_collection_mode_text">文本</string>
+    <string name="knowledge_collection_mode_qa">问答</string>
+    <string name="knowledge_import_task_summary">%1$s · %2$s · %3$d%%</string>
+    <string name="knowledge_collection_summary">%1$s · %2$s · %3$s</string>
+
+    <string name="knowledge_chunk_viewer_title">Chunk Viewer</string>
+    <string name="knowledge_disable_chunk">禁用该 Chunk</string>
+    <string name="knowledge_highlighted_hit">当前引用命中</string>
+    <string name="knowledge_chunk_header">Chunk %1$d · %2$s</string>
+    <string name="knowledge_error_load_failed">加载失败</string>
+    <string name="knowledge_error_save_failed">保存失败</string>
+
+    <string name="knowledge_label_type_file">文件</string>
+    <string name="knowledge_label_type_link">链接</string>
+    <string name="knowledge_label_type_text">文本</string>
+    <string name="knowledge_label_type_qa">问答</string>
+    <string name="knowledge_label_type_url">链接</string>
+    <string name="knowledge_label_training_chunk">分块</string>
+    <string name="knowledge_label_training_qa">问答</string>
+    <string name="knowledge_label_status_active">启用</string>
+    <string name="knowledge_label_status_running">运行中</string>
+    <string name="knowledge_label_status_syncing">同步中</string>
+    <string name="knowledge_label_status_failed">失败</string>
+    <string name="knowledge_label_status_success">成功</string>
+    <string name="knowledge_label_status_pending">等待中</string>
+    <string name="knowledge_label_status_disabled">已禁用</string>
+
+    <string name="knowledge_search_test_title">检索测试</string>
+    <string name="knowledge_search_mode">Search Mode</string>
+    <string name="knowledge_similarity">Similarity</string>
+    <string name="knowledge_embedding_weight">Embedding Weight</string>
+    <string name="knowledge_use_rerank">使用 ReRank</string>
+    <string name="knowledge_searching">检索中...</string>
+    <string name="knowledge_start_search">开始检索</string>
+    <string name="knowledge_duration">耗时：%1$s</string>
+    <string name="knowledge_extension_model">扩展查询模型：%1$s</string>
+    <string name="knowledge_search_empty">未命中结果。</string>
+    <string name="knowledge_error_search_failed">检索失败</string>
+    <string name="knowledge_search_result_title_fallback">命中片段</string>
+    <string name="knowledge_search_result_snippet_fallback">暂无预览</string>
+    <string name="knowledge_score_summary">%1$s · %2$s</string>
+</resources>

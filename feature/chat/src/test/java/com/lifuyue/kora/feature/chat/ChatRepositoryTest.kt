@@ -9,10 +9,8 @@ import com.lifuyue.kora.core.network.StaticApiKeyProvider
 import com.lifuyue.kora.core.network.StaticBaseUrlProvider
 import com.lifuyue.kora.core.testing.MockWebServerRule
 import com.lifuyue.kora.core.testing.RoomTestFactory
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import okhttp3.mockwebserver.MockResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -23,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -54,7 +53,10 @@ class ChatRepositoryTest {
                         baseUrlProvider = StaticBaseUrlProvider(baseUrl),
                     ),
                 conversationDao = database.conversationDao(),
+                conversationFolderDao = database.conversationFolderDao(),
+                conversationTagDao = database.conversationTagDao(),
                 messageDao = database.messageDao(),
+                context = ApplicationProvider.getApplicationContext(),
             )
     }
 
@@ -179,7 +181,10 @@ class ChatRepositoryTest {
                             baseUrlProvider = StaticBaseUrlProvider(serverRule.baseUrl),
                         ),
                     conversationDao = database.conversationDao(),
+                    conversationFolderDao = database.conversationFolderDao(),
+                    conversationTagDao = database.conversationTagDao(),
                     messageDao = database.messageDao(),
+                    context = ApplicationProvider.getApplicationContext(),
                     responsePlanner =
                         AssistantResponsePlanner {
                             plannerInvocation += 1

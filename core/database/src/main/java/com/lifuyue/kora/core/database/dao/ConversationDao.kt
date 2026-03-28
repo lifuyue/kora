@@ -62,7 +62,10 @@ interface ConversationDao {
         WHERE appId = :appId
         """,
     )
-    fun markMissingAsDeleted(appId: String, activeChatIds: List<String>)
+    fun markMissingAsDeleted(
+        appId: String,
+        activeChatIds: List<String>,
+    )
 
     @Query(
         """

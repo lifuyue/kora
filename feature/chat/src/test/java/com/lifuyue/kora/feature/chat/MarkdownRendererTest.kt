@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -40,5 +41,28 @@ class MarkdownRendererTest {
         composeRule.onNodeWithTag("markdown-latex-block:x^2 + y^2 = z^2").fetchSemanticsNode()
         composeRule.onNodeWithTag("markdown-code-block:mermaid").fetchSemanticsNode()
         composeRule.onNodeWithTag("markdown-code-block:kotlin").fetchSemanticsNode()
+    }
+
+    @Test
+    fun mermaidCodeFenceRendersMermaidContainer() {
+        val source =
+            """
+            graph TD
+            A-->B
+            """.trimIndent()
+
+        composeRule.setContent {
+            MarkdownMessage(
+                markdown =
+                    """
+                    ```mermaid
+                    $source
+                    ```
+                    """.trimIndent(),
+                onCopyCode = {},
+            )
+        }
+
+        composeRule.onNodeWithTag("${ChatTestTags.MERMAID_BLOCK_PREFIX}${source.hashCode()}").assertIsDisplayed()
     }
 }

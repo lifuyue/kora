@@ -1,8 +1,8 @@
 package com.lifuyue.kora.core.testing
 
 import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.RecordedRequest
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.rules.ExternalResource
 import java.util.concurrent.TimeUnit
 
@@ -22,7 +22,10 @@ class MockWebServerRule : ExternalResource() {
         server.shutdown()
     }
 
-    fun enqueueJson(body: String, code: Int = 200) {
+    fun enqueueJson(
+        body: String,
+        code: Int = 200,
+    ) {
         server.enqueue(
             MockResponse()
                 .setResponseCode(code)
@@ -31,7 +34,10 @@ class MockWebServerRule : ExternalResource() {
         )
     }
 
-    fun enqueueSse(body: String, code: Int = 200) {
+    fun enqueueSse(
+        body: String,
+        code: Int = 200,
+    ) {
         server.enqueue(
             MockResponse()
                 .setResponseCode(code)

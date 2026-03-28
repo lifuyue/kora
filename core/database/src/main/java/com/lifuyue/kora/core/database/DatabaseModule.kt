@@ -6,10 +6,14 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
+import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import com.lifuyue.kora.core.database.dao.CachedCollectionDao
 import com.lifuyue.kora.core.database.dao.CachedDatasetDao
 import com.lifuyue.kora.core.database.dao.ConversationDao
+import com.lifuyue.kora.core.database.dao.ConversationFolderDao
+import com.lifuyue.kora.core.database.dao.ConversationTagDao
+import com.lifuyue.kora.core.database.dao.ImportTaskDao
 import com.lifuyue.kora.core.database.dao.MessageDao
-import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
 import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
 import com.lifuyue.kora.core.network.FastGptApiFactory
@@ -41,10 +45,22 @@ object DatabaseModule {
     fun provideConversationDao(database: KoraDatabase): ConversationDao = database.conversationDao()
 
     @Provides
+    fun provideConversationFolderDao(database: KoraDatabase): ConversationFolderDao = database.conversationFolderDao()
+
+    @Provides
+    fun provideConversationTagDao(database: KoraDatabase): ConversationTagDao = database.conversationTagDao()
+
+    @Provides
     fun provideMessageDao(database: KoraDatabase): MessageDao = database.messageDao()
 
     @Provides
     fun provideCachedDatasetDao(database: KoraDatabase): CachedDatasetDao = database.cachedDatasetDao()
+
+    @Provides
+    fun provideCachedCollectionDao(database: KoraDatabase): CachedCollectionDao = database.cachedCollectionDao()
+
+    @Provides
+    fun provideImportTaskDao(database: KoraDatabase): ImportTaskDao = database.importTaskDao()
 
     @Provides
     @Singleton
