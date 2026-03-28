@@ -68,6 +68,7 @@ class RoomChatRepositoryTest {
                 conversationDao = database.conversationDao(),
                 conversationFolderDao = database.conversationFolderDao(),
                 conversationTagDao = database.conversationTagDao(),
+                interactiveDraftDao = database.interactiveDraftDao(),
                 messageDao = database.messageDao(),
                 context = context,
                 json = NetworkJson.default,

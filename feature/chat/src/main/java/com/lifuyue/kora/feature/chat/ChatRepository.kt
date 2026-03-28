@@ -4,10 +4,12 @@ import android.content.Context
 import com.lifuyue.kora.core.database.dao.ConversationDao
 import com.lifuyue.kora.core.database.dao.ConversationFolderDao
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
+import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.network.AppQuestionGuideConfigDto
 import com.lifuyue.kora.core.network.FastGptApi
 import com.lifuyue.kora.core.network.SseStreamClient
+import com.lifuyue.kora.core.network.UploadedAssetRef
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -87,6 +89,14 @@ interface ConversationRepository {
         chatId: String,
         tagIds: List<String>,
     )
+
+    suspend fun setConversationArchived(
+        appId: String,
+        chatId: String,
+        archived: Boolean,
+    ) {
+        throw UnsupportedOperationException("Conversation archive foundation is not implemented yet")
+    }
 }
 
 interface ChatRepository {
@@ -130,6 +140,39 @@ interface ChatRepository {
         messageId: String,
         feedback: MessageFeedback,
     )
+
+    suspend fun uploadAttachment(
+        appId: String,
+        chatId: String?,
+        attachment: AttachmentDraftUiModel,
+    ): UploadedAssetRef {
+        throw UnsupportedOperationException("Attachment upload foundation is not implemented yet")
+    }
+
+    suspend fun savePendingInteractiveDraft(
+        appId: String,
+        chatId: String,
+        card: InteractiveCardUiModel,
+        draftPayloadJson: String?,
+    ) {
+        throw UnsupportedOperationException("Interactive draft foundation is not implemented yet")
+    }
+
+    suspend fun clearPendingInteractiveDraft(
+        appId: String,
+        chatId: String,
+    ) {
+        throw UnsupportedOperationException("Interactive draft foundation is not implemented yet")
+    }
+
+    suspend fun buildShareExportPreview(
+        appId: String,
+        chatId: String,
+        selection: MessageRangeSelection?,
+        format: ConversationExportFormat,
+    ): String {
+        throw UnsupportedOperationException("Share/export foundation is not implemented yet")
+    }
 }
 
 data class ChatBootstrap(
@@ -168,6 +211,7 @@ object ChatRepositoryModule {
         conversationDao: ConversationDao,
         conversationFolderDao: ConversationFolderDao,
         conversationTagDao: ConversationTagDao,
+        interactiveDraftDao: InteractiveDraftDao,
         messageDao: MessageDao,
         @ApplicationContext context: Context,
     ): RoomChatRepository =
@@ -177,6 +221,7 @@ object ChatRepositoryModule {
             conversationDao = conversationDao,
             conversationFolderDao = conversationFolderDao,
             conversationTagDao = conversationTagDao,
+            interactiveDraftDao = interactiveDraftDao,
             messageDao = messageDao,
             context = context,
         )

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.core.app.ApplicationProvider
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.database.store.ConnectionPreferences
 import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
@@ -40,6 +42,11 @@ class ConnectionPreferencesStoreTest {
             store.updateDynamicColorEnabled(false)
             store.updateOledEnabled(true)
             store.updateLanguageTag("zh-CN")
+            store.updateSpeechToTextEngine(SpeechToTextEngine.WhisperApp)
+            store.updateAutoSendTranscripts(true)
+            store.updateTextToSpeechEngine(TextToSpeechEngine.AppManaged)
+            store.updateSpeechRate(1.2f)
+            store.updateDefaultVoiceName("alloy")
 
             val preferences = store.preferences.first()
 
@@ -53,6 +60,11 @@ class ConnectionPreferencesStoreTest {
             assertFalse(preferences.dynamicColorEnabled)
             assertTrue(preferences.oledEnabled)
             assertEquals("zh-CN", preferences.languageTag)
+            assertEquals(SpeechToTextEngine.WhisperApp, preferences.speechToTextEngine)
+            assertTrue(preferences.autoSendTranscripts)
+            assertEquals(TextToSpeechEngine.AppManaged, preferences.textToSpeechEngine)
+            assertEquals(1.2f, preferences.speechRate)
+            assertEquals("alloy", preferences.defaultVoiceName)
         }
 
     @Test

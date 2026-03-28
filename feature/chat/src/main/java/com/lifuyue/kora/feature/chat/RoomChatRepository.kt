@@ -8,12 +8,14 @@ import com.lifuyue.kora.core.database.dao.ConversationFolderAssignmentRow
 import com.lifuyue.kora.core.database.dao.ConversationFolderDao
 import com.lifuyue.kora.core.database.dao.ConversationTagAssignmentRow
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
+import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.entity.ConversationEntity
 import com.lifuyue.kora.core.database.entity.ConversationFolderCrossRef
 import com.lifuyue.kora.core.database.entity.ConversationFolderEntity
 import com.lifuyue.kora.core.database.entity.ConversationTagCrossRef
 import com.lifuyue.kora.core.database.entity.ConversationTagEntity
+import com.lifuyue.kora.core.database.entity.InteractiveDraftEntity
 import com.lifuyue.kora.core.database.entity.MessageEntity
 import com.lifuyue.kora.core.network.ChatCompletionMessageParam
 import com.lifuyue.kora.core.network.ChatCompletionRequest
@@ -67,6 +69,7 @@ class RoomChatRepository
         private val conversationDao: ConversationDao,
         private val conversationFolderDao: ConversationFolderDao,
         private val conversationTagDao: ConversationTagDao,
+        private val interactiveDraftDao: InteractiveDraftDao,
         private val messageDao: MessageDao,
         private val context: Context,
         private val json: Json = NetworkJson.default,
@@ -310,6 +313,14 @@ class RoomChatRepository
             }
         }
 
+        override suspend fun setConversationArchived(
+            appId: String,
+            chatId: String,
+            archived: Boolean,
+        ) {
+            conversationDao.updateArchived(chatId = chatId, isArchived = archived)
+        }
+
         override fun observeMessages(
             appId: String,
             chatId: String?,
@@ -517,6 +528,31 @@ class RoomChatRepository
                     userBadFeedback = if (feedback == MessageFeedback.Downvote) "downvote" else null,
                 ),
             )
+        }
+
+        override suspend fun savePendingInteractiveDraft(
+            appId: String,
+            chatId: String,
+            card: InteractiveCardUiModel,
+            draftPayloadJson: String?,
+        ) {
+            interactiveDraftDao.upsert(
+                InteractiveDraftEntity(
+                    chatId = chatId,
+                    messageDataId = card.messageDataId,
+                    responseValueId = card.responseValueId,
+                    rawPayloadJson = """{"kind":"${card.kind.name}"}""",
+                    draftPayloadJson = draftPayloadJson,
+                    updatedAt = clock(),
+                ),
+            )
+        }
+
+        override suspend fun clearPendingInteractiveDraft(
+            appId: String,
+            chatId: String,
+        ) {
+            interactiveDraftDao.deleteByChatId(chatId)
         }
 
         private fun ensureMessagesRestored(

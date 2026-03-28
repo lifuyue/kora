@@ -118,6 +118,28 @@ class ChatViewModelTest {
             assertEquals("chat-1", repository.continuedChatId)
             collectJob.cancel()
         }
+
+    @Test
+    fun uiStateExposesFoundationDefaultsAfterBootstrap() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val viewModel =
+                ChatViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
+                    chatRepository = repository,
+                    strings = FakeChatStrings(),
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(emptyList<AttachmentDraftUiModel>(), state.attachments)
+            assertEquals(null, state.pendingInteractiveCard)
+            assertEquals(SpeechInputStatus.Idle, state.speechInputState.status)
+            assertEquals(TtsPlaybackStatus.Idle, state.ttsPlaybackState.status)
+            assertEquals(null, state.shareExportState.selection)
+            collectJob.cancel()
+        }
 }
 
 private class FakeChatStrings : ChatStrings(context = ContextWrapper(null)) {

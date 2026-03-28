@@ -3,6 +3,8 @@ package com.lifuyue.kora.core.database
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
@@ -132,6 +134,45 @@ class ConnectionRepositoryTest {
 
             assertTrue(repository.snapshot.first().onboardingCompleted)
             assertTrue(store.preferences.first().onboardingCompleted)
+        }
+
+    @Test
+    fun updateAudioPreferencesPersistsSnapshotAndPreferences() =
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val store =
+                ConnectionPreferencesStore.createForTest(
+                    scope = this,
+                    file = File(context.filesDir, "connection-audio.preferences_pb"),
+                )
+            val secureStore = ApiKeySecureStore(context, "connection-audio-secure")
+            val repository =
+                ConnectionRepository(
+                    preferencesStore = store,
+                    apiKeySecureStore = secureStore,
+                    connectionProvider = MutableConnectionProvider(),
+                    apiFactory = FastGptApiFactory(NetworkJson.default),
+                )
+
+            repository.updateAudioPreferences(
+                speechToTextEngine = SpeechToTextEngine.WhisperApp,
+                autoSendTranscripts = true,
+                textToSpeechEngine = TextToSpeechEngine.AppManaged,
+                speechRate = 1.15f,
+                defaultVoiceName = "verse",
+            )
+
+            val snapshot = repository.snapshot.first()
+            val preferences = store.preferences.first()
+
+            assertEquals(SpeechToTextEngine.WhisperApp, snapshot.audioPreferences.speechToTextEngine)
+            assertTrue(snapshot.audioPreferences.autoSendTranscripts)
+            assertEquals(TextToSpeechEngine.AppManaged, snapshot.audioPreferences.textToSpeechEngine)
+            assertEquals(1.15f, snapshot.audioPreferences.speechRate)
+            assertEquals("verse", snapshot.audioPreferences.defaultVoiceName)
+            assertEquals(SpeechToTextEngine.WhisperApp, preferences.speechToTextEngine)
+            assertTrue(preferences.autoSendTranscripts)
+            assertEquals(TextToSpeechEngine.AppManaged, preferences.textToSpeechEngine)
         }
 }
 

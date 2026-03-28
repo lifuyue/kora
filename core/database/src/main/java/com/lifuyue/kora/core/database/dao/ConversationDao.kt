@@ -93,4 +93,7 @@ interface ConversationDao {
 
     @Query("UPDATE conversations SET isDeleted = 1 WHERE appId = :appId")
     fun clearByAppId(appId: String)
+
+    @Query("UPDATE conversations SET isArchived = :isArchived WHERE chatId = :chatId")
+    fun updateArchived(chatId: String, isArchived: Boolean)
 }

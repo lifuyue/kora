@@ -4,6 +4,8 @@ import com.lifuyue.kora.core.common.AppearancePreferences
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -313,6 +315,26 @@ private class FakeSettingsConnectionFacade(
         mutableSnapshot.value =
             mutableSnapshot.value.copy(
                 appearancePreferences = mutableSnapshot.value.appearancePreferences.copy(languageTag = languageTag),
+            )
+    }
+
+    override suspend fun updateAudioPreferences(
+        speechToTextEngine: SpeechToTextEngine,
+        autoSendTranscripts: Boolean,
+        textToSpeechEngine: TextToSpeechEngine,
+        speechRate: Float,
+        defaultVoiceName: String?,
+    ) {
+        mutableSnapshot.value =
+            mutableSnapshot.value.copy(
+                audioPreferences =
+                    mutableSnapshot.value.audioPreferences.copy(
+                        speechToTextEngine = speechToTextEngine,
+                        autoSendTranscripts = autoSendTranscripts,
+                        textToSpeechEngine = textToSpeechEngine,
+                        speechRate = speechRate,
+                        defaultVoiceName = defaultVoiceName,
+                    ),
             )
     }
 }

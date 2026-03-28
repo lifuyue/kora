@@ -39,12 +39,33 @@ data class AppearancePreferences(
     val languageTag: String? = null,
 )
 
+@Serializable
+enum class SpeechToTextEngine {
+    System,
+    WhisperApp,
+}
+
+@Serializable
+enum class TextToSpeechEngine {
+    System,
+    AppManaged,
+}
+
+data class AudioPreferences(
+    val speechToTextEngine: SpeechToTextEngine = SpeechToTextEngine.System,
+    val autoSendTranscripts: Boolean = false,
+    val textToSpeechEngine: TextToSpeechEngine = TextToSpeechEngine.System,
+    val speechRate: Float = 1f,
+    val defaultVoiceName: String? = null,
+)
+
 data class ConnectionSnapshot(
     val serverBaseUrl: String? = null,
     val apiKey: String? = null,
     val selectedAppId: String? = null,
     val onboardingCompleted: Boolean = false,
     val appearancePreferences: AppearancePreferences = AppearancePreferences(),
+    val audioPreferences: AudioPreferences = AudioPreferences(),
 ) {
     val hasApiKey: Boolean
         get() = !apiKey.isNullOrBlank()

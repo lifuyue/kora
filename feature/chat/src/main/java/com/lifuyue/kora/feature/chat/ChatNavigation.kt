@@ -17,6 +17,7 @@ object ChatRoutes {
     const val CONVERSATIONS = "chat/{appId}"
     const val THREAD = "chat/thread/{appId}?chatId={chatId}"
     const val APP_DETAIL = "chat/app/{appId}?chatId={chatId}"
+    const val APP_ANALYTICS = "chat/app/{appId}/analytics"
 
     fun conversations(appId: String): String = "chat/$appId"
 
@@ -39,6 +40,8 @@ object ChatRoutes {
         } else {
             "chat/app/$appId?chatId=$chatId"
         }
+
+    fun appAnalytics(appId: String): String = "chat/app/$appId/analytics"
 }
 
 fun NavGraphBuilder.chatGraph(navController: NavController) {

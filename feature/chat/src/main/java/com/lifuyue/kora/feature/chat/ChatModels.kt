@@ -2,6 +2,103 @@ package com.lifuyue.kora.feature.chat
 
 import androidx.compose.runtime.Immutable
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.network.UploadedAssetRef
+
+enum class AttachmentKind {
+    Image,
+    File,
+}
+
+enum class AttachmentUploadStatus {
+    Idle,
+    Uploading,
+    Uploaded,
+    Failed,
+    Cancelled,
+}
+
+enum class InteractiveCardKind {
+    UserSelect,
+    UserInput,
+    CollectionForm,
+}
+
+enum class InteractiveCardStatus {
+    Pending,
+    Submitting,
+    Resolved,
+    Expired,
+}
+
+enum class SpeechInputStatus {
+    Idle,
+    Recording,
+    Recognizing,
+    Error,
+}
+
+enum class TtsPlaybackStatus {
+    Idle,
+    Playing,
+    Paused,
+    Stopped,
+    Error,
+}
+
+enum class ConversationExportFormat {
+    Txt,
+    Json,
+    Pdf,
+}
+
+@Immutable
+data class AttachmentDraftUiModel(
+    val localUri: String,
+    val mimeType: String,
+    val kind: AttachmentKind,
+    val uploadStatus: AttachmentUploadStatus = AttachmentUploadStatus.Idle,
+    val uploadedRef: UploadedAssetRef? = null,
+    val progress: Float = 0f,
+    val errorMessage: String? = null,
+)
+
+@Immutable
+data class InteractiveCardUiModel(
+    val kind: InteractiveCardKind,
+    val messageDataId: String,
+    val responseValueId: String? = null,
+    val status: InteractiveCardStatus = InteractiveCardStatus.Pending,
+    val fields: List<String> = emptyList(),
+    val options: List<String> = emptyList(),
+)
+
+@Immutable
+data class SpeechInputUiState(
+    val status: SpeechInputStatus = SpeechInputStatus.Idle,
+    val transcript: String = "",
+    val errorMessage: String? = null,
+)
+
+@Immutable
+data class TtsPlaybackUiState(
+    val messageId: String? = null,
+    val status: TtsPlaybackStatus = TtsPlaybackStatus.Idle,
+    val progress: Float = 0f,
+    val errorMessage: String? = null,
+)
+
+@Immutable
+data class MessageRangeSelection(
+    val startMessageId: String,
+    val endMessageId: String,
+)
+
+@Immutable
+data class ShareExportUiState(
+    val selection: MessageRangeSelection? = null,
+    val exportFormat: ConversationExportFormat = ConversationExportFormat.Txt,
+    val previewText: String = "",
+)
 
 enum class MessageDeliveryState {
     Sent,
@@ -91,6 +188,7 @@ data class ConversationListUiState(
     val selectedFolderId: String? = null,
     val selectedTagId: String? = null,
     val isRefreshing: Boolean = false,
+    val showArchived: Boolean = false,
 ) {
     val isEmpty: Boolean
         get() = items.isEmpty()
@@ -122,6 +220,11 @@ data class ChatUiState(
     val messages: List<ChatMessageUiModel> = emptyList(),
     val autoScrollEnabled: Boolean = true,
     val isInitialLoading: Boolean = false,
+    val attachments: List<AttachmentDraftUiModel> = emptyList(),
+    val pendingInteractiveCard: InteractiveCardUiModel? = null,
+    val speechInputState: SpeechInputUiState = SpeechInputUiState(),
+    val ttsPlaybackState: TtsPlaybackUiState = TtsPlaybackUiState(),
+    val shareExportState: ShareExportUiState = ShareExportUiState(),
 ) {
     val canStopGeneration: Boolean
         get() = messages.any { it.isStreaming }

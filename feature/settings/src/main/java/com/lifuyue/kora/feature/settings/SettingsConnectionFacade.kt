@@ -2,6 +2,8 @@ package com.lifuyue.kora.feature.settings
 
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import dagger.Binds
@@ -45,6 +47,14 @@ interface SettingsConnectionFacade {
     )
 
     suspend fun updateLanguageTag(languageTag: String?)
+
+    suspend fun updateAudioPreferences(
+        speechToTextEngine: SpeechToTextEngine,
+        autoSendTranscripts: Boolean,
+        textToSpeechEngine: TextToSpeechEngine,
+        speechRate: Float,
+        defaultVoiceName: String?,
+    )
 }
 
 @Singleton
@@ -110,6 +120,22 @@ class ConnectionRepositorySettingsFacade
 
         override suspend fun updateLanguageTag(languageTag: String?) {
             connectionRepository.updateLanguageTag(languageTag)
+        }
+
+        override suspend fun updateAudioPreferences(
+            speechToTextEngine: SpeechToTextEngine,
+            autoSendTranscripts: Boolean,
+            textToSpeechEngine: TextToSpeechEngine,
+            speechRate: Float,
+            defaultVoiceName: String?,
+        ) {
+            connectionRepository.updateAudioPreferences(
+                speechToTextEngine = speechToTextEngine,
+                autoSendTranscripts = autoSendTranscripts,
+                textToSpeechEngine = textToSpeechEngine,
+                speechRate = speechRate,
+                defaultVoiceName = defaultVoiceName,
+            )
         }
     }
 

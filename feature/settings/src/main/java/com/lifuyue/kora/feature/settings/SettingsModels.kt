@@ -1,5 +1,7 @@
 package com.lifuyue.kora.feature.settings
 
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.ThemeMode
 
@@ -51,6 +53,14 @@ data class ThemeAppearanceUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColorEnabled: Boolean = true,
     val oledEnabled: Boolean = false,
+)
+
+data class AudioSettingsUiState(
+    val speechToTextEngine: SpeechToTextEngine = SpeechToTextEngine.System,
+    val autoSendTranscripts: Boolean = false,
+    val textToSpeechEngine: TextToSpeechEngine = TextToSpeechEngine.System,
+    val speechRate: Float = 1f,
+    val defaultVoiceName: String? = null,
 )
 
 enum class StorageBucket {

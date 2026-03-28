@@ -25,6 +25,7 @@ object SettingsRoutes {
     const val CONNECTION = "settings/connection"
     const val THEME = "settings/theme"
     const val CHAT_PREFERENCES = "settings/chat-preferences"
+    const val AUDIO = "settings/audio"
     const val LANGUAGE = "settings/language"
     const val CACHE = "settings/cache"
     const val ABOUT = "settings/about"

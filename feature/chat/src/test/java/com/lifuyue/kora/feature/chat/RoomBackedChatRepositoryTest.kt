@@ -32,11 +32,18 @@ import com.lifuyue.kora.core.network.PaginationRecordsResponseData
 import com.lifuyue.kora.core.network.QuestionGuideRequest
 import com.lifuyue.kora.core.network.SearchTestRequest
 import com.lifuyue.kora.core.network.SearchTestResponseDto
+import com.lifuyue.kora.core.network.ShareAuthFinishRequest
+import com.lifuyue.kora.core.network.ShareAuthInitRequest
+import com.lifuyue.kora.core.network.ShareAuthStartRequest
+import com.lifuyue.kora.core.network.ShareAuthStateDto
+import com.lifuyue.kora.core.network.ShareSessionBootstrapDto
 import com.lifuyue.kora.core.network.SseStreamClient
 import com.lifuyue.kora.core.network.StaticBaseUrlProvider
 import com.lifuyue.kora.core.network.TextCollectionCreateRequest
+import com.lifuyue.kora.core.network.UploadedAssetRef
 import com.lifuyue.kora.core.network.UpdateHistoryRequest
 import com.lifuyue.kora.core.network.UpdateUserFeedbackRequest
+import com.lifuyue.kora.core.network.AppAnalyticsSummaryDto
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -297,6 +304,7 @@ private fun RoomBackedChatRepositoryTest.newFixture(): Fixture {
             conversationDao = database.conversationDao(),
             conversationFolderDao = database.conversationFolderDao(),
             conversationTagDao = database.conversationTagDao(),
+            interactiveDraftDao = database.interactiveDraftDao(),
             messageDao = database.messageDao(),
             api = api,
             context = ApplicationProvider.getApplicationContext(),
@@ -369,6 +377,23 @@ private class FakeFastGptApi : FastGptApi {
     override suspend fun createQuestionGuide(request: QuestionGuideRequest): ResponseEnvelope<List<String>> =
         ResponseEnvelope(code = 200, data = emptyList())
 
+    override suspend fun uploadChatAttachment(
+        file: okhttp3.MultipartBody.Part,
+        appId: okhttp3.RequestBody,
+        chatId: okhttp3.RequestBody?,
+    ): ResponseEnvelope<UploadedAssetRef> =
+        ResponseEnvelope(
+            code = 200,
+            data =
+                UploadedAssetRef(
+                    name = "upload.bin",
+                    url = "https://example.com/upload.bin",
+                    key = "chat/upload.bin",
+                    mimeType = "application/octet-stream",
+                    size = 1L,
+                ),
+        )
+
     override suspend fun listDatasets(request: DatasetListRequest): ResponseEnvelope<List<DatasetSummaryDto>> =
         ResponseEnvelope(code = 200, data = emptyList())
 
@@ -411,6 +436,31 @@ private class FakeFastGptApi : FastGptApi {
 
     override suspend fun updateUserFeedback(request: UpdateUserFeedbackRequest): ResponseEnvelope<JsonObject> =
         ResponseEnvelope(code = 200, data = JsonObject(emptyMap()))
+
+    override suspend fun shareAuthInit(request: ShareAuthInitRequest): ResponseEnvelope<ShareAuthStateDto> =
+        ResponseEnvelope(code = 200, data = ShareAuthStateDto(uid = request.token))
+
+    override suspend fun shareAuthStart(request: ShareAuthStartRequest): ResponseEnvelope<ShareAuthStateDto> =
+        ResponseEnvelope(code = 200, data = ShareAuthStateDto(uid = request.token))
+
+    override suspend fun shareAuthFinish(request: ShareAuthFinishRequest): ResponseEnvelope<JsonObject> =
+        ResponseEnvelope(code = 200, data = JsonObject(emptyMap()))
+
+    override suspend fun initShareSession(
+        shareId: String,
+        outLinkUid: String,
+        chatId: String?,
+    ): ResponseEnvelope<ShareSessionBootstrapDto> =
+        ResponseEnvelope(
+            code = 200,
+            data = ShareSessionBootstrapDto(chatId = chatId ?: "share-chat", appId = "app-1", title = "share", appName = "Kora"),
+        )
+
+    override suspend fun getAppAnalytics(
+        appId: String,
+        range: String?,
+    ): ResponseEnvelope<AppAnalyticsSummaryDto> =
+        ResponseEnvelope(code = 200, data = AppAnalyticsSummaryDto())
 
     override suspend fun chatCompletions(request: ChatCompletionRequest): ResponseEnvelope<ChatCompletionResponseDto> =
         ResponseEnvelope(code = 200, data = ChatCompletionResponseDto())

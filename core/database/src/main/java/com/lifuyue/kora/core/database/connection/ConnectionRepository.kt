@@ -1,11 +1,14 @@
 package com.lifuyue.kora.core.database.connection
 
+import com.lifuyue.kora.core.common.AudioPreferences
 import com.lifuyue.kora.core.common.AppearancePreferences
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.ConnectionValidationError
 import com.lifuyue.kora.core.common.NetworkError
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
 import com.lifuyue.kora.core.database.store.ConnectionPreferences
@@ -101,6 +104,7 @@ class ConnectionRepository
                             showCitationsByDefault = showCitationsByDefault,
                             languageTag = languageTag,
                         ),
+                    audioPreferences = mutableSnapshot.value.audioPreferences,
                 ),
             )
         }
@@ -139,6 +143,32 @@ class ConnectionRepository
 
         suspend fun updateLanguageTag(languageTag: String?) {
             preferencesStore.updateLanguageTag(languageTag)
+        }
+
+        suspend fun updateAudioPreferences(
+            speechToTextEngine: SpeechToTextEngine,
+            autoSendTranscripts: Boolean,
+            textToSpeechEngine: TextToSpeechEngine,
+            speechRate: Float,
+            defaultVoiceName: String?,
+        ) {
+            preferencesStore.updateSpeechToTextEngine(speechToTextEngine)
+            preferencesStore.updateAutoSendTranscripts(autoSendTranscripts)
+            preferencesStore.updateTextToSpeechEngine(textToSpeechEngine)
+            preferencesStore.updateSpeechRate(speechRate)
+            preferencesStore.updateDefaultVoiceName(defaultVoiceName)
+            publishSnapshot(
+                mutableSnapshot.value.copy(
+                    audioPreferences =
+                        AudioPreferences(
+                            speechToTextEngine = speechToTextEngine,
+                            autoSendTranscripts = autoSendTranscripts,
+                            textToSpeechEngine = textToSpeechEngine,
+                            speechRate = speechRate,
+                            defaultVoiceName = defaultVoiceName,
+                        ),
+                ),
+            )
         }
 
         suspend fun updateOnboardingCompleted(onboardingCompleted: Boolean) {
@@ -258,6 +288,14 @@ class ConnectionRepository
                         fontSizeScale = preferences.fontSizeScale,
                         showCitationsByDefault = preferences.showCitationsByDefault,
                         languageTag = preferences.languageTag,
+                    ),
+                audioPreferences =
+                    AudioPreferences(
+                        speechToTextEngine = preferences.speechToTextEngine,
+                        autoSendTranscripts = preferences.autoSendTranscripts,
+                        textToSpeechEngine = preferences.textToSpeechEngine,
+                        speechRate = preferences.speechRate,
+                        defaultVoiceName = preferences.defaultVoiceName,
                     ),
             )
 
