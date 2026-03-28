@@ -104,11 +104,11 @@ data class ConversationListUiState(
     val canClear: Boolean
         get() = items.isNotEmpty()
 
-    val selectedFolderName: String
-        get() = folders.firstOrNull { it.folderId == selectedFolderId }?.name ?: "全部文件夹"
+    val selectedFolderName: String?
+        get() = folders.firstOrNull { it.folderId == selectedFolderId }?.name
 
-    val selectedTagName: String
-        get() = tags.firstOrNull { it.tagId == selectedTagId }?.name ?: "全部标签"
+    val selectedTagName: String?
+        get() = tags.firstOrNull { it.tagId == selectedTagId }?.name
 }
 
 @Immutable

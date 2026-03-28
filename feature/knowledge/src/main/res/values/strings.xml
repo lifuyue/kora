@@ -30,11 +30,19 @@
     <string name="knowledge_dataset_empty">当前筛选下没有数据集。</string>
     <string name="knowledge_dataset_vector_model">向量模型：%1$s</string>
     <string name="knowledge_dataset_summary">%1$s · %2$s</string>
+    <string name="knowledge_error_refresh_failed">刷新失败</string>
+    <string name="knowledge_error_create_failed">创建失败</string>
+    <string name="knowledge_error_delete_failed">删除失败</string>
 
     <string name="knowledge_collections_title">Collections</string>
     <string name="knowledge_pick_file">选择文件</string>
     <string name="knowledge_selected_document">已选择：%1$s</string>
     <string name="knowledge_selected_document_unreadable">无法读取所选文件</string>
+    <string name="knowledge_selected_document_unsupported">仅支持 PDF、DOCX、TXT、MD、CSV、HTML</string>
+    <string name="knowledge_default_text_import_name">文本导入</string>
+    <string name="knowledge_default_qa_import_name">QA 导入</string>
+    <string name="knowledge_default_document_name">document</string>
+    <string name="knowledge_error_submit_failed">提交失败</string>
     <string name="knowledge_link_urls_label">URL，每行一个</string>
     <string name="knowledge_link_selector_label">Selector（可选）</string>
     <string name="knowledge_qa_content">Q/A 内容</string>
@@ -56,6 +64,8 @@
     <string name="knowledge_disable_chunk">禁用该 Chunk</string>
     <string name="knowledge_highlighted_hit">当前引用命中</string>
     <string name="knowledge_chunk_header">Chunk %1$d · %2$s</string>
+    <string name="knowledge_error_load_failed">加载失败</string>
+    <string name="knowledge_error_save_failed">保存失败</string>
 
     <string name="knowledge_label_type_file">文件</string>
     <string name="knowledge_label_type_link">链接</string>
@@ -82,6 +92,7 @@
     <string name="knowledge_duration">耗时：%1$s</string>
     <string name="knowledge_extension_model">扩展查询模型：%1$s</string>
     <string name="knowledge_search_empty">未命中结果。</string>
+    <string name="knowledge_error_search_failed">检索失败</string>
     <string name="knowledge_search_result_title_fallback">命中片段</string>
     <string name="knowledge_search_result_snippet_fallback">暂无预览</string>
     <string name="knowledge_score_summary">%1$s · %2$s</string>

@@ -141,6 +141,21 @@ class ConversationListScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_SEARCH).assertTextContains("架构")
         composeRule.onAllNodesWithText("架构讨论").assertCountEquals(1)
     }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun filterChipsUseResourceFallbackLabelsInEnglish() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeRule.renderConversationList(
+            uiState = ConversationListUiState(items = sampleConversationItems),
+        )
+
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FOLDER_FILTER)
+            .assertTextContains(context.getString(R.string.conversation_list_all_folders))
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_TAG_FILTER)
+            .assertTextContains(context.getString(R.string.conversation_list_all_tags))
+    }
 }
 
 private fun ComposeContentTestRule.renderConversationList(

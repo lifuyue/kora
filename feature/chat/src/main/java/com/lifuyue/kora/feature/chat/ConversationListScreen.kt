@@ -143,12 +143,12 @@ fun ConversationListScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedActionChip(
-                    label = uiState.selectedFolderName,
+                    label = uiState.selectedFolderName ?: stringResource(R.string.conversation_list_all_folders),
                     modifier = Modifier.weight(1f).testTag(ChatTestTags.CONVERSATION_FOLDER_FILTER),
                     onClick = { activeSheet = ConversationOrganizerSheet.FolderFilter },
                 )
                 OutlinedActionChip(
-                    label = uiState.selectedTagName,
+                    label = uiState.selectedTagName ?: stringResource(R.string.conversation_list_all_tags),
                     modifier = Modifier.weight(1f).testTag(ChatTestTags.CONVERSATION_TAG_FILTER),
                     onClick = { activeSheet = ConversationOrganizerSheet.TagFilter },
                 )

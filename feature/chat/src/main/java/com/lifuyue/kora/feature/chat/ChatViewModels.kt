@@ -1,11 +1,13 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.core.network.FastGptApi
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -200,6 +202,7 @@ class ChatViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val chatRepository: ChatRepository,
+        private val strings: ChatStrings,
     ) : ViewModel() {
         private val appId: String = checkNotNull(savedStateHandle["appId"])
         private val chatId = MutableStateFlow(savedStateHandle.get<String?>("chatId"))
@@ -212,7 +215,7 @@ class ChatViewModel
                 if (existingChatId != null) {
                     runCatching { chatRepository.restoreMessages(appId, existingChatId) }
                         .onFailure { error ->
-                            metaState.update { it.copy(errorMessage = error.message ?: "恢复历史失败") }
+                            metaState.update { it.copy(errorMessage = error.message ?: strings.restoreFailed()) }
                         }
                 } else {
                     runCatching { chatRepository.bootstrapChat(appId) }
@@ -225,7 +228,7 @@ class ChatViewModel
                                 )
                             }
                         }.onFailure { error ->
-                            metaState.update { it.copy(errorMessage = error.message ?: "初始化会话失败") }
+                            metaState.update { it.copy(errorMessage = error.message ?: strings.bootstrapFailed()) }
                         }
                 }
             }
@@ -278,7 +281,7 @@ class ChatViewModel
                     metaState.update {
                         it.copy(
                             isSending = false,
-                            errorMessage = error.message ?: "发送失败",
+                            errorMessage = error.message ?: strings.sendFailed(),
                         )
                     }
                 }
@@ -298,7 +301,7 @@ class ChatViewModel
                 runCatching {
                     chatRepository.continueGeneration(appId, resolvedChatId)
                 }.onFailure { error ->
-                    metaState.update { it.copy(errorMessage = error.message ?: "继续生成失败") }
+                    metaState.update { it.copy(errorMessage = error.message ?: strings.continueFailed()) }
                 }
             }
         }
@@ -310,7 +313,7 @@ class ChatViewModel
                 runCatching {
                     chatRepository.regenerateResponse(appId, resolvedChatId, message.messageId)
                 }.onFailure { error ->
-                    metaState.update { it.copy(errorMessage = error.message ?: "重新生成失败") }
+                    metaState.update { it.copy(errorMessage = error.message ?: strings.regenerateFailed()) }
                 }
             }
         }
@@ -358,6 +361,7 @@ class AppSelectorViewModel
     constructor(
         private val api: FastGptApi,
         private val connectionRepository: ConnectionRepository,
+        private val strings: ChatStrings,
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(AppSelectorUiState())
         val uiState: StateFlow<AppSelectorUiState> = mutableState.asStateFlow()
@@ -390,7 +394,7 @@ class AppSelectorViewModel
                                     },
                             )
                     }.onFailure { error ->
-                        mutableState.update { it.copy(errorMessage = error.message ?: "加载 App 失败") }
+                        mutableState.update { it.copy(errorMessage = error.message ?: strings.loadAppsFailed()) }
                     }
             }
         }
@@ -412,6 +416,7 @@ class AppDetailViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val api: FastGptApi,
+        private val strings: ChatStrings,
     ) : ViewModel() {
         private val appId: String = checkNotNull(savedStateHandle["appId"])
         private val chatId: String? = savedStateHandle["chatId"]
@@ -475,12 +480,32 @@ class AppDetailViewModel
                         mutableState.update {
                             it.copy(
                                 isLoading = false,
-                                errorMessage = error.message ?: "加载 App 详情失败",
+                                errorMessage = error.message ?: strings.loadAppDetailFailed(),
                             )
                         }
                     }
             }
         }
+    }
+
+open class ChatStrings
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) {
+        open fun restoreFailed(): String = context.getString(R.string.chat_error_restore_failed)
+
+        open fun bootstrapFailed(): String = context.getString(R.string.chat_error_bootstrap_failed)
+
+        open fun sendFailed(): String = context.getString(R.string.chat_error_send_failed)
+
+        open fun continueFailed(): String = context.getString(R.string.chat_error_continue_failed)
+
+        open fun regenerateFailed(): String = context.getString(R.string.chat_error_regenerate_failed)
+
+        open fun loadAppsFailed(): String = context.getString(R.string.chat_error_load_apps_failed)
+
+        open fun loadAppDetailFailed(): String = context.getString(R.string.chat_error_load_app_detail_failed)
     }
 
 private fun JsonArray.toDisplayItems(): List<String> = mapNotNull { element -> element.toString().trim('"').takeIf { it.isNotBlank() } }

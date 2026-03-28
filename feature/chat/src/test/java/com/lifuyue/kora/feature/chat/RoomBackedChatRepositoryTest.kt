@@ -299,6 +299,7 @@ private fun RoomBackedChatRepositoryTest.newFixture(): Fixture {
             conversationTagDao = database.conversationTagDao(),
             messageDao = database.messageDao(),
             api = api,
+            context = ApplicationProvider.getApplicationContext(),
             sseStreamClient =
                 SseStreamClient(
                     okHttpClient = OkHttpClient(),

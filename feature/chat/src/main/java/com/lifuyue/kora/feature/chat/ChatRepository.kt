@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.Context
 import com.lifuyue.kora.core.database.dao.ConversationDao
 import com.lifuyue.kora.core.database.dao.ConversationFolderDao
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
@@ -10,6 +11,7 @@ import com.lifuyue.kora.core.network.SseStreamClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Singleton
@@ -167,6 +169,7 @@ object ChatRepositoryModule {
         conversationFolderDao: ConversationFolderDao,
         conversationTagDao: ConversationTagDao,
         messageDao: MessageDao,
+        @ApplicationContext context: Context,
     ): RoomChatRepository =
         RoomChatRepository(
             api = api,
@@ -175,6 +178,7 @@ object ChatRepositoryModule {
             conversationFolderDao = conversationFolderDao,
             conversationTagDao = conversationTagDao,
             messageDao = messageDao,
+            context = context,
         )
 
     @Provides

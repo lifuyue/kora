@@ -31,11 +31,19 @@
     <string name="knowledge_dataset_empty">No datasets match the current filters.</string>
     <string name="knowledge_dataset_vector_model">Vector model: %1$s</string>
     <string name="knowledge_dataset_summary">%1$s · %2$s</string>
+    <string name="knowledge_error_refresh_failed">Failed to refresh</string>
+    <string name="knowledge_error_create_failed">Failed to create</string>
+    <string name="knowledge_error_delete_failed">Failed to delete</string>
 
     <string name="knowledge_collections_title">Collections</string>
     <string name="knowledge_pick_file">Choose file</string>
     <string name="knowledge_selected_document">Selected: %1$s</string>
     <string name="knowledge_selected_document_unreadable">Unable to read the selected file</string>
+    <string name="knowledge_selected_document_unsupported">Only PDF, DOCX, TXT, MD, CSV, and HTML are supported</string>
+    <string name="knowledge_default_text_import_name">Text import</string>
+    <string name="knowledge_default_qa_import_name">Q&amp;A import</string>
+    <string name="knowledge_default_document_name">document</string>
+    <string name="knowledge_error_submit_failed">Failed to submit</string>
     <string name="knowledge_link_urls_label">URL, one per line</string>
     <string name="knowledge_link_selector_label">Selector (optional)</string>
     <string name="knowledge_qa_content">Q/A content</string>
@@ -57,6 +65,8 @@
     <string name="knowledge_disable_chunk">Disable this chunk</string>
     <string name="knowledge_highlighted_hit">Current citation hit</string>
     <string name="knowledge_chunk_header">Chunk %1$d · %2$s</string>
+    <string name="knowledge_error_load_failed">Failed to load</string>
+    <string name="knowledge_error_save_failed">Failed to save</string>
 
     <string name="knowledge_label_type_file">File</string>
     <string name="knowledge_label_type_link">Link</string>
@@ -83,6 +93,7 @@
     <string name="knowledge_duration">Duration: %1$s</string>
     <string name="knowledge_extension_model">Query extension model: %1$s</string>
     <string name="knowledge_search_empty">No results found.</string>
+    <string name="knowledge_error_search_failed">Failed to search</string>
     <string name="knowledge_search_result_title_fallback">Matched snippet</string>
     <string name="knowledge_search_result_snippet_fallback">No preview available</string>
     <string name="knowledge_score_summary">%1$s · %2$s</string>
