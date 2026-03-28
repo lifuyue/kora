@@ -6,11 +6,15 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -135,6 +139,7 @@ private fun ChatRoute(
     val appSelectorUiState = appSelectorViewModel.uiState.collectAsStateWithLifecycle()
     var showAppSelector by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val recordAudioPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
@@ -155,6 +160,16 @@ private fun ChatRoute(
                 viewModel.addAttachments(uris)
             }
         }
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_STOP) {
+                    viewModel.onHostStopped()
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     ChatScreen(
         uiState = uiState.value,
         appSelectorUiState = appSelectorUiState.value,
@@ -192,6 +207,9 @@ private fun ChatRoute(
         onContinueGeneration = viewModel::continueGeneration,
         onFeedback = viewModel::updateFeedback,
         onRegenerate = viewModel::regenerate,
+        onPlayMessage = viewModel::playMessage,
+        onPausePlayback = viewModel::pausePlayback,
+        onStopPlayback = viewModel::stopPlayback,
         onOpenAppSelector = { showAppSelector = true },
         onDismissAppSelector = { showAppSelector = false },
         onSwitchApp = { appId ->

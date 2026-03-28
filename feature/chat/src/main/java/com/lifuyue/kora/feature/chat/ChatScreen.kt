@@ -74,6 +74,9 @@ fun ChatScreen(
     onContinueGeneration: () -> Unit,
     onFeedback: (ChatMessageUiModel, MessageFeedback) -> Unit,
     onRegenerate: (ChatMessageUiModel) -> Unit,
+    onPlayMessage: (String, String) -> Unit = { _, _ -> },
+    onPausePlayback: () -> Unit = {},
+    onStopPlayback: () -> Unit = {},
     onOpenAppSelector: () -> Unit = {},
     onDismissAppSelector: () -> Unit = {},
     onSwitchApp: (String) -> Unit = {},
@@ -258,6 +261,10 @@ fun ChatScreen(
                             onContinueGeneration = onContinueGeneration,
                             onRegenerate = { onRegenerate(message) },
                             onFeedback = { feedback -> onFeedback(message, feedback) },
+                            ttsPlaybackState = uiState.ttsPlaybackState,
+                            onPlayMessage = onPlayMessage,
+                            onPausePlayback = onPausePlayback,
+                            onStopPlayback = onStopPlayback,
                             onSuggestedQuestion = onSuggestedQuestion,
                             onOpenCitation = onOpenCitation,
                             onUpdateInteractiveDraft = onUpdateInteractiveDraft,
@@ -653,6 +660,10 @@ private fun MessageCard(
     onContinueGeneration: () -> Unit,
     onRegenerate: () -> Unit,
     onFeedback: (MessageFeedback) -> Unit,
+    ttsPlaybackState: TtsPlaybackUiState,
+    onPlayMessage: (String, String) -> Unit,
+    onPausePlayback: () -> Unit,
+    onStopPlayback: () -> Unit,
     onSuggestedQuestion: (String) -> Unit,
     onOpenCitation: (CitationItemUiModel) -> Unit,
     onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit,
@@ -783,6 +794,26 @@ private fun MessageCard(
                                 },
                             ),
                         )
+                    }
+                    TextButton(
+                        onClick = { onPlayMessage(message.messageId, message.markdown) },
+                        modifier = Modifier.testTag(ChatTestTags.messageTtsAction(message.messageId)),
+                    ) {
+                        Text(appString("chat_tts_play"))
+                    }
+                    if (ttsPlaybackState.messageId == message.messageId && ttsPlaybackState.status == TtsPlaybackStatus.Playing) {
+                        TextButton(
+                            onClick = onPausePlayback,
+                            modifier = Modifier.testTag(ChatTestTags.messageTtsPauseAction(message.messageId)),
+                        ) {
+                            Text(appString("chat_tts_pause"))
+                        }
+                        TextButton(
+                            onClick = onStopPlayback,
+                            modifier = Modifier.testTag(ChatTestTags.messageTtsStopAction(message.messageId)),
+                        ) {
+                            Text(appString("chat_tts_stop"))
+                        }
                     }
                 }
             }

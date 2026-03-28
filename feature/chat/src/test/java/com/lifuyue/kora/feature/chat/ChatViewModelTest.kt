@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.AudioPreferences
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CompletableDeferred
@@ -476,6 +477,64 @@ class ChatViewModelTest {
             assertEquals("draft", viewModel.uiState.value.input)
             collectJob.cancel()
         }
+
+    @Test
+    fun playMessageStopsPreviousPlaybackBeforeStartingNewOne() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val audioPreferencesSource =
+                FakeChatAudioPreferencesSource(
+                    AudioPreferences(
+                        textToSpeechEngine = TextToSpeechEngine.System,
+                        speechRate = 1.25f,
+                    ),
+                )
+            val ttsController = FakeTtsPlaybackController()
+            val viewModel =
+                createViewModel(
+                    repository = repository,
+                    audioPreferencesSource = audioPreferencesSource,
+                    ttsPlaybackController = ttsController,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            viewModel.playMessage("msg-1", "First")
+            advanceUntilIdle()
+            viewModel.playMessage("msg-2", "Second")
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf("play:msg-1:First", "stop:msg-1", "play:msg-2:Second"),
+                ttsController.events,
+            )
+            assertEquals("msg-2", ttsController.lastRequest?.messageId)
+            assertEquals(TextToSpeechEngine.System, ttsController.lastRequest?.audioPreferences?.textToSpeechEngine)
+            assertEquals(TtsPlaybackStatus.Playing, viewModel.uiState.value.ttsPlaybackState.status)
+            assertEquals("msg-2", viewModel.uiState.value.ttsPlaybackState.messageId)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun hostStoppedClearsPlaybackState() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val ttsController = FakeTtsPlaybackController()
+            val viewModel =
+                createViewModel(
+                    repository = repository,
+                    ttsPlaybackController = ttsController,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            viewModel.playMessage("msg-1", "Hello")
+            advanceUntilIdle()
+            viewModel.onHostStopped()
+            advanceUntilIdle()
+
+            assertEquals(listOf("play:msg-1:Hello", "stop:msg-1"), ttsController.events)
+            assertEquals(TtsPlaybackStatus.Stopped, viewModel.uiState.value.ttsPlaybackState.status)
+            collectJob.cancel()
+        }
 }
 
 private class FakeChatStrings : ChatStrings(context = ApplicationProvider.getApplicationContext()) {
@@ -563,12 +622,44 @@ private class FakeSpeechRecognitionSession : SpeechRecognitionSession {
     }
 }
 
+private class FakeTtsPlaybackController : TtsPlaybackController {
+    var lastRequest: TtsPlaybackRequest? = null
+        private set
+    val events = mutableListOf<String>()
+    private val mutableState = MutableStateFlow(TtsPlaybackUiState())
+
+    override val state = mutableState
+
+    override fun play(request: TtsPlaybackRequest) {
+        lastRequest = request
+        events += "play:${request.messageId}:${request.text}"
+        mutableState.value =
+            TtsPlaybackUiState(
+                messageId = request.messageId,
+                status = TtsPlaybackStatus.Playing,
+            )
+    }
+
+    override fun pause() {
+        val messageId = mutableState.value.messageId ?: return
+        events += "pause:$messageId"
+        mutableState.value = mutableState.value.copy(status = TtsPlaybackStatus.Paused)
+    }
+
+    override fun stop() {
+        val messageId = mutableState.value.messageId ?: return
+        events += "stop:$messageId"
+        mutableState.value = mutableState.value.copy(status = TtsPlaybackStatus.Stopped)
+    }
+}
+
 private fun createViewModel(
     repository: ChatRepository = RecordingChatRepository(),
     chatId: String? = null,
     strings: ChatStrings = FakeChatStrings(),
     audioPreferencesSource: ChatAudioPreferencesSource = FakeChatAudioPreferencesSource(),
     speechRecognitionEngine: SpeechRecognitionEngine = FakeSpeechRecognitionEngine(),
+    ttsPlaybackController: TtsPlaybackController = FakeTtsPlaybackController(),
 ): ChatViewModel =
     ChatViewModel(
         savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to chatId)),
@@ -576,6 +667,7 @@ private fun createViewModel(
         chatRepository = repository,
         chatAudioPreferencesSource = audioPreferencesSource,
         speechRecognitionEngine = speechRecognitionEngine,
+        ttsPlaybackController = ttsPlaybackController,
         strings = strings,
     )
 

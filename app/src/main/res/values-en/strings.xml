@@ -51,4 +51,8 @@
     <string name="settings_audio_speech_rate">Speech rate %1$.1fx</string>
     <string name="settings_audio_default_voice">Default voice</string>
     <string name="settings_audio_default_voice_hint">Leave blank to use the system default voice</string>
+    <string name="chat_tts_play">Read aloud</string>
+    <string name="chat_tts_pause">Pause playback</string>
+    <string name="chat_tts_stop">Stop playback</string>
+    <string name="chat_error_tts_unavailable">Speech playback unavailable</string>
 </resources>

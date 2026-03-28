@@ -105,6 +105,48 @@ class ChatScreenTest {
     }
 
     @Test
+    fun assistantMessageShowsPlaybackActionsForActiveMessage() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "assistant-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "Read me",
+                                ),
+                            ),
+                        ttsPlaybackState =
+                            TtsPlaybackUiState(
+                                messageId = "assistant-1",
+                                status = TtsPlaybackStatus.Playing,
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+                onPlayMessage = { _, _ -> },
+                onPausePlayback = {},
+                onStopPlayback = {},
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.messageTtsAction("assistant-1")).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.messageTtsPauseAction("assistant-1")).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.messageTtsStopAction("assistant-1")).assertExists()
+    }
+
+    @Test
     fun composerShowsAttachmentActionsAndPreviewControls() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         var pickedImage = false

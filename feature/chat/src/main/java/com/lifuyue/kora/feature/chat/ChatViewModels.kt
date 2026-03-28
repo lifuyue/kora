@@ -209,6 +209,7 @@ class ChatViewModel
         private val chatRepository: ChatRepository,
         private val chatAudioPreferencesSource: ChatAudioPreferencesSource,
         private val speechRecognitionEngine: SpeechRecognitionEngine,
+        private val ttsPlaybackController: TtsPlaybackController,
         private val strings: ChatStrings,
     ) : ViewModel() {
         private val appId: String = checkNotNull(savedStateHandle["appId"])
@@ -268,6 +269,7 @@ class ChatViewModel
                 attachments,
                 attachmentConfig,
                 speechInputState,
+                ttsPlaybackController.state,
             ) { values ->
                 val currentInput = values[0] as String
                 val meta = values[1] as ChatMetaState
@@ -275,6 +277,7 @@ class ChatViewModel
                 val currentAttachments = values[3] as List<AttachmentDraftUiModel>
                 val currentAttachmentConfig = values[4] as ChatAttachmentConfig
                 val currentSpeechInputState = values[5] as SpeechInputUiState
+                val currentTtsPlaybackState = values[6] as TtsPlaybackUiState
                 val pendingInteractiveCard =
                     messages.lastOrNull { it.interactiveCard?.status == InteractiveCardStatus.Pending }?.interactiveCard
                 ChatUiState(
@@ -290,6 +293,7 @@ class ChatViewModel
                     attachmentConfig = currentAttachmentConfig,
                     pendingInteractiveCard = pendingInteractiveCard,
                     speechInputState = currentSpeechInputState,
+                    ttsPlaybackState = currentTtsPlaybackState,
                 )
             }.stateIn(
                 viewModelScope,
@@ -302,6 +306,7 @@ class ChatViewModel
                     attachments = attachments.value,
                     attachmentConfig = attachmentConfig.value,
                     speechInputState = speechInputState.value,
+                    ttsPlaybackState = ttsPlaybackController.state.value,
                 ),
             )
 
@@ -389,6 +394,35 @@ class ChatViewModel
                     transcript = speechDraftBeforeStart,
                     errorMessage = strings.speechPermissionRequired(),
                 )
+        }
+
+        fun playMessage(
+            messageId: String,
+            text: String,
+        ) {
+            val currentMessageId = ttsPlaybackController.state.value.messageId
+            if (currentMessageId != null && currentMessageId != messageId) {
+                ttsPlaybackController.stop()
+            }
+            ttsPlaybackController.play(
+                TtsPlaybackRequest(
+                    messageId = messageId,
+                    text = text,
+                    audioPreferences = chatAudioPreferencesSource.currentAudioPreferences(),
+                ),
+            )
+        }
+
+        fun pausePlayback() {
+            ttsPlaybackController.pause()
+        }
+
+        fun stopPlayback() {
+            ttsPlaybackController.stop()
+        }
+
+        fun onHostStopped() {
+            ttsPlaybackController.stop()
         }
 
         private fun isCurrentSpeechSession(sessionId: Long): Boolean = activeSpeechSessionId == sessionId

@@ -42,6 +42,12 @@ object ChatTestTags {
 
     fun messageDownvoteAction(messageId: String): String = "message_downvote_$messageId"
 
+    fun messageTtsAction(messageId: String): String = "message_tts_$messageId"
+
+    fun messageTtsPauseAction(messageId: String): String = "message_tts_pause_$messageId"
+
+    fun messageTtsStopAction(messageId: String): String = "message_tts_stop_$messageId"
+
     fun messageError(messageId: String): String = "message_error_$messageId"
 
     fun citationSummary(messageId: String): String = "${CITATION_SUMMARY_PREFIX}$messageId"

@@ -51,4 +51,8 @@
     <string name="settings_audio_speech_rate">语速 %1$.1fx</string>
     <string name="settings_audio_default_voice">默认语音</string>
     <string name="settings_audio_default_voice_hint">留空则使用系统默认语音</string>
+    <string name="chat_tts_play">朗读</string>
+    <string name="chat_tts_pause">暂停朗读</string>
+    <string name="chat_tts_stop">停止朗读</string>
+    <string name="chat_error_tts_unavailable">语音播报不可用</string>
 </resources>
