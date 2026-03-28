@@ -17,12 +17,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -32,6 +34,8 @@ import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 
 @Composable
@@ -156,6 +160,7 @@ fun SettingsOverviewScreen(
     onOpenCurrentApp: () -> Unit,
     onOpenTheme: () -> Unit,
     onOpenChatPreferences: () -> Unit,
+    onOpenAudio: () -> Unit = {},
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -212,6 +217,12 @@ fun SettingsOverviewScreen(
                         testTag = "settings-chat-preferences",
                     )
                     SettingsEntry(
+                        title = appString("settings_audio_title"),
+                        summary = appString("settings_audio_summary"),
+                        onClick = onOpenAudio,
+                        testTag = "settings-audio",
+                    )
+                    SettingsEntry(
                         title = stringResource(R.string.settings_language_title),
                         summary = stringResource(R.string.settings_language_follow_system),
                         onClick = onOpenLanguage,
@@ -232,6 +243,17 @@ fun SettingsOverviewScreen(
                 },
             )
         }
+    }
+}
+
+@Composable
+internal fun SettingsAdaptivePlaceholder() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(appString("adaptive_settings_placeholder_title"), style = MaterialTheme.typography.headlineSmall)
+        Text(appString("adaptive_settings_placeholder_body"), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -372,6 +394,88 @@ fun ChatPreferencesScreen(
 }
 
 @Composable
+fun AudioSettingsScreen(
+    state: AudioSettingsUiState,
+    onSpeechToTextEngineChange: (SpeechToTextEngine) -> Unit,
+    onAutoSendTranscriptsChange: (Boolean) -> Unit,
+    onTextToSpeechEngineChange: (TextToSpeechEngine) -> Unit,
+    onSpeechRateChange: (Float) -> Unit,
+    onDefaultVoiceNameChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(appString("settings_audio_title"), style = MaterialTheme.typography.headlineMedium)
+        SettingsSection(
+            title = appString("settings_audio_section_stt"),
+            content = {
+                Text(appString("settings_audio_stt_engine"), style = MaterialTheme.typography.titleMedium)
+                AudioEngineOption(
+                    tag = "audio-stt-system",
+                    label = appString("settings_audio_stt_engine_system"),
+                    selected = state.speechToTextEngine == SpeechToTextEngine.System,
+                    onClick = { onSpeechToTextEngineChange(SpeechToTextEngine.System) },
+                )
+                AudioEngineOption(
+                    tag = "audio-stt-whisper",
+                    label = appString("settings_audio_stt_engine_whisper"),
+                    selected = state.speechToTextEngine == SpeechToTextEngine.WhisperApp,
+                    onClick = { onSpeechToTextEngineChange(SpeechToTextEngine.WhisperApp) },
+                )
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text(appString("settings_audio_auto_send_transcripts"))
+                    Switch(
+                        checked = state.autoSendTranscripts,
+                        onCheckedChange = onAutoSendTranscriptsChange,
+                        modifier = Modifier.semantics { testTag = "audio-auto-send" },
+                    )
+                }
+            },
+        )
+        SettingsSection(
+            title = appString("settings_audio_section_tts"),
+            content = {
+                Text(appString("settings_audio_tts_engine"), style = MaterialTheme.typography.titleMedium)
+                AudioEngineOption(
+                    tag = "audio-tts-system",
+                    label = appString("settings_audio_tts_engine_system"),
+                    selected = state.textToSpeechEngine == TextToSpeechEngine.System,
+                    onClick = { onTextToSpeechEngineChange(TextToSpeechEngine.System) },
+                )
+                AudioEngineOption(
+                    tag = "audio-tts-app-managed",
+                    label = appString("settings_audio_tts_engine_app_managed"),
+                    selected = state.textToSpeechEngine == TextToSpeechEngine.AppManaged,
+                    onClick = { onTextToSpeechEngineChange(TextToSpeechEngine.AppManaged) },
+                )
+                Text(appString("settings_audio_speech_rate", state.speechRate), style = MaterialTheme.typography.bodyMedium)
+                Slider(
+                    value = state.speechRate,
+                    onValueChange = onSpeechRateChange,
+                    valueRange = 0.5f..2.0f,
+                    steps = 9,
+                    modifier = Modifier.semantics { testTag = "audio-speech-rate" },
+                )
+                OutlinedTextField(
+                    value = state.defaultVoiceName.orEmpty(),
+                    onValueChange = onDefaultVoiceNameChange,
+                    label = { Text(appString("settings_audio_default_voice")) },
+                    supportingText = { Text(appString("settings_audio_default_voice_hint")) },
+                    modifier = Modifier.fillMaxWidth().semantics { testTag = "audio-default-voice" },
+                    singleLine = true,
+                )
+            },
+        )
+    }
+}
+
+@Composable
 fun LanguageSettingsScreen(
     state: LanguageSettingsUiState,
     onLanguageTagChange: (String?) -> Unit,
@@ -423,6 +527,30 @@ private fun LanguageOption(
         ) {
             Text(label)
             Text(if (selected) stringResource(R.string.settings_selected) else "")
+        }
+    }
+}
+
+@Composable
+private fun AudioEngineOption(
+    tag: String,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().semantics { testTag = tag },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(label)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(selected = selected, onClick = null)
+                Text(if (selected) stringResource(R.string.settings_selected) else "")
+            }
         }
     }
 }

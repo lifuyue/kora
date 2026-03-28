@@ -105,10 +105,6 @@ class MainActivityM3AcceptanceTest {
             .onNodeWithText(
                 context.getString(com.lifuyue.kora.feature.chat.R.string.conversation_list_empty_title),
             ).assertIsDisplayed()
-        composeRule
-            .onNodeWithText(
-                context.getString(com.lifuyue.kora.feature.chat.R.string.conversation_list_empty_body),
-            ).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
 

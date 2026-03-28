@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +49,17 @@ class ConnectionPreferencesStore internal constructor(
                     dynamicColorEnabled = preferences[Keys.DYNAMIC_COLOR_ENABLED] ?: true,
                     oledEnabled = preferences[Keys.OLED_ENABLED] ?: false,
                     languageTag = preferences[Keys.LANGUAGE_TAG],
+                    speechToTextEngine =
+                        preferences[Keys.SPEECH_TO_TEXT_ENGINE]
+                            ?.let { storedEngine -> SpeechToTextEngine.entries.firstOrNull { it.name == storedEngine } }
+                            ?: SpeechToTextEngine.System,
+                    autoSendTranscripts = preferences[Keys.AUTO_SEND_TRANSCRIPTS] ?: false,
+                    textToSpeechEngine =
+                        preferences[Keys.TEXT_TO_SPEECH_ENGINE]
+                            ?.let { storedEngine -> TextToSpeechEngine.entries.firstOrNull { it.name == storedEngine } }
+                            ?: TextToSpeechEngine.System,
+                    speechRate = preferences[Keys.SPEECH_RATE] ?: 1f,
+                    defaultVoiceName = preferences[Keys.DEFAULT_VOICE_NAME],
                 )
             }
 
@@ -134,6 +147,40 @@ class ConnectionPreferencesStore internal constructor(
         }
     }
 
+    suspend fun updateSpeechToTextEngine(value: SpeechToTextEngine) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SPEECH_TO_TEXT_ENGINE] = value.name
+        }
+    }
+
+    suspend fun updateAutoSendTranscripts(value: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.AUTO_SEND_TRANSCRIPTS] = value
+        }
+    }
+
+    suspend fun updateTextToSpeechEngine(value: TextToSpeechEngine) {
+        dataStore.edit { preferences ->
+            preferences[Keys.TEXT_TO_SPEECH_ENGINE] = value.name
+        }
+    }
+
+    suspend fun updateSpeechRate(value: Float) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SPEECH_RATE] = value
+        }
+    }
+
+    suspend fun updateDefaultVoiceName(value: String?) {
+        dataStore.edit { preferences ->
+            if (value == null) {
+                preferences.remove(Keys.DEFAULT_VOICE_NAME)
+            } else {
+                preferences[Keys.DEFAULT_VOICE_NAME] = value
+            }
+        }
+    }
+
     companion object {
         fun create(
             scope: CoroutineScope,
@@ -170,5 +217,10 @@ class ConnectionPreferencesStore internal constructor(
         val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
         val OLED_ENABLED = booleanPreferencesKey("oled_enabled")
         val LANGUAGE_TAG = stringPreferencesKey("language_tag")
+        val SPEECH_TO_TEXT_ENGINE = stringPreferencesKey("speech_to_text_engine")
+        val AUTO_SEND_TRANSCRIPTS = booleanPreferencesKey("auto_send_transcripts")
+        val TEXT_TO_SPEECH_ENGINE = stringPreferencesKey("text_to_speech_engine")
+        val SPEECH_RATE = floatPreferencesKey("speech_rate")
+        val DEFAULT_VOICE_NAME = stringPreferencesKey("default_voice_name")
     }
 }

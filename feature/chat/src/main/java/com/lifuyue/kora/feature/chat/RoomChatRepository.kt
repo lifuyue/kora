@@ -1,6 +1,7 @@
 package com.lifuyue.kora.feature.chat
 
 import android.content.Context
+import android.net.Uri
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.NetworkError
 import com.lifuyue.kora.core.database.dao.ConversationDao
@@ -8,12 +9,14 @@ import com.lifuyue.kora.core.database.dao.ConversationFolderAssignmentRow
 import com.lifuyue.kora.core.database.dao.ConversationFolderDao
 import com.lifuyue.kora.core.database.dao.ConversationTagAssignmentRow
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
+import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.entity.ConversationEntity
 import com.lifuyue.kora.core.database.entity.ConversationFolderCrossRef
 import com.lifuyue.kora.core.database.entity.ConversationFolderEntity
 import com.lifuyue.kora.core.database.entity.ConversationTagCrossRef
 import com.lifuyue.kora.core.database.entity.ConversationTagEntity
+import com.lifuyue.kora.core.database.entity.InteractiveDraftEntity
 import com.lifuyue.kora.core.database.entity.MessageEntity
 import com.lifuyue.kora.core.network.ChatCompletionMessageParam
 import com.lifuyue.kora.core.network.ChatCompletionRequest
@@ -31,12 +34,14 @@ import com.lifuyue.kora.core.network.SseEventData
 import com.lifuyue.kora.core.network.SseStreamClient
 import com.lifuyue.kora.core.network.UpdateHistoryRequest
 import com.lifuyue.kora.core.network.UpdateUserFeedbackRequest
+import com.lifuyue.kora.core.network.UploadedAssetRef
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -45,6 +50,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -56,6 +62,12 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
+import java.io.File
 import java.time.Instant
 
 typealias RoomBackedChatRepository = RoomChatRepository
@@ -67,6 +79,7 @@ class RoomChatRepository
         private val conversationDao: ConversationDao,
         private val conversationFolderDao: ConversationFolderDao,
         private val conversationTagDao: ConversationTagDao,
+        private val interactiveDraftDao: InteractiveDraftDao,
         private val messageDao: MessageDao,
         private val context: Context,
         private val json: Json = NetworkJson.default,
@@ -81,14 +94,18 @@ class RoomChatRepository
         private var localId = 0L
         private var lastCreatedAt = 0L
 
-        override suspend fun bootstrapChat(appId: String): ChatBootstrap {
-            val data = api.initChat(appId = appId, chatId = null).data
-            val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: nextId("chat")
+        override suspend fun bootstrapChat(
+            appId: String,
+            chatId: String?,
+        ): ChatBootstrap {
+            val data = api.initChat(appId = appId, chatId = chatId).data
+            val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: chatId?.takeIf { it.isNotBlank() } ?: nextId("chat")
             return ChatBootstrap(
                 chatId = resolvedChatId,
                 title = data?.title.orEmpty(),
                 welcomeText = data?.welcomeText,
                 questionGuide = data?.questionGuide,
+                attachmentConfig = data?.fileSelectConfig.toChatAttachmentConfig(),
             ).also { chatBootstrapByChatId[resolvedChatId] = it }
         }
 
@@ -310,6 +327,14 @@ class RoomChatRepository
             }
         }
 
+        override suspend fun setConversationArchived(
+            appId: String,
+            chatId: String,
+            archived: Boolean,
+        ) {
+            conversationDao.updateArchived(chatId = chatId, isArchived = archived)
+        }
+
         override fun observeMessages(
             appId: String,
             chatId: String?,
@@ -323,7 +348,14 @@ class RoomChatRepository
                     ensureMessagesRestored(appId = appId, chatId = chatId)
                     emit(emptyList())
                 }
-                emitAll(messageDao.observeMessagesForChat(chatId).map { rows -> rows.map(::messageToUiModel) })
+                emitAll(
+                    combine(
+                        messageDao.observeMessagesForChat(chatId),
+                        interactiveDraftDao.observeByChatId(chatId),
+                    ) { rows, draft ->
+                        rows.map { row -> messageToUiModel(row, draft) }
+                    },
+                )
             }
         }
 
@@ -352,20 +384,22 @@ class RoomChatRepository
                         appId = appId,
                         chatId = chatId,
                         createdAt = index.toLong(),
-                        payload = StoredMessagePayload(markdown = extractMarkdown(record.value)),
+                        payload = record.toStoredPayload(),
                     )
                 }
             messageDao.upsertAll(entities)
-            updateConversationPreview(chatId, entities.lastOrNull()?.let(::messageToUiModel)?.markdown.orEmpty())
+            updateConversationPreview(chatId, entities.lastOrNull()?.let { messageToUiModel(it, null) }?.markdown.orEmpty())
         }
 
         override suspend fun sendMessage(
             appId: String,
             chatId: String?,
             text: String,
+            attachments: List<AttachmentDraftUiModel>,
         ): String {
             val prompt = text.trim()
-            require(prompt.isNotEmpty()) { "消息不能为空" }
+            val uploadedAttachments = attachments.filter { it.uploadStatus == AttachmentUploadStatus.Uploaded && it.uploadedRef != null }
+            require(prompt.isNotEmpty() || uploadedAttachments.isNotEmpty()) { "消息不能为空" }
 
             val initData =
                 if (chatId == null) {
@@ -384,16 +418,21 @@ class RoomChatRepository
                         title = initData.title.orEmpty(),
                         welcomeText = initData.welcomeText,
                         questionGuide = initData.questionGuide,
+                        attachmentConfig = initData.fileSelectConfig.toChatAttachmentConfig(),
                     )
             }
             val createdAt = nextCreatedAt()
+            val previewText =
+                prompt.ifBlank {
+                    uploadedAttachments.joinToString(separator = "、") { it.displayName }
+                }
             val humanMessage =
                 newMessageEntity(
                     dataId = nextId("human"),
                     chatId = resolvedChatId,
                     appId = appId,
                     role = ChatRole.Human,
-                    markdown = prompt,
+                    markdown = previewText,
                     sendStatus = "sent",
                     isStreaming = false,
                     createdAt = createdAt,
@@ -411,8 +450,8 @@ class RoomChatRepository
                 title =
                     conversationDao.getConversationByChatId(resolvedChatId)?.displayTitle
                         ?: initData?.title?.takeIf { it.isNotBlank() }
-                        ?: prompt.take(18).ifBlank { context.getString(R.string.chat_repository_new_conversation_title) },
-                preview = prompt,
+                        ?: previewText.take(18).ifBlank { context.getString(R.string.chat_repository_new_conversation_title) },
+                preview = previewText,
             )
             messageDao.upsertAll(listOf(humanMessage, assistantMessage))
 
@@ -421,6 +460,11 @@ class RoomChatRepository
                 chatId = resolvedChatId,
                 prompt = prompt,
                 assistantMessageId = assistantMessage.dataId,
+                userMessage =
+                    ChatCompletionMessageParam(
+                        role = "user",
+                        content = buildChatCompletionContent(prompt, uploadedAttachments),
+                    ),
             )
             return resolvedChatId
         }
@@ -443,6 +487,7 @@ class RoomChatRepository
                 chatId,
                 messageToUiModel(
                     current.copy(payloadJson = updateStoredPayload(current.payloadJson, errorMessage = stoppedMessage, json = json)),
+                    null,
                 ).markdown,
             )
         }
@@ -454,7 +499,7 @@ class RoomChatRepository
             val prompt =
                 messageDao.getMessagesForChat(chatId)
                     .lastOrNull { it.role == ChatRole.Human.name }
-                    ?.let(::messageToUiModel)
+                    ?.let { messageToUiModel(it, null) }
                     ?.markdown
                     .orEmpty()
                     .ifBlank { context.getString(R.string.chat_repository_continue_prompt) }
@@ -481,7 +526,7 @@ class RoomChatRepository
                 messages
                     .take(targetIndex + 1)
                     .lastOrNull { it.role == ChatRole.Human.name }
-                    ?.let(::messageToUiModel)
+                    ?.let { messageToUiModel(it, null) }
                     ?.markdown
                     .orEmpty()
                     .ifBlank { context.getString(R.string.chat_repository_continue_prompt) }
@@ -519,6 +564,138 @@ class RoomChatRepository
             )
         }
 
+        override suspend fun uploadAttachment(
+            appId: String,
+            chatId: String?,
+            attachment: AttachmentDraftUiModel,
+            onProgress: (Float) -> Unit,
+        ): UploadedAssetRef {
+            val uri = Uri.parse(attachment.localUri)
+            val metadata = resolveAttachmentMetadata(context, uri)
+            val displayName = metadata.displayName.ifBlank { attachment.displayName }
+            val mimeType = metadata.mimeType.ifBlank { attachment.mimeType }.ifBlank { "application/octet-stream" }
+            val tempFile = File.createTempFile("chat-upload-", displayName.sanitizeUploadSuffix(), context.cacheDir)
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    tempFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                } ?: throw IllegalStateException(context.chatString("chat_error_attachment_upload_failed"))
+
+                val response =
+                    api.uploadChatAttachment(
+                        file =
+                            MultipartBody.Part.createFormData(
+                                "file",
+                                displayName,
+                                tempFile.asProgressRequestBody(
+                                    contentType = mimeType.toMediaType(),
+                                    onProgress = onProgress,
+                                ),
+                            ),
+                        appId = appId.toRequestBody("text/plain".toMediaType()),
+                        chatId = chatId?.takeIf(String::isNotBlank)?.toRequestBody("text/plain".toMediaType()),
+                    )
+                return response.data ?: throw IllegalStateException(context.chatString("chat_error_attachment_upload_failed"))
+            } finally {
+                tempFile.delete()
+            }
+        }
+
+        override suspend fun savePendingInteractiveDraft(
+            appId: String,
+            chatId: String,
+            card: InteractiveCardUiModel,
+            draftPayloadJson: String?,
+        ) {
+            interactiveDraftDao.upsert(
+                InteractiveDraftEntity(
+                    chatId = chatId,
+                    messageDataId = card.messageDataId,
+                    responseValueId = card.responseValueId,
+                    rawPayloadJson = card.toRawPayloadJson(),
+                    draftPayloadJson = draftPayloadJson,
+                    updatedAt = clock(),
+                ),
+            )
+        }
+
+        override suspend fun clearPendingInteractiveDraft(
+            appId: String,
+            chatId: String,
+        ) {
+            interactiveDraftDao.deleteByChatId(chatId)
+        }
+
+        override suspend fun submitInteractiveResponse(
+            appId: String,
+            chatId: String,
+            card: InteractiveCardUiModel,
+            value: String,
+        ): String {
+            val trimmed = value.trim()
+            require(trimmed.isNotEmpty()) { "交互输入不能为空" }
+            val displayValue = card.displaySubmissionValue(trimmed)
+
+            val createdAt = nextCreatedAt()
+            val submissionPayload = card.toDraftPayloadJson(value = trimmed, status = InteractiveCardStatus.Submitting)
+            interactiveDraftDao.upsert(
+                InteractiveDraftEntity(
+                    chatId = chatId,
+                    messageDataId = card.messageDataId,
+                    responseValueId = card.responseValueId,
+                    rawPayloadJson = card.toRawPayloadJson(),
+                    draftPayloadJson = submissionPayload,
+                    updatedAt = clock(),
+                ),
+            )
+            updateInteractiveMessageState(
+                messageDataId = card.messageDataId,
+                status = InteractiveCardStatus.Submitting,
+                submissionPayloadJson = submissionPayload,
+            )
+            val humanMessage =
+                newMessageEntity(
+                    dataId = nextId("human"),
+                    chatId = chatId,
+                    appId = appId,
+                    role = ChatRole.Human,
+                    markdown = displayValue,
+                    sendStatus = "sent",
+                    isStreaming = false,
+                    createdAt = createdAt,
+                )
+            val assistantMessage =
+                newStreamingAssistantEntity(
+                    chatId = chatId,
+                    appId = appId,
+                    createdAt = createdAt + 1L,
+                )
+            messageDao.upsertAll(listOf(humanMessage, assistantMessage))
+            updateConversationPreview(chatId, displayValue)
+            startStreaming(
+                appId = appId,
+                chatId = chatId,
+                prompt = displayValue,
+                assistantMessageId = assistantMessage.dataId,
+                userMessage =
+                    ChatCompletionMessageParam(
+                        role = "user",
+                        content = JsonPrimitive(displayValue),
+                        interactive = card.toSubmissionPayload(trimmed),
+                    ),
+                onSuccess = {
+                    interactiveDraftDao.deleteByChatId(chatId)
+                    updateInteractiveMessageState(
+                        messageDataId = card.messageDataId,
+                        status = InteractiveCardStatus.Resolved,
+                        submissionPayloadJson = submissionPayload,
+                    )
+                },
+            )
+            return chatId
+        }
+
         private fun ensureMessagesRestored(
             appId: String,
             chatId: String,
@@ -544,6 +721,8 @@ class RoomChatRepository
             chatId: String,
             prompt: String,
             assistantMessageId: String,
+            userMessage: ChatCompletionMessageParam? = null,
+            onSuccess: suspend () -> Unit = {},
         ) {
             streamingJobs.remove(chatId)?.cancel()
             streamingJobs[chatId] =
@@ -567,6 +746,7 @@ class RoomChatRepository
                                 if (step.delayMillis > 0) {
                                     delay(step.delayMillis)
                                 }
+                                coroutineContext.ensureActive()
                                 markdown += step.markdownDelta
                                 reasoning += step.reasoningDelta
                                 persistAssistantState(
@@ -592,13 +772,7 @@ class RoomChatRepository
                                         chatId = chatId,
                                         appId = appId,
                                         responseChatItemId = assistantMessageId,
-                                        messages =
-                                            listOf(
-                                                ChatCompletionMessageParam(
-                                                    role = "user",
-                                                    content = JsonPrimitive(prompt),
-                                                ),
-                                            ),
+                                        messages = listOf(userMessage ?: ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt))),
                                     ),
                                 ).collect { event ->
                                     val update =
@@ -641,6 +815,7 @@ class RoomChatRepository
                         }
 
                         if (!failed) {
+                            coroutineContext.ensureActive()
                             persistAssistantState(
                                 dataId = assistantMessageId,
                                 markdown = markdown,
@@ -657,6 +832,7 @@ class RoomChatRepository
                                 chatId = chatId,
                                 assistantMessageId = assistantMessageId,
                             )
+                            onSuccess()
                         }
                     } catch (_: CancellationException) {
                         return@launch
@@ -808,7 +984,10 @@ class RoomChatRepository
             return lastCreatedAt
         }
 
-        private fun messageToUiModel(entity: MessageEntity): ChatMessageUiModel {
+        private fun messageToUiModel(
+            entity: MessageEntity,
+            draft: InteractiveDraftEntity?,
+        ): ChatMessageUiModel {
             val storedPayload = entity.payloadJson.toStoredPayload(json)
             return ChatMessageUiModel(
                 messageId = entity.dataId,
@@ -823,6 +1002,27 @@ class RoomChatRepository
                 feedback = entity.feedbackType.toFeedback(),
                 citations = storedPayload.citations.map(CitationPayload::toUiModel),
                 suggestedQuestions = storedPayload.suggestedQuestions,
+                interactiveCard = storedPayload.toInteractiveCard(messageId = entity.dataId, draft = draft, json = json),
+            )
+        }
+
+        private fun updateInteractiveMessageState(
+            messageDataId: String,
+            status: InteractiveCardStatus,
+            submissionPayloadJson: String,
+        ) {
+            val source = messageDao.getMessageById(messageDataId) ?: return
+            val payload = source.payloadJson.toStoredPayload(json)
+            messageDao.updateMessageState(
+                dataId = messageDataId,
+                payloadJson =
+                    payload.copy(
+                        interactiveStatus = status.name,
+                        interactiveSubmissionJson = submissionPayloadJson,
+                    ).toJsonString(),
+                isStreaming = source.isStreaming,
+                sendStatus = source.sendStatus,
+                errorCode = source.errorCode,
             )
         }
 
@@ -897,6 +1097,8 @@ private data class StoredMessagePayload(
     val errorMessage: String? = null,
     val citations: List<CitationPayload> = emptyList(),
     val suggestedQuestions: List<String> = emptyList(),
+    val interactiveStatus: String? = null,
+    val interactiveSubmissionJson: String? = null,
 )
 
 private data class CitationPayload(
@@ -908,6 +1110,19 @@ private data class CitationPayload(
     val snippet: String = "",
     val scoreType: String? = null,
     val score: Double? = null,
+)
+
+private data class InteractivePayload(
+    val kind: InteractiveCardKind,
+    val responseValueId: String? = null,
+    val fields: List<InteractiveFieldUiModel> = emptyList(),
+    val options: List<String> = emptyList(),
+)
+
+private data class InteractiveDraftSnapshot(
+    val status: InteractiveCardStatus? = null,
+    val singleValue: String? = null,
+    val fieldValues: Map<String, String> = emptyMap(),
 )
 
 private fun ChatHistoryItemDto.toConversationEntity(
@@ -946,6 +1161,12 @@ private fun ChatRecordItemDto.toMessageEntity(
         errorCode = null,
     )
 
+private fun ChatRecordItemDto.toStoredPayload(): StoredMessagePayload =
+    StoredMessagePayload(
+        markdown = extractVisibleMarkdown(value),
+        eventPayloads = value.extractInteractiveEventPayloads(),
+    )
+
 private fun ConversationEntity.displayTitle(): String = customTitle?.takeIf { it.isNotBlank() } ?: title
 
 private fun ConversationEntity.toUiModel(
@@ -968,6 +1189,7 @@ private fun ConversationEntity.toUiModel(
                 )
             },
         isPinned = isPinned,
+        isArchived = isArchived,
         updateTime = updateTime,
     )
 
@@ -1025,7 +1247,7 @@ private fun String.toStoredPayload(json: Json): StoredMessagePayload =
                 eventPayloads =
                     payload["eventPayloads"]
                         ?.jsonArray
-                        ?.mapNotNull { it.stringContentOrNull() }
+                        ?.map { element -> element.stringContentOrNull() ?: element.toString() }
                         .orEmpty(),
                 errorMessage = payload["errorMessage"].stringContentOrNull(),
                 citations =
@@ -1050,6 +1272,8 @@ private fun String.toStoredPayload(json: Json): StoredMessagePayload =
                         ?.jsonArray
                         ?.mapNotNull { it.stringContentOrNull() }
                         .orEmpty(),
+                interactiveStatus = payload["interactiveStatus"].stringContentOrNull(),
+                interactiveSubmissionJson = payload["interactiveSubmissionJson"].stringContentOrNull(),
             )
         }
     }.getOrElse {
@@ -1145,7 +1369,32 @@ private fun extractMarkdown(value: JsonElement?): String {
     }
 }
 
+private fun extractVisibleMarkdown(value: JsonElement?): String =
+    when (value) {
+        null -> ""
+        is JsonArray ->
+            value.joinToString(separator = "") { element ->
+                if (element is JsonObject && (element.containsKey("interactive") || element.containsKey("collectionForm"))) {
+                    ""
+                } else {
+                    extractMarkdown(element)
+                }
+            }
+        else -> extractMarkdown(value)
+    }
+
 private fun JsonElement?.stringContentOrNull(): String? = (this as? JsonPrimitive)?.content
+
+private fun JsonElement?.extractInteractiveEventPayloads(): List<String> =
+    when (this) {
+        is JsonArray -> flatMap { it.extractInteractiveEventPayloads() }
+        is JsonObject ->
+            buildList {
+                this@extractInteractiveEventPayloads["interactive"]?.let { add(it.toString()) }
+                this@extractInteractiveEventPayloads["collectionForm"]?.let { add(it.toString()) }
+            }
+        else -> emptyList()
+    }
 
 private fun StoredMessagePayload.toJsonString(): String =
     JsonObject(
@@ -1174,8 +1423,261 @@ private fun StoredMessagePayload.toJsonString(): String =
             )
             put("suggestedQuestions", JsonArray(suggestedQuestions.map(::JsonPrimitive)))
             errorMessage?.let { put("errorMessage", JsonPrimitive(it)) }
+            interactiveStatus?.let { put("interactiveStatus", JsonPrimitive(it)) }
+            interactiveSubmissionJson?.let { put("interactiveSubmissionJson", JsonPrimitive(it)) }
         },
     ).toString()
+
+private fun StoredMessagePayload.toInteractiveCard(
+    messageId: String,
+    draft: InteractiveDraftEntity?,
+    json: Json,
+): InteractiveCardUiModel? {
+    val payload =
+        eventPayloads.firstNotNullOfOrNull { raw ->
+            runCatching { json.parseToJsonElement(raw) }.getOrNull()?.extractInteractivePayload()
+        } ?: draft
+            ?.takeIf { it.messageDataId == messageId }
+            ?.rawPayloadJson
+            ?.let { raw -> runCatching { json.parseToJsonElement(raw) }.getOrNull()?.extractInteractivePayload() }
+            ?: return null
+    val draftSnapshot = draft?.takeIf { it.messageDataId == messageId }?.draftPayloadJson.extractInteractiveDraftSnapshot(json)
+    val submissionSnapshot = interactiveSubmissionJson.extractInteractiveDraftSnapshot(json)
+    val status = draftSnapshot?.status ?: interactiveStatus.toInteractiveCardStatus() ?: InteractiveCardStatus.Pending
+    val valueSource = draftSnapshot ?: submissionSnapshot
+    val resolvedFields =
+        payload.fields.map { field ->
+            field.copy(value = valueSource?.fieldValues?.get(field.id).orEmpty())
+        }
+    return InteractiveCardUiModel(
+        kind = payload.kind,
+        messageDataId = messageId,
+        responseValueId = draft?.responseValueId ?: payload.responseValueId,
+        status = status,
+        fields = resolvedFields,
+        options = payload.options,
+        selectedOption = valueSource?.singleValue,
+    )
+}
+
+private fun JsonElement.extractInteractivePayload(): InteractivePayload? {
+    val objectValue = this as? JsonObject ?: return null
+    val candidate =
+        when {
+            objectValue.containsKey("interactive") -> objectValue["interactive"]?.jsonObject
+            objectValue.containsKey("collectionForm") -> objectValue["collectionForm"]?.jsonObject
+            else -> objectValue
+        } ?: return null
+
+    val rawKind =
+        candidate["type"].stringContentOrNull()
+            ?: candidate["kind"].stringContentOrNull()
+            ?: if (objectValue.containsKey("collectionForm") || candidate.containsKey("fields")) "collectionForm" else null
+            ?: return null
+    val kind =
+        when (rawKind.lowercase()) {
+            "userselect" -> InteractiveCardKind.UserSelect
+            "userinput" -> InteractiveCardKind.UserInput
+            "collectionform" -> InteractiveCardKind.CollectionForm
+            else -> return null
+        }
+    val responseValueId =
+        candidate["responseValueId"].stringContentOrNull()
+            ?: candidate["valueId"].stringContentOrNull()
+    val options =
+        candidate["options"]
+            ?.jsonArray
+            ?.mapNotNull { option ->
+                when (option) {
+                    is JsonObject ->
+                        option["label"].stringContentOrNull()
+                            ?: option["text"].stringContentOrNull()
+                            ?: option["value"].stringContentOrNull()
+                    else -> option.stringContentOrNull()
+                }
+            }.orEmpty()
+    val fields =
+        buildList {
+            candidate["fields"]
+                ?.jsonArray
+                ?.mapNotNull { field ->
+                    when (field) {
+                        is JsonObject -> {
+                            val id =
+                                field["name"].stringContentOrNull()
+                                    ?: field["key"].stringContentOrNull()
+                                    ?: field["label"].stringContentOrNull()
+                                    ?: return@mapNotNull null
+                            InteractiveFieldUiModel(
+                                id = id,
+                                label = field["label"].stringContentOrNull() ?: id,
+                                required = field["required"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true,
+                            )
+                        }
+                        else -> {
+                            val label = field.stringContentOrNull() ?: return@mapNotNull null
+                            InteractiveFieldUiModel(id = label, label = label)
+                        }
+                    }
+                }?.forEach(::add)
+        }
+    val normalizedFields =
+        if (fields.isEmpty() && kind != InteractiveCardKind.UserSelect) {
+            listOf(
+                InteractiveFieldUiModel(
+                    id = "value",
+                    label =
+                        candidate["header"].stringContentOrNull()
+                            ?: candidate["prompt"].stringContentOrNull()
+                            ?: "Input",
+                ),
+            )
+        } else {
+            fields.distinctBy { it.id }
+        }
+    if (options.isEmpty() && normalizedFields.isEmpty() && kind == InteractiveCardKind.UserSelect) {
+        return null
+    }
+    return InteractivePayload(
+        kind = kind,
+        responseValueId = responseValueId,
+        fields = normalizedFields,
+        options = options.distinct(),
+    )
+}
+
+private fun String?.extractInteractiveDraftSnapshot(json: Json): InteractiveDraftSnapshot? =
+    this?.let { raw ->
+        val element = runCatching { json.parseToJsonElement(raw) }.getOrNull() as? JsonObject ?: return@let null
+        val status =
+            when (element["status"].stringContentOrNull()?.lowercase()) {
+                "pending" -> InteractiveCardStatus.Pending
+                "submitting" -> InteractiveCardStatus.Submitting
+                "resolved" -> InteractiveCardStatus.Resolved
+                "expired" -> InteractiveCardStatus.Expired
+                else -> null
+            }
+        val fieldValues =
+            element["fieldValues"]
+                ?.jsonObject
+                ?.mapValues { (_, value) -> value.stringContentOrNull().orEmpty() }
+                .orEmpty()
+        InteractiveDraftSnapshot(
+            status = status,
+            singleValue = element["value"].stringContentOrNull() ?: element["selected"].stringContentOrNull(),
+            fieldValues = fieldValues,
+        )
+    }
+
+private fun String?.toInteractiveCardStatus(): InteractiveCardStatus? =
+    when (this?.lowercase()) {
+        "pending" -> InteractiveCardStatus.Pending
+        "submitting" -> InteractiveCardStatus.Submitting
+        "resolved" -> InteractiveCardStatus.Resolved
+        "expired" -> InteractiveCardStatus.Expired
+        else -> null
+    }
+
+private fun InteractiveCardUiModel.toRawPayloadJson(): String =
+    JsonObject(
+        buildMap {
+            put(
+                "type",
+                JsonPrimitive(
+                    when (kind) {
+                        InteractiveCardKind.UserSelect -> "userSelect"
+                        InteractiveCardKind.UserInput -> "userInput"
+                        InteractiveCardKind.CollectionForm -> "collectionForm"
+                    },
+                ),
+            )
+            responseValueId?.let { put("responseValueId", JsonPrimitive(it)) }
+            if (fields.isNotEmpty()) {
+                put(
+                    "fields",
+                    JsonArray(
+                        fields.map { field ->
+                            JsonObject(
+                                mapOf(
+                                    "name" to JsonPrimitive(field.id),
+                                    "label" to JsonPrimitive(field.label),
+                                ),
+                            )
+                        },
+                    ),
+                )
+            }
+            if (options.isNotEmpty()) {
+                put("options", JsonArray(options.map(::JsonPrimitive)))
+            }
+        },
+    ).toString()
+
+private fun InteractiveCardUiModel.toSubmissionPayload(value: String): JsonObject =
+    JsonObject(
+        buildMap {
+            put(
+                "type",
+                JsonPrimitive(
+                    when (kind) {
+                        InteractiveCardKind.UserSelect -> "userSelect"
+                        InteractiveCardKind.UserInput -> "userInput"
+                        InteractiveCardKind.CollectionForm -> "collectionForm"
+                    },
+                ),
+            )
+            put("messageDataId", JsonPrimitive(messageDataId))
+            responseValueId?.let { put("responseValueId", JsonPrimitive(it)) }
+            runCatching { NetworkJson.default.parseToJsonElement(value) }
+                .getOrNull()
+                ?.let { parsed ->
+                    if (parsed is JsonObject && parsed.containsKey("fieldValues")) {
+                        parsed["fieldValues"]?.let { put("fieldValues", it) }
+                    } else {
+                        put("value", JsonPrimitive(value))
+                    }
+                } ?: put("value", JsonPrimitive(value))
+        },
+    )
+
+private fun InteractiveCardUiModel.displaySubmissionValue(value: String): String {
+    if (kind == InteractiveCardKind.UserSelect) {
+        return value
+    }
+    val parsed = runCatching { NetworkJson.default.parseToJsonElement(value) }.getOrNull() as? JsonObject
+    val fieldValues =
+        parsed?.get("fieldValues")
+            ?.jsonObject
+            ?.mapValues { (_, fieldValue) -> fieldValue.stringContentOrNull().orEmpty() }
+            .orEmpty()
+    if (fieldValues.isEmpty()) {
+        return value
+    }
+    return fields.joinToString(separator = "\n") { field ->
+        "${field.label}: ${fieldValues[field.id].orEmpty()}"
+    }
+}
+
+private fun InteractiveCardUiModel.toDraftPayloadJson(
+    value: String,
+    status: InteractiveCardStatus,
+): String {
+    val json = NetworkJson.default
+    val parsed = runCatching { json.parseToJsonElement(value) }.getOrNull() as? JsonObject
+    val payload =
+        buildMap<String, JsonElement> {
+            put("status", JsonPrimitive(status.name))
+            parsed?.get("fieldValues")?.let { put("fieldValues", it) }
+            if (parsed?.containsKey("fieldValues") != true) {
+                if (kind == InteractiveCardKind.UserSelect) {
+                    put("selected", JsonPrimitive(value))
+                } else {
+                    put("value", JsonPrimitive(value))
+                }
+            }
+        }
+    return JsonObject(payload).toString()
+}
 
 private fun CitationPayload.toUiModel(): CitationItemUiModel =
     CitationItemUiModel(
@@ -1253,3 +1755,40 @@ private fun JsonElement.collectCitationCandidates(): List<CitationDto> =
         }
         else -> emptyList()
     }
+
+private fun File.asProgressRequestBody(
+    contentType: okhttp3.MediaType,
+    onProgress: (Float) -> Unit,
+): RequestBody =
+    object : RequestBody() {
+        override fun contentType(): okhttp3.MediaType = contentType
+
+        override fun contentLength(): Long = length()
+
+        override fun writeTo(sink: BufferedSink) {
+            val totalBytes = length().coerceAtLeast(0L)
+            var writtenBytes = 0L
+            inputStream().use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read == -1) {
+                        break
+                    }
+                    sink.write(buffer, 0, read)
+                    writtenBytes += read
+                    if (totalBytes > 0L) {
+                        onProgress((writtenBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f))
+                    }
+                }
+            }
+            if (totalBytes == 0L) {
+                onProgress(1f)
+            }
+        }
+    }
+
+private fun String.sanitizeUploadSuffix(): String {
+    val suffix = substringAfterLast('.', missingDelimiterValue = "").takeIf { it.isNotBlank() }
+    return if (suffix == null) ".bin" else ".$suffix"
+}

@@ -1,12 +1,15 @@
 package com.lifuyue.kora.feature.chat
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -22,6 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -40,7 +44,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.lifuyue.kora.core.common.ChatRole
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -53,17 +61,30 @@ fun ChatScreen(
     showAppSelector: Boolean = false,
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
+    onStartSpeechInput: () -> Unit = {},
+    onStopSpeechInput: () -> Unit = {},
+    onCancelSpeechInput: () -> Unit = {},
     onSend: () -> Unit,
+    onPickImage: () -> Unit = {},
+    onPickFile: () -> Unit = {},
+    onRemoveAttachment: (String) -> Unit = {},
+    onRetryAttachment: (String) -> Unit = {},
+    onCancelAttachmentUpload: (String) -> Unit = {},
     onStopGenerating: () -> Unit,
     onContinueGeneration: () -> Unit,
     onFeedback: (ChatMessageUiModel, MessageFeedback) -> Unit,
     onRegenerate: (ChatMessageUiModel) -> Unit,
+    onPlayMessage: (String, String) -> Unit = { _, _ -> },
+    onPausePlayback: () -> Unit = {},
+    onStopPlayback: () -> Unit = {},
     onOpenAppSelector: () -> Unit = {},
     onDismissAppSelector: () -> Unit = {},
     onSwitchApp: (String) -> Unit = {},
     onOpenAppDetail: () -> Unit = {},
     onSuggestedQuestion: (String) -> Unit = {},
     onOpenCitation: (CitationItemUiModel) -> Unit = {},
+    onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit = { _, _ -> },
+    onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit = { _, _ -> },
 ) {
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
@@ -240,10 +261,14 @@ fun ChatScreen(
                             onContinueGeneration = onContinueGeneration,
                             onRegenerate = { onRegenerate(message) },
                             onFeedback = { feedback -> onFeedback(message, feedback) },
+                            ttsPlaybackState = uiState.ttsPlaybackState,
+                            onPlayMessage = onPlayMessage,
+                            onPausePlayback = onPausePlayback,
+                            onStopPlayback = onStopPlayback,
                             onSuggestedQuestion = onSuggestedQuestion,
-                            onOpenCitation = {
-                                activeCitationMessage = message
-                            },
+                            onOpenCitation = onOpenCitation,
+                            onUpdateInteractiveDraft = onUpdateInteractiveDraft,
+                            onSubmitInteractiveResponse = onSubmitInteractiveResponse,
                         )
                     }
                 }
@@ -263,15 +288,62 @@ fun ChatScreen(
                     modifier = Modifier.testTag(ChatTestTags.AUTO_SCROLL_RESUME),
                 )
             }
+            if (uiState.attachments.isNotEmpty() || uiState.attachmentConfig.hasAnySelectionType) {
+                AttachmentComposer(
+                    attachments = uiState.attachments,
+                    canPickImage = uiState.attachmentConfig.canSelectImg,
+                    canPickFile = uiState.attachmentConfig.canSelectFile ||
+                        uiState.attachmentConfig.canSelectVideo ||
+                        uiState.attachmentConfig.canSelectAudio ||
+                        uiState.attachmentConfig.canSelectCustomFileExtension,
+                    onPickImage = onPickImage,
+                    onPickFile = onPickFile,
+                    onRemoveAttachment = onRemoveAttachment,
+                    onRetryAttachment = onRetryAttachment,
+                    onCancelAttachmentUpload = onCancelAttachmentUpload,
+                )
+            }
+            if (
+                uiState.speechInputState.status != SpeechInputStatus.Idle ||
+                uiState.speechInputState.transcript.isNotBlank() ||
+                !uiState.speechInputState.errorMessage.isNullOrBlank()
+            ) {
+                SpeechInputComposer(
+                    state = uiState.speechInputState,
+                    onStart = onStartSpeechInput,
+                    onStop = onStopSpeechInput,
+                    onCancel = onCancelSpeechInput,
+                )
+            }
             OutlinedTextField(
                 value = uiState.input,
                 onValueChange = onInputChanged,
                 label = { Text(stringResource(R.string.chat_input_label)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { onSend() }),
+                keyboardActions = KeyboardActions(onSend = { if (uiState.canSend) onSend() }),
                 modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
+                        uiState.speechInputState.status == SpeechInputStatus.Recognizing
+                    ) {
+                        onStopSpeechInput
+                    } else {
+                        onStartSpeechInput
+                    },
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
+                ) {
+                    Text(
+                        when (uiState.speechInputState.status) {
+                            SpeechInputStatus.Recording,
+                            SpeechInputStatus.Recognizing,
+                            -> appString("chat_speech_stop")
+                            SpeechInputStatus.Error -> appString("chat_speech_retry")
+                            SpeechInputStatus.Idle -> appString("chat_speech_start")
+                        },
+                    )
+                }
                 if (uiState.canStopGeneration) {
                     OutlinedButton(onClick = onStopGenerating) {
                         Text(stringResource(R.string.chat_stop_generation))
@@ -279,7 +351,7 @@ fun ChatScreen(
                 }
                 Button(
                     onClick = onSend,
-                    enabled = uiState.input.isNotBlank() && !uiState.isSending && !uiState.canStopGeneration,
+                    enabled = uiState.canSend,
                 ) {
                     Text(
                         stringResource(
@@ -290,6 +362,73 @@ fun ChatScreen(
                             },
                         ),
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpeechInputComposer(
+    state: SpeechInputUiState,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_SPEECH_STATUS),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+                Text(
+                    text =
+                        when (state.status) {
+                        SpeechInputStatus.Recording -> appString("chat_speech_recording")
+                        SpeechInputStatus.Recognizing -> appString("chat_speech_recognizing")
+                        SpeechInputStatus.Error -> state.errorMessage ?: appString("chat_error_speech_failed")
+                        SpeechInputStatus.Idle -> appString("chat_speech_start")
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            if (state.transcript.isNotBlank()) {
+                Text(text = state.transcript, style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                when (state.status) {
+                    SpeechInputStatus.Recording,
+                    SpeechInputStatus.Recognizing,
+                    -> {
+                        OutlinedButton(
+                            onClick = onStop,
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_SPEECH_STOP),
+                        ) {
+                            Text(appString("chat_speech_stop"))
+                        }
+                        TextButton(
+                            onClick = onCancel,
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_SPEECH_CANCEL),
+                        ) {
+                            Text(appString("chat_speech_cancel"))
+                        }
+                    }
+                    SpeechInputStatus.Error,
+                    SpeechInputStatus.Idle,
+                    -> {
+                        OutlinedButton(
+                            onClick = onStart,
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
+                        ) {
+                            Text(
+                                if (state.status == SpeechInputStatus.Error) {
+                                    appString("chat_speech_retry")
+                                } else {
+                                    appString("chat_speech_start")
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -345,6 +484,149 @@ private fun ChatLoadingSkeleton(modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun AttachmentComposer(
+    attachments: List<AttachmentDraftUiModel>,
+    canPickImage: Boolean,
+    canPickFile: Boolean,
+    onPickImage: () -> Unit,
+    onPickFile: () -> Unit,
+    onRemoveAttachment: (String) -> Unit,
+    onRetryAttachment: (String) -> Unit,
+    onCancelAttachmentUpload: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (canPickImage) {
+                OutlinedButton(onClick = onPickImage, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK)) {
+                    Text(chatString("chat_attachment_add_image"))
+                }
+            }
+            if (canPickFile) {
+                OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK)) {
+                    Text(chatString("chat_attachment_add_file"))
+                }
+            }
+        }
+        if (attachments.isNotEmpty()) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_ATTACHMENT_LIST),
+            ) {
+                attachments.forEach { attachment ->
+                    AttachmentPreviewCard(
+                        attachment = attachment,
+                        onRemoveAttachment = onRemoveAttachment,
+                        onRetryAttachment = onRetryAttachment,
+                        onCancelAttachmentUpload = onCancelAttachmentUpload,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentPreviewCard(
+    attachment: AttachmentDraftUiModel,
+    onRemoveAttachment: (String) -> Unit,
+    onRetryAttachment: (String) -> Unit,
+    onCancelAttachmentUpload: (String) -> Unit,
+) {
+    Surface(
+        tonalElevation = 1.dp,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.attachmentItem(attachment.localUri)),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (attachment.kind == AttachmentKind.Image) {
+                    AsyncImage(
+                        model = Uri.parse(attachment.localUri),
+                        contentDescription = attachment.displayName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(64.dp).clip(MaterialTheme.shapes.small),
+                    )
+                } else {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.size(64.dp),
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            Text(attachment.kind.name, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(attachment.displayName, style = MaterialTheme.typography.titleSmall)
+                    attachment.sizeBytes?.let { sizeBytes ->
+                        val locale = LocalContext.current.resources.configuration.locales[0]
+                        Text(
+                            chatString(
+                                "chat_attachment_size_bytes",
+                                NumberFormat.getIntegerInstance(locale).format(sizeBytes),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    Text(
+                        text =
+                            when (attachment.uploadStatus) {
+                                AttachmentUploadStatus.Idle -> chatString("chat_attachment_uploading")
+                                AttachmentUploadStatus.Uploading -> chatString("chat_attachment_uploading")
+                                AttachmentUploadStatus.Uploaded -> chatString("chat_attachment_uploaded")
+                                AttachmentUploadStatus.Failed -> attachment.errorMessage ?: chatString("chat_attachment_failed")
+                                AttachmentUploadStatus.Cancelled -> chatString("chat_attachment_cancelled")
+                            },
+                        color =
+                            if (attachment.uploadStatus == AttachmentUploadStatus.Failed) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.secondary
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                TextButton(onClick = { onRemoveAttachment(attachment.localUri) }) {
+                    Text(chatString("chat_attachment_remove"))
+                }
+            }
+            if (attachment.uploadStatus == AttachmentUploadStatus.Uploading) {
+                LinearProgressIndicator(
+                    progress = { attachment.progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(onClick = { onCancelAttachmentUpload(attachment.localUri) }) {
+                    Text(chatString("chat_attachment_cancel"))
+                }
+            }
+            if (attachment.uploadStatus == AttachmentUploadStatus.Failed) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { onRetryAttachment(attachment.localUri) }) {
+                        Text(chatString("chat_attachment_retry"))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun citationDisplayTitle(citation: CitationItemUiModel): String =
     citation.title.ifBlank {
         citation.sourceName.ifBlank {
@@ -378,8 +660,14 @@ private fun MessageCard(
     onContinueGeneration: () -> Unit,
     onRegenerate: () -> Unit,
     onFeedback: (MessageFeedback) -> Unit,
+    ttsPlaybackState: TtsPlaybackUiState,
+    onPlayMessage: (String, String) -> Unit,
+    onPausePlayback: () -> Unit,
+    onStopPlayback: () -> Unit,
     onSuggestedQuestion: (String) -> Unit,
     onOpenCitation: (CitationItemUiModel) -> Unit,
+    onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit,
+    onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit,
 ) {
     Card(
         modifier =
@@ -412,6 +700,16 @@ private fun MessageCard(
                     text = message.reasoning,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            message.interactiveCard?.let { card ->
+                InteractiveCard(
+                    message = message,
+                    messageId = message.messageId,
+                    card = card,
+                    onDraftChanged = onUpdateInteractiveDraft,
+                    onSubmit = onSubmitInteractiveResponse,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             if (message.deliveryState != MessageDeliveryState.Sent) {
@@ -497,6 +795,26 @@ private fun MessageCard(
                             ),
                         )
                     }
+                    TextButton(
+                        onClick = { onPlayMessage(message.messageId, message.markdown) },
+                        modifier = Modifier.testTag(ChatTestTags.messageTtsAction(message.messageId)),
+                    ) {
+                        Text(appString("chat_tts_play"))
+                    }
+                    if (ttsPlaybackState.messageId == message.messageId && ttsPlaybackState.status == TtsPlaybackStatus.Playing) {
+                        TextButton(
+                            onClick = onPausePlayback,
+                            modifier = Modifier.testTag(ChatTestTags.messageTtsPauseAction(message.messageId)),
+                        ) {
+                            Text(appString("chat_tts_pause"))
+                        }
+                        TextButton(
+                            onClick = onStopPlayback,
+                            modifier = Modifier.testTag(ChatTestTags.messageTtsStopAction(message.messageId)),
+                        ) {
+                            Text(appString("chat_tts_stop"))
+                        }
+                    }
                 }
             }
             if (message.citations.isNotEmpty()) {
@@ -520,3 +838,97 @@ private fun MessageCard(
         }
     }
 }
+
+@Composable
+private fun InteractiveCard(
+    message: ChatMessageUiModel,
+    messageId: String,
+    card: InteractiveCardUiModel,
+    onDraftChanged: (ChatMessageUiModel, String) -> Unit,
+    onSubmit: (ChatMessageUiModel, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var fieldValues by rememberSaveable(messageId, card.fields) {
+        mutableStateOf(card.fields.associate { it.id to it.value })
+    }
+    val canEdit = card.status == InteractiveCardStatus.Pending
+    val canSubmit =
+        canEdit &&
+            when (card.kind) {
+                InteractiveCardKind.UserSelect -> true
+                else -> card.fields.all { !it.required || !fieldValues[it.id].isNullOrBlank() }
+            }
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier.testTag(ChatTestTags.interactiveCard(messageId)),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(12.dp),
+        ) {
+            Text(
+                text = card.kind.name,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            card.selectedOption?.takeIf { it.isNotBlank() }?.let { selected ->
+                Text(selected, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (card.options.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.wrapContentWidth(Alignment.Start),
+                ) {
+                        card.options.forEach { option ->
+                            OutlinedButton(
+                                onClick = { onSubmit(message, option) },
+                                enabled = canEdit,
+                                modifier = Modifier.testTag(ChatTestTags.interactiveOption(messageId, option)),
+                            ) {
+                                Text(option)
+                            }
+                        }
+                }
+            }
+            if (card.fields.isNotEmpty()) {
+                card.fields.forEach { field ->
+                    OutlinedTextField(
+                        value = fieldValues[field.id].orEmpty(),
+                        onValueChange = { value ->
+                            fieldValues = fieldValues.toMutableMap().apply { put(field.id, value) }
+                            onDraftChanged(message, interactiveFieldValuesToJson(fieldValues))
+                        },
+                        label = { Text(field.label) },
+                        enabled = canEdit,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .testTag(ChatTestTags.interactiveFieldInput(messageId, field.id)),
+                    )
+                }
+            } else if (card.kind != InteractiveCardKind.UserSelect) {
+                Text(card.selectedOption.orEmpty(), style = MaterialTheme.typography.bodyMedium)
+            }
+            if (card.kind != InteractiveCardKind.UserSelect) {
+                Button(
+                    onClick = { onSubmit(message, interactiveFieldValuesToJson(fieldValues)) },
+                    enabled = canSubmit,
+                    modifier = Modifier.testTag(ChatTestTags.interactiveSubmit(messageId)),
+                ) {
+                    Text(stringResource(R.string.chat_send))
+                }
+            }
+        }
+    }
+}
+
+private fun interactiveFieldValuesToJson(values: Map<String, String>): String =
+    kotlinx.serialization.json.JsonObject(
+        mapOf(
+            "fieldValues" to
+                kotlinx.serialization.json.JsonObject(
+                    values.mapValues { (_, value) -> kotlinx.serialization.json.JsonPrimitive(value) },
+                ),
+        ),
+    ).toString()

@@ -1,9 +1,12 @@
 package com.lifuyue.kora.feature.settings
 
 import com.lifuyue.kora.core.common.AppearancePreferences
+import com.lifuyue.kora.core.common.AudioPreferences
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.SpeechToTextEngine
+import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -155,6 +158,40 @@ class SettingsViewModelsTest {
             assertFalse(facade.snapshot.value.appearancePreferences.autoScroll)
             assertEquals(1.25f, facade.snapshot.value.appearancePreferences.fontSizeScale)
             assertFalse(facade.snapshot.value.appearancePreferences.showCitationsByDefault)
+        }
+
+    @Test
+    fun audioSettingsViewModel_updatesStoredPreferences() =
+        runTest {
+            val facade =
+                FakeSettingsConnectionFacade(
+                    initialSnapshot =
+                        ConnectionSnapshot(
+                            audioPreferences =
+                                AudioPreferences(
+                                    speechToTextEngine = SpeechToTextEngine.System,
+                                    autoSendTranscripts = false,
+                                    textToSpeechEngine = TextToSpeechEngine.System,
+                                    speechRate = 1f,
+                                    defaultVoiceName = null,
+                                ),
+                        ),
+                )
+            val viewModel = AudioSettingsViewModel(facade)
+
+            viewModel.updateSpeechToTextEngine(SpeechToTextEngine.WhisperApp)
+            viewModel.updateAutoSendTranscripts(true)
+            viewModel.updateTextToSpeechEngine(TextToSpeechEngine.AppManaged)
+            viewModel.updateSpeechRate(2.5f)
+            viewModel.updateDefaultVoiceName("  Voice A  ")
+            advanceUntilIdle()
+
+            val preferences = facade.snapshot.value.audioPreferences
+            assertEquals(SpeechToTextEngine.WhisperApp, preferences.speechToTextEngine)
+            assertTrue(preferences.autoSendTranscripts)
+            assertEquals(TextToSpeechEngine.AppManaged, preferences.textToSpeechEngine)
+            assertEquals(2.0f, preferences.speechRate)
+            assertEquals("Voice A", preferences.defaultVoiceName)
         }
 
     @Test
@@ -313,6 +350,26 @@ private class FakeSettingsConnectionFacade(
         mutableSnapshot.value =
             mutableSnapshot.value.copy(
                 appearancePreferences = mutableSnapshot.value.appearancePreferences.copy(languageTag = languageTag),
+            )
+    }
+
+    override suspend fun updateAudioPreferences(
+        speechToTextEngine: SpeechToTextEngine,
+        autoSendTranscripts: Boolean,
+        textToSpeechEngine: TextToSpeechEngine,
+        speechRate: Float,
+        defaultVoiceName: String?,
+    ) {
+        mutableSnapshot.value =
+            mutableSnapshot.value.copy(
+                audioPreferences =
+                    mutableSnapshot.value.audioPreferences.copy(
+                        speechToTextEngine = speechToTextEngine,
+                        autoSendTranscripts = autoSendTranscripts,
+                        textToSpeechEngine = textToSpeechEngine,
+                        speechRate = speechRate,
+                        defaultVoiceName = defaultVoiceName,
+                    ),
             )
     }
 }

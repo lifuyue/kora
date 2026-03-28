@@ -25,6 +25,7 @@ object SettingsRoutes {
     const val CONNECTION = "settings/connection"
     const val THEME = "settings/theme"
     const val CHAT_PREFERENCES = "settings/chat-preferences"
+    const val AUDIO = "settings/audio"
     const val LANGUAGE = "settings/language"
     const val CACHE = "settings/cache"
     const val ABOUT = "settings/about"
@@ -47,6 +48,7 @@ fun NavGraphBuilder.settingsGraph(
             },
             onOpenTheme = { navController.navigate(SettingsRoutes.THEME) },
             onOpenChatPreferences = { navController.navigate(SettingsRoutes.CHAT_PREFERENCES) },
+            onOpenAudio = { navController.navigate(SettingsRoutes.AUDIO) },
             onOpenLanguage = { navController.navigate(SettingsRoutes.LANGUAGE) },
             onOpenCache = { navController.navigate(SettingsRoutes.CACHE) },
             onOpenAbout = { navController.navigate(SettingsRoutes.ABOUT) },
@@ -60,6 +62,9 @@ fun NavGraphBuilder.settingsGraph(
     }
     composable(SettingsRoutes.CHAT_PREFERENCES) {
         ChatPreferencesRoute()
+    }
+    composable(SettingsRoutes.AUDIO) {
+        AudioSettingsRoute(onBack = { navController.popBackStack() })
     }
     composable(SettingsRoutes.LANGUAGE) {
         LanguageSettingsRoute()
@@ -78,22 +83,45 @@ fun SettingsOverviewRoute(
     onOpenCurrentApp: () -> Unit,
     onOpenTheme: () -> Unit,
     onOpenChatPreferences: () -> Unit,
+    onOpenAudio: () -> Unit = {},
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
     viewModel: SettingsOverviewViewModel = settingsViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    SettingsOverviewScreen(
-        state = uiState,
-        onOpenConnection = onOpenConnection,
-        onOpenCurrentApp = onOpenCurrentApp,
-        onOpenTheme = onOpenTheme,
-        onOpenChatPreferences = onOpenChatPreferences,
-        onOpenLanguage = onOpenLanguage,
-        onOpenCache = onOpenCache,
-        onOpenAbout = onOpenAbout,
-    )
+    val useDualPane = rememberSettingsDualPaneEnabled()
+    if (useDualPane) {
+        AdaptiveSettingsScaffold(
+            isExpanded = true,
+            listPane = {
+                SettingsOverviewScreen(
+                    state = uiState,
+                    onOpenConnection = onOpenConnection,
+                    onOpenCurrentApp = onOpenCurrentApp,
+                    onOpenTheme = onOpenTheme,
+                    onOpenChatPreferences = onOpenChatPreferences,
+                    onOpenAudio = onOpenAudio,
+                    onOpenLanguage = onOpenLanguage,
+                    onOpenCache = onOpenCache,
+                    onOpenAbout = onOpenAbout,
+                )
+            },
+            detailPane = { SettingsAdaptivePlaceholder() },
+        )
+    } else {
+        SettingsOverviewScreen(
+            state = uiState,
+            onOpenConnection = onOpenConnection,
+            onOpenCurrentApp = onOpenCurrentApp,
+            onOpenTheme = onOpenTheme,
+            onOpenChatPreferences = onOpenChatPreferences,
+            onOpenAudio = onOpenAudio,
+            onOpenLanguage = onOpenLanguage,
+            onOpenCache = onOpenCache,
+            onOpenAbout = onOpenAbout,
+        )
+    }
 }
 
 @Composable
@@ -107,8 +135,24 @@ fun ConnectionConfigRoute(
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onApiKeyChange = viewModel::onApiKeyChanged,
         onTestConnection = viewModel::testConnection,
-        onSave = { viewModel.saveConnection(onConnectionSaved) },
-        onClear = viewModel::clearConnection,
+    onSave = { viewModel.saveConnection(onConnectionSaved) },
+    onClear = viewModel::clearConnection,
+    )
+}
+
+@Composable
+fun AudioSettingsRoute(
+    viewModel: AudioSettingsViewModel = settingsViewModel(),
+    onBack: () -> Unit,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    AudioSettingsScreen(
+        state = uiState,
+        onSpeechToTextEngineChange = viewModel::updateSpeechToTextEngine,
+        onAutoSendTranscriptsChange = viewModel::updateAutoSendTranscripts,
+        onTextToSpeechEngineChange = viewModel::updateTextToSpeechEngine,
+        onSpeechRateChange = viewModel::updateSpeechRate,
+        onDefaultVoiceNameChange = viewModel::updateDefaultVoiceName,
     )
 }
 
@@ -213,6 +257,8 @@ private inline fun <reified T : ViewModel> settingsViewModel(): T {
                             ThemeAppearanceViewModel(settingsConnectionFacade) as VM
                         ChatPreferencesViewModel::class.java ->
                             ChatPreferencesViewModel(settingsConnectionFacade) as VM
+                        AudioSettingsViewModel::class.java ->
+                            AudioSettingsViewModel(settingsConnectionFacade) as VM
                         LanguageSettingsViewModel::class.java ->
                             LanguageSettingsViewModel(settingsConnectionFacade) as VM
                         CacheSettingsViewModel::class.java ->

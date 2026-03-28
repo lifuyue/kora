@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.database.KoraDatabase
@@ -21,6 +22,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
@@ -55,6 +57,7 @@ class ChatRepositoryTest {
                 conversationDao = database.conversationDao(),
                 conversationFolderDao = database.conversationFolderDao(),
                 conversationTagDao = database.conversationTagDao(),
+                interactiveDraftDao = database.interactiveDraftDao(),
                 messageDao = database.messageDao(),
                 context = ApplicationProvider.getApplicationContext(),
             )
@@ -183,6 +186,7 @@ class ChatRepositoryTest {
                     conversationDao = database.conversationDao(),
                     conversationFolderDao = database.conversationFolderDao(),
                     conversationTagDao = database.conversationTagDao(),
+                    interactiveDraftDao = database.interactiveDraftDao(),
                     messageDao = database.messageDao(),
                     context = ApplicationProvider.getApplicationContext(),
                     responsePlanner =
@@ -326,6 +330,108 @@ class ChatRepositoryTest {
             assertEquals("/api/v1/chat/completions", chatRequest.path)
             assertEquals("/api/core/chat/feedback/updateUserFeedback", feedbackRequest.path)
             assertTrue(feedbackRequest.body.readUtf8().contains(assistantId))
+        }
+
+    @Test
+    fun sendMessageAssemblesAttachmentPartsIntoCompletionRequest() =
+        runBlocking {
+            serverRule.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-attachments","appId":"app-1","title":"附件会话"}}
+                """,
+            )
+            serverRule.enqueueSse(
+                """
+                data: [DONE]
+                """,
+            )
+
+            val chatId =
+                repository.sendMessage(
+                    appId = "app-1",
+                    chatId = null,
+                    text = "see attachments",
+                    attachments =
+                        listOf(
+                            AttachmentDraftUiModel(
+                                displayName = "photo.png",
+                                localUri = "content://local/photo.png",
+                                mimeType = "image/png",
+                                kind = AttachmentKind.Image,
+                                uploadStatus = AttachmentUploadStatus.Uploaded,
+                                uploadedRef =
+                                    com.lifuyue.kora.core.network.UploadedAssetRef(
+                                        name = "photo.png",
+                                        url = "https://example.com/photo.png",
+                                        key = "chat/photo.png",
+                                        mimeType = "image/png",
+                                        size = 1L,
+                                    ),
+                            ),
+                            AttachmentDraftUiModel(
+                                displayName = "notes.pdf",
+                                localUri = "content://local/notes.pdf",
+                                mimeType = "application/pdf",
+                                kind = AttachmentKind.File,
+                                uploadStatus = AttachmentUploadStatus.Uploaded,
+                                uploadedRef =
+                                    com.lifuyue.kora.core.network.UploadedAssetRef(
+                                        name = "notes.pdf",
+                                        url = "https://example.com/notes.pdf",
+                                        key = "chat/notes.pdf",
+                                        mimeType = "application/pdf",
+                                        size = 1L,
+                                    ),
+                            ),
+                        ),
+                )
+
+            waitUntil {
+                database.messageDao().getMessagesForChat(chatId).last().sendStatus == "sent"
+            }
+
+            val initRequest = serverRule.takeRequest()
+            val chatRequest = serverRule.takeRequest()
+            val body = chatRequest.body.readUtf8()
+            assertEquals("/api/core/chat/init?appId=app-1", initRequest.path)
+            assertEquals("/api/v1/chat/completions", chatRequest.path)
+            assertTrue(body.contains("\"file_url\""))
+            assertTrue(body.contains("https://example.com/photo.png"))
+            assertTrue(body.contains("https://example.com/notes.pdf"))
+        }
+
+    @Test
+    fun uploadAttachmentUsesDedicatedChatEndpointAndReportsProgress() =
+        runBlocking {
+            val tempFile = File.createTempFile("chat-attachment-", ".txt", ApplicationProvider.getApplicationContext<Context>().cacheDir).apply {
+                writeText("hello upload")
+            }
+            serverRule.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"name":"hello.txt","url":"https://example.com/hello.txt","key":"chat/hello.txt","mimeType":"text/plain","size":12}}
+                """,
+            )
+
+            var reportedProgress = 0f
+            val uploaded =
+                repository.uploadAttachment(
+                    appId = "app-1",
+                    chatId = "chat-1",
+                    attachment =
+                        AttachmentDraftUiModel(
+                            displayName = "hello.txt",
+                            localUri = tempFile.toURI().toString(),
+                            mimeType = "text/plain",
+                            sizeBytes = tempFile.length(),
+                            kind = AttachmentKind.File,
+                        ),
+                ) { progress ->
+                    reportedProgress = progress
+                }
+
+            assertEquals("hello.txt", uploaded.name)
+            assertTrue(reportedProgress >= 1f)
+            assertEquals("/api/core/chat/attachment/upload", serverRule.takeRequest().path)
         }
 
     private fun waitUntil(

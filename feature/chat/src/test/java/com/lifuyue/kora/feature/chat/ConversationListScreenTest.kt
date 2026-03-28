@@ -51,6 +51,7 @@ class ConversationListScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_RENAME, useUnmergedTree = true).fetchSemanticsNode()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_MOVE_FOLDER, useUnmergedTree = true).fetchSemanticsNode()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_EDIT_TAGS, useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_ARCHIVE, useUnmergedTree = true).fetchSemanticsNode()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ACTION_DELETE, useUnmergedTree = true).fetchSemanticsNode()
     }
 
@@ -163,6 +164,7 @@ private fun ComposeContentTestRule.renderConversationList(
     onQueryChanged: (String) -> Unit = {},
     onSelectFolderFilter: (String?) -> Unit = {},
     onSelectTagFilter: (String?) -> Unit = {},
+    onToggleShowArchived: (Boolean) -> Unit = {},
     onOpenConversation: (String) -> Unit = {},
     onNewConversation: () -> Unit = {},
     onDeleteConversation: (String) -> Unit = {},
@@ -177,6 +179,7 @@ private fun ComposeContentTestRule.renderConversationList(
     onDeleteTag: (String) -> Unit = {},
     onMoveConversationToFolder: (String, String?) -> Unit = { _, _ -> },
     onSetConversationTags: (String, List<String>) -> Unit = { _, _ -> },
+    onSetArchived: (String, Boolean) -> Unit = { _, _ -> },
 ) {
     setContent {
         ConversationListScreen(
@@ -184,6 +187,7 @@ private fun ComposeContentTestRule.renderConversationList(
             onQueryChanged = onQueryChanged,
             onSelectFolderFilter = onSelectFolderFilter,
             onSelectTagFilter = onSelectTagFilter,
+            onToggleShowArchived = onToggleShowArchived,
             onOpenConversation = onOpenConversation,
             onNewConversation = onNewConversation,
             onDeleteConversation = onDeleteConversation,
@@ -198,6 +202,7 @@ private fun ComposeContentTestRule.renderConversationList(
             onDeleteTag = onDeleteTag,
             onMoveConversationToFolder = onMoveConversationToFolder,
             onSetConversationTags = onSetConversationTags,
+            onSetArchived = onSetArchived,
         )
     }
 }

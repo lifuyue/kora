@@ -56,7 +56,7 @@
     <string name="conversation_list_pinned_section">Pinned</string>
     <string name="conversation_list_all_section">All conversations</string>
     <string name="conversation_list_empty_title">No conversations yet</string>
-    <string name="conversation_list_empty_body">Tap the new conversation button to start your first exchange. History will appear here.</string>
+    <string name="conversation_list_empty_body">Start a new conversation from the lower-right button.</string>
     <string name="conversation_list_action_sheet_title">Conversation actions</string>
     <string name="conversation_list_action_rename">Rename</string>
     <string name="conversation_list_action_move_to_folder">Move to folder</string>

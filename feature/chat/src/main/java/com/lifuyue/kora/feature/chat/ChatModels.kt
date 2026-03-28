@@ -2,6 +2,133 @@ package com.lifuyue.kora.feature.chat
 
 import androidx.compose.runtime.Immutable
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.network.UploadedAssetRef
+
+enum class AttachmentKind {
+    Image,
+    File,
+}
+
+enum class AttachmentUploadStatus {
+    Idle,
+    Uploading,
+    Uploaded,
+    Failed,
+    Cancelled,
+}
+
+enum class InteractiveCardKind {
+    UserSelect,
+    UserInput,
+    CollectionForm,
+}
+
+enum class InteractiveCardStatus {
+    Pending,
+    Submitting,
+    Resolved,
+    Expired,
+}
+
+enum class SpeechInputStatus {
+    Idle,
+    Recording,
+    Recognizing,
+    Error,
+}
+
+enum class TtsPlaybackStatus {
+    Idle,
+    Playing,
+    Paused,
+    Stopped,
+    Error,
+}
+
+enum class ConversationExportFormat {
+    Txt,
+    Json,
+    Pdf,
+}
+
+@Immutable
+data class AttachmentDraftUiModel(
+    val displayName: String,
+    val localUri: String,
+    val mimeType: String,
+    val sizeBytes: Long? = null,
+    val kind: AttachmentKind,
+    val uploadStatus: AttachmentUploadStatus = AttachmentUploadStatus.Idle,
+    val uploadedRef: UploadedAssetRef? = null,
+    val progress: Float = 0f,
+    val errorMessage: String? = null,
+)
+
+@Immutable
+data class ChatAttachmentConfig(
+    val maxFiles: Int = 10,
+    val canSelectFile: Boolean = false,
+    val canSelectImg: Boolean = false,
+    val canSelectVideo: Boolean = false,
+    val canSelectAudio: Boolean = false,
+    val canSelectCustomFileExtension: Boolean = false,
+    val customFileExtensionList: List<String> = emptyList(),
+) {
+    val hasAnySelectionType: Boolean
+        get() =
+            canSelectFile ||
+                canSelectImg ||
+                canSelectVideo ||
+                canSelectAudio ||
+                canSelectCustomFileExtension
+}
+
+@Immutable
+data class InteractiveFieldUiModel(
+    val id: String,
+    val label: String,
+    val value: String = "",
+    val required: Boolean = true,
+)
+
+@Immutable
+data class InteractiveCardUiModel(
+    val kind: InteractiveCardKind,
+    val messageDataId: String,
+    val responseValueId: String? = null,
+    val status: InteractiveCardStatus = InteractiveCardStatus.Pending,
+    val fields: List<InteractiveFieldUiModel> = emptyList(),
+    val options: List<String> = emptyList(),
+    val selectedOption: String? = null,
+)
+
+@Immutable
+data class SpeechInputUiState(
+    val status: SpeechInputStatus = SpeechInputStatus.Idle,
+    val transcript: String = "",
+    val errorMessage: String? = null,
+)
+
+@Immutable
+data class TtsPlaybackUiState(
+    val messageId: String? = null,
+    val status: TtsPlaybackStatus = TtsPlaybackStatus.Idle,
+    val progress: Float = 0f,
+    val errorMessage: String? = null,
+)
+
+@Immutable
+data class MessageRangeSelection(
+    val startMessageId: String,
+    val endMessageId: String,
+)
+
+@Immutable
+data class ShareExportUiState(
+    val selection: MessageRangeSelection? = null,
+    val exportFormat: ConversationExportFormat = ConversationExportFormat.Txt,
+    val previewText: String = "",
+)
 
 enum class MessageDeliveryState {
     Sent,
@@ -51,6 +178,7 @@ data class ChatMessageUiModel(
     val feedback: MessageFeedback = MessageFeedback.None,
     val citations: List<CitationItemUiModel> = emptyList(),
     val suggestedQuestions: List<String> = emptyList(),
+    val interactiveCard: InteractiveCardUiModel? = null,
 ) {
     val blocks: List<AssistantBlock>
         get() = parseAssistantBlocks(markdown)
@@ -66,6 +194,7 @@ data class ConversationListItemUiModel(
     val folderName: String? = null,
     val tags: List<ConversationTagUiModel> = emptyList(),
     val isPinned: Boolean = false,
+    val isArchived: Boolean = false,
     val updateTime: Long = 0L,
 )
 
@@ -91,6 +220,7 @@ data class ConversationListUiState(
     val selectedFolderId: String? = null,
     val selectedTagId: String? = null,
     val isRefreshing: Boolean = false,
+    val showArchived: Boolean = false,
 ) {
     val isEmpty: Boolean
         get() = items.isEmpty()
@@ -122,9 +252,24 @@ data class ChatUiState(
     val messages: List<ChatMessageUiModel> = emptyList(),
     val autoScrollEnabled: Boolean = true,
     val isInitialLoading: Boolean = false,
+    val attachments: List<AttachmentDraftUiModel> = emptyList(),
+    val attachmentConfig: ChatAttachmentConfig = ChatAttachmentConfig(),
+    val pendingInteractiveCard: InteractiveCardUiModel? = null,
+    val speechInputState: SpeechInputUiState = SpeechInputUiState(),
+    val ttsPlaybackState: TtsPlaybackUiState = TtsPlaybackUiState(),
+    val shareExportState: ShareExportUiState = ShareExportUiState(),
 ) {
     val canStopGeneration: Boolean
         get() = messages.any { it.isStreaming }
+
+    val canSend: Boolean
+        get() =
+            !isSending &&
+                !canStopGeneration &&
+                speechInputState.status != SpeechInputStatus.Recording &&
+                speechInputState.status != SpeechInputStatus.Recognizing &&
+                (input.isNotBlank() || attachments.any { it.uploadStatus == AttachmentUploadStatus.Uploaded }) &&
+                attachments.none { it.uploadStatus == AttachmentUploadStatus.Uploading || it.uploadStatus == AttachmentUploadStatus.Failed }
 }
 
 @Immutable
@@ -154,6 +299,30 @@ data class AppDetailUiState(
     val type: String = "",
     val welcomeText: String? = null,
     val sections: List<AppDetailSectionUiModel> = emptyList(),
+    val showAnalyticsEntry: Boolean = false,
     val isLoading: Boolean = true,
+    val errorMessage: String? = null,
+)
+
+enum class AnalyticsRange(val raw: String) {
+    Last7Days("7d"),
+    Last30Days("30d"),
+    Last90Days("90d"),
+}
+
+enum class AnalyticsStatus {
+    Loading,
+    Success,
+    Empty,
+    Error,
+}
+
+data class AppAnalyticsUiState(
+    val range: AnalyticsRange = AnalyticsRange.Last7Days,
+    val requestCount: Int = 0,
+    val conversationCount: Int = 0,
+    val inputTokens: Long = 0L,
+    val outputTokens: Long = 0L,
+    val status: AnalyticsStatus = AnalyticsStatus.Loading,
     val errorMessage: String? = null,
 )

@@ -66,6 +66,14 @@ interface FastGptApi {
         @Body request: QuestionGuideRequest,
     ): ResponseEnvelope<List<String>>
 
+    @Multipart
+    @POST("api/core/chat/attachment/upload")
+    suspend fun uploadChatAttachment(
+        @Part file: MultipartBody.Part,
+        @Part("appId") appId: RequestBody,
+        @Part("chatId") chatId: RequestBody? = null,
+    ): ResponseEnvelope<UploadedAssetRef>
+
     @POST("api/core/dataset/list")
     suspend fun listDatasets(
         @Body request: DatasetListRequest = DatasetListRequest(),
@@ -134,6 +142,34 @@ interface FastGptApi {
     suspend fun updateUserFeedback(
         @Body request: UpdateUserFeedbackRequest,
     ): ResponseEnvelope<JsonObject>
+
+    @POST("shareAuth/init")
+    suspend fun shareAuthInit(
+        @Body request: ShareAuthInitRequest,
+    ): ResponseEnvelope<ShareAuthStateDto>
+
+    @POST("shareAuth/start")
+    suspend fun shareAuthStart(
+        @Body request: ShareAuthStartRequest,
+    ): ResponseEnvelope<ShareAuthStateDto>
+
+    @POST("shareAuth/finish")
+    suspend fun shareAuthFinish(
+        @Body request: ShareAuthFinishRequest,
+    ): ResponseEnvelope<JsonObject>
+
+    @GET("api/core/chat/outLink/init")
+    suspend fun initShareSession(
+        @Query("shareId") shareId: String,
+        @Query("outLinkUid") outLinkUid: String,
+        @Query("chatId") chatId: String? = null,
+    ): ResponseEnvelope<ShareSessionBootstrapDto>
+
+    @GET("api/core/app/logs/getTotalData")
+    suspend fun getAppAnalytics(
+        @Query("appId") appId: String,
+        @Query("range") range: String? = null,
+    ): ResponseEnvelope<AppAnalyticsSummaryDto>
 
     @POST("api/v1/chat/completions")
     suspend fun chatCompletions(

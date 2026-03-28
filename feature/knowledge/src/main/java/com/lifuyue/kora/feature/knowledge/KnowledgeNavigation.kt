@@ -39,11 +39,26 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
     composable(KnowledgeRoutes.OVERVIEW) {
         val viewModel: KnowledgeOverviewViewModel = hiltViewModel()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        KnowledgeOverviewScreen(
-            state = uiState,
-            onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
-            onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
-        )
+        val useDualPane = rememberKnowledgeDualPaneEnabled()
+        if (useDualPane) {
+            AdaptiveKnowledgeScaffold(
+                isExpanded = true,
+                listPane = {
+                    KnowledgeOverviewScreen(
+                        state = uiState,
+                        onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
+                        onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
+                    )
+                },
+                detailPane = { KnowledgeAdaptivePlaceholder() },
+            )
+        } else {
+            KnowledgeOverviewScreen(
+                state = uiState,
+                onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
+                onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
+            )
+        }
     }
     composable(KnowledgeRoutes.DATASETS) {
         val viewModel: DatasetBrowserViewModel = hiltViewModel()

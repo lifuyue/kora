@@ -9,6 +9,7 @@ object ChatTestTags {
     const val CONVERSATION_ACTIONS_SHEET = "conversation_actions_sheet"
     const val CONVERSATION_ACTION_RENAME = "conversation_action_rename"
     const val CONVERSATION_ACTION_TOGGLE_PIN = "conversation_action_toggle_pin"
+    const val CONVERSATION_ACTION_ARCHIVE = "conversation_action_archive"
     const val CONVERSATION_ACTION_DELETE = "conversation_action_delete"
     const val CONVERSATION_ACTION_MOVE_FOLDER = "conversation_action_move_folder"
     const val CONVERSATION_ACTION_EDIT_TAGS = "conversation_action_edit_tags"
@@ -17,6 +18,14 @@ object ChatTestTags {
     const val RENAME_CONVERSATION_INPUT = "rename_conversation_input"
     const val CONVERSATION_ITEM_PREFIX = "conversation_item_"
     const val CHAT_INPUT = "chat_input"
+    const val CHAT_ATTACHMENT_IMAGE_PICK = "chat_attachment_pick_image"
+    const val CHAT_ATTACHMENT_FILE_PICK = "chat_attachment_pick_file"
+    const val CHAT_ATTACHMENT_LIST = "chat_attachment_list"
+    const val CHAT_ATTACHMENT_ITEM_PREFIX = "chat_attachment_item_"
+    const val CHAT_SPEECH_STATUS = "chat-speech-status"
+    const val CHAT_MIC_BUTTON = "chat-mic-button"
+    const val CHAT_SPEECH_STOP = "chat-speech-stop"
+    const val CHAT_SPEECH_CANCEL = "chat-speech-cancel"
     const val CHAT_LIST = "chat_list"
     const val CHAT_SKELETON = "chat_skeleton"
     const val AUTO_SCROLL_RESUME = "auto_scroll_resume"
@@ -34,7 +43,29 @@ object ChatTestTags {
 
     fun messageDownvoteAction(messageId: String): String = "message_downvote_$messageId"
 
+    fun messageTtsAction(messageId: String): String = "message_tts_$messageId"
+
+    fun messageTtsPauseAction(messageId: String): String = "message_tts_pause_$messageId"
+
+    fun messageTtsStopAction(messageId: String): String = "message_tts_stop_$messageId"
+
     fun messageError(messageId: String): String = "message_error_$messageId"
 
     fun citationSummary(messageId: String): String = "${CITATION_SUMMARY_PREFIX}$messageId"
+
+    fun interactiveCard(messageId: String): String = "interactive_card_$messageId"
+
+    fun interactiveOption(
+        messageId: String,
+        option: String,
+    ): String = "interactive_option_${messageId}_${option.hashCode()}"
+
+    fun interactiveFieldInput(
+        messageId: String,
+        fieldId: String,
+    ): String = "interactive_field_${messageId}_$fieldId"
+
+    fun interactiveSubmit(messageId: String): String = "interactive_submit_$messageId"
+
+    fun attachmentItem(localUri: String): String = "${CHAT_ATTACHMENT_ITEM_PREFIX}$localUri"
 }

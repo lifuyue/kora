@@ -151,6 +151,47 @@ class ConversationListViewModelTest {
             assertEquals("Kotlin", state.selectedTagName)
             collectJob.cancel()
         }
+
+    @Test
+    fun archivedItemsAreHiddenByDefaultAndShownWhenToggled() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingConversationRepository()
+            repository.emit(
+                listOf(
+                    ConversationListItemUiModel(
+                        chatId = "chat-1",
+                        appId = "app-1",
+                        title = "Visible",
+                        preview = "Preview",
+                        isArchived = false,
+                    ),
+                    ConversationListItemUiModel(
+                        chatId = "chat-2",
+                        appId = "app-1",
+                        title = "Archived",
+                        preview = "Preview",
+                        isArchived = true,
+                    ),
+                ),
+            )
+            val viewModel =
+                ConversationListViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1")),
+                    conversationRepository = repository,
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            assertEquals(listOf("chat-1"), viewModel.uiState.value.items.map { it.chatId })
+            assertEquals(false, viewModel.uiState.value.showArchived)
+
+            viewModel.toggleShowArchived(true)
+            advanceUntilIdle()
+
+            assertEquals(listOf("chat-2"), viewModel.uiState.value.items.map { it.chatId })
+            assertEquals(true, viewModel.uiState.value.showArchived)
+            collectJob.cancel()
+        }
 }
 
 private class RecordingConversationRepository : ConversationRepository {
@@ -162,6 +203,7 @@ private class RecordingConversationRepository : ConversationRepository {
     var pinned: Boolean = false
     var deletedChatId: String? = null
     var cleared: Boolean = false
+    var archivedChatId: String? = null
 
     override fun observeConversations(appId: String): Flow<List<ConversationListItemUiModel>> = items
 
@@ -241,6 +283,14 @@ private class RecordingConversationRepository : ConversationRepository {
         chatId: String,
         tagIds: List<String>,
     ) = Unit
+
+    override suspend fun setConversationArchived(
+        appId: String,
+        chatId: String,
+        archived: Boolean,
+    ) {
+        archivedChatId = chatId
+    }
 
     fun emit(value: List<ConversationListItemUiModel>) {
         items.value = value

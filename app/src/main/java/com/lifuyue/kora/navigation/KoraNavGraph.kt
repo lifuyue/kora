@@ -32,6 +32,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lifuyue.kora.R
 import com.lifuyue.kora.core.common.ConnectionSnapshot
+import com.lifuyue.kora.core.database.store.ShareLinkPayload
 import com.lifuyue.kora.feature.chat.ChatRoutes
 import com.lifuyue.kora.feature.chat.chatGraph
 import com.lifuyue.kora.feature.knowledge.KnowledgeRoutes
@@ -48,6 +49,7 @@ private const val ROUTE_SHELL = "shell"
 @Composable
 fun KoraNavGraph(
     snapshot: ConnectionSnapshot,
+    shareLinkPayload: ShareLinkPayload? = null,
     modifier: Modifier = Modifier,
     onOnboardingCompleted: () -> Unit = {},
     connectionRoute: @Composable ((() -> Unit) -> Unit) = { onConnectionSaved ->
@@ -55,6 +57,9 @@ fun KoraNavGraph(
     },
     shellRoute: @Composable ((ConnectionSnapshot) -> Unit) = { shellSnapshot ->
         KoraShell(snapshot = shellSnapshot)
+    },
+    shareRoute: @Composable ((ShareLinkPayload) -> Unit) = { payload ->
+        ShareRouteEntry(payload = payload)
     },
 ) {
     val navController = rememberNavController()
@@ -65,7 +70,7 @@ fun KoraNavGraph(
         modifier = modifier,
     ) {
         composable(ROUTE_BOOTSTRAP) {
-            BootstrapRoute(snapshot = snapshot, navController = navController)
+            BootstrapRoute(snapshot = snapshot, shareLinkPayload = shareLinkPayload, navController = navController)
         }
         composable(ROUTE_ONBOARDING) {
             OnboardingRoute(
@@ -87,16 +92,27 @@ fun KoraNavGraph(
         composable(ROUTE_SHELL) {
             shellRoute(snapshot)
         }
+        shareLinkPayload?.let { payload ->
+            composable(ROUTE_SHARE) {
+                shareRoute(payload)
+            }
+        }
     }
 }
 
 @Composable
 private fun BootstrapRoute(
     snapshot: ConnectionSnapshot,
+    shareLinkPayload: ShareLinkPayload?,
     navController: NavHostController,
 ) {
-    LaunchedEffect(snapshot.onboardingCompleted, snapshot.hasValidConnection, snapshot.selectedAppId) {
+    LaunchedEffect(snapshot.onboardingCompleted, snapshot.hasValidConnection, snapshot.selectedAppId, shareLinkPayload) {
         when {
+            shareLinkPayload != null -> {
+                navController.navigate(ROUTE_SHARE) {
+                    popUpTo(ROUTE_BOOTSTRAP) { inclusive = true }
+                }
+            }
             !snapshot.onboardingCompleted -> {
                 navController.navigate(ROUTE_ONBOARDING) {
                     popUpTo(ROUTE_BOOTSTRAP) { inclusive = true }

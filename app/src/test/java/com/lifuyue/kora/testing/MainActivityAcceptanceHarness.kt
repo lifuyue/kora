@@ -315,9 +315,12 @@ class AcceptanceChatRepository :
         }
     }
 
-    override suspend fun bootstrapChat(appId: String): com.lifuyue.kora.feature.chat.ChatBootstrap =
+    override suspend fun bootstrapChat(
+        appId: String,
+        chatId: String?,
+    ): com.lifuyue.kora.feature.chat.ChatBootstrap =
         com.lifuyue.kora.feature.chat.ChatBootstrap(
-            chatId = nextId("chat"),
+            chatId = chatId?.takeIf { it.isNotBlank() } ?: nextId("chat"),
             welcomeText = "欢迎使用 $appId",
         )
 
@@ -330,6 +333,7 @@ class AcceptanceChatRepository :
         appId: String,
         chatId: String?,
         text: String,
+        attachments: List<com.lifuyue.kora.feature.chat.AttachmentDraftUiModel>,
     ): String {
         sendCalls.incrementAndGet()
         val prompt = text.trim()

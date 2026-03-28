@@ -13,6 +13,7 @@ import com.lifuyue.kora.core.database.dao.ConversationDao
 import com.lifuyue.kora.core.database.dao.ConversationFolderDao
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
 import com.lifuyue.kora.core.database.dao.ImportTaskDao
+import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
 import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
@@ -61,6 +62,9 @@ object DatabaseModule {
 
     @Provides
     fun provideImportTaskDao(database: KoraDatabase): ImportTaskDao = database.importTaskDao()
+
+    @Provides
+    fun provideInteractiveDraftDao(database: KoraDatabase): InteractiveDraftDao = database.interactiveDraftDao()
 
     @Provides
     @Singleton

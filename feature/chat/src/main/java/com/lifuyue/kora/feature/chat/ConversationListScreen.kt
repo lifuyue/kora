@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -59,11 +61,13 @@ fun ConversationListScreen(
     onQueryChanged: (String) -> Unit,
     onSelectFolderFilter: (String?) -> Unit,
     onSelectTagFilter: (String?) -> Unit,
+    onToggleShowArchived: (Boolean) -> Unit,
     onOpenConversation: (String) -> Unit,
     onNewConversation: () -> Unit,
     onDeleteConversation: (String) -> Unit,
     onRenameConversation: (String, String) -> Unit,
     onTogglePin: (String, Boolean) -> Unit,
+    onSetArchived: (String, Boolean) -> Unit,
     onClearConversations: () -> Unit,
     onCreateFolder: (String) -> Unit,
     onRenameFolder: (String, String) -> Unit,
@@ -153,8 +157,25 @@ fun ConversationListScreen(
                     onClick = { activeSheet = ConversationOrganizerSheet.TagFilter },
                 )
             }
+            OutlinedActionChip(
+                label =
+                    appString(
+                        if (uiState.showArchived) {
+                            "conversation_list_filter_archived"
+                        } else {
+                            "conversation_list_filter_active"
+                        },
+                    ),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onToggleShowArchived(!uiState.showArchived) },
+            )
             if (uiState.isEmpty) {
-                EmptyConversationState(modifier = Modifier.fillMaxWidth())
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    EmptyConversationState(modifier = Modifier.fillMaxWidth())
+                }
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -253,6 +274,21 @@ fun ConversationListScreen(
                     testTag = ChatTestTags.CONVERSATION_ACTION_TOGGLE_PIN,
                     onClick = {
                         onTogglePin(selectedConversation.chatId, !selectedConversation.isPinned)
+                        selectedChatId = null
+                    },
+                )
+                SheetAction(
+                    label =
+                        appString(
+                            if (selectedConversation.isArchived) {
+                                "conversation_list_action_unarchive"
+                            } else {
+                                "conversation_list_action_archive"
+                            },
+                        ),
+                    testTag = ChatTestTags.CONVERSATION_ACTION_ARCHIVE,
+                    onClick = {
+                        onSetArchived(selectedConversation.chatId, !selectedConversation.isArchived)
                         selectedChatId = null
                     },
                 )

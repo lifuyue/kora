@@ -357,3 +357,54 @@ data class QuestionGuideRequest(
     val chatId: String,
     val questionGuide: AppQuestionGuideConfigDto? = null,
 )
+
+@Serializable
+data class UploadedAssetRef(
+    val name: String,
+    val url: String,
+    val key: String? = null,
+    val mimeType: String,
+    val size: Long,
+)
+
+@Serializable
+data class ShareAuthInitRequest(
+    val token: String,
+)
+
+@Serializable
+data class ShareAuthStartRequest(
+    val token: String,
+    val question: String,
+)
+
+@Serializable
+data class ShareAuthFinishRequest(
+    val token: String,
+    val shareId: String,
+    val chatId: String,
+    val appName: String,
+    val responses: JsonArray = JsonArray(emptyList()),
+)
+
+@Serializable
+data class ShareAuthStateDto(
+    val uid: String? = null,
+)
+
+@Serializable
+data class ShareSessionBootstrapDto(
+    val chatId: String,
+    val appId: String,
+    val title: String? = null,
+    val appName: String = "",
+    val userAvatar: String? = null,
+)
+
+@Serializable
+data class AppAnalyticsSummaryDto(
+    val requestCount: Int = 0,
+    val conversationCount: Int = 0,
+    val inputTokens: Long = 0L,
+    val outputTokens: Long = 0L,
+)

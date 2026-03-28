@@ -9,6 +9,7 @@ import com.lifuyue.kora.core.database.entity.ConversationFolderCrossRef
 import com.lifuyue.kora.core.database.entity.ConversationFolderEntity
 import com.lifuyue.kora.core.database.entity.ConversationTagCrossRef
 import com.lifuyue.kora.core.database.entity.ConversationTagEntity
+import com.lifuyue.kora.core.database.entity.InteractiveDraftEntity
 import com.lifuyue.kora.core.database.entity.MessageEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -180,6 +181,30 @@ class KoraDatabaseTest {
         }
 
     @Test
+    fun conversationDaoUpdatesArchivedFlag() =
+        runBlocking {
+            database.conversationDao().upsert(
+                ConversationEntity(
+                    chatId = "chat-1",
+                    appId = "app-a",
+                    title = "Archive me",
+                    customTitle = null,
+                    isPinned = false,
+                    source = ChatSource.online.name,
+                    updateTime = 100L,
+                    lastMessagePreview = null,
+                    hasDraft = false,
+                    isDeleted = false,
+                    isArchived = false,
+                ),
+            )
+
+            database.conversationDao().updateArchived(chatId = "chat-1", isArchived = true)
+
+            assertTrue(database.conversationDao().getConversationByChatId("chat-1")!!.isArchived)
+        }
+
+    @Test
     fun messageDaoPersistsStreamingAndOrdersByCreatedAtThenDataId() =
         runBlocking {
             database.messageDao().upsertAll(
@@ -336,5 +361,30 @@ class KoraDatabaseTest {
 
             assertEquals(listOf("folder-1"), database.conversationFolderDao().observeAssignments("app-a").first().map { it.folderId })
             assertEquals(listOf("tag-1"), database.conversationTagDao().observeAssignments("app-a").first().map { it.tagId })
+        }
+
+    @Test
+    fun interactiveDraftDaoPersistsAndDeletesLatestSnapshot() =
+        runBlocking {
+            database.interactiveDraftDao().upsert(
+                InteractiveDraftEntity(
+                    chatId = "chat-1",
+                    messageDataId = "assistant-1",
+                    responseValueId = "value-1",
+                    rawPayloadJson = """{"kind":"userInput"}""",
+                    draftPayloadJson = """{"field":"draft"}""",
+                    updatedAt = 123L,
+                ),
+            )
+
+            val stored = database.interactiveDraftDao().getByChatId("chat-1")
+
+            assertEquals("assistant-1", stored?.messageDataId)
+            assertEquals("value-1", stored?.responseValueId)
+            assertEquals("""{"field":"draft"}""", stored?.draftPayloadJson)
+
+            database.interactiveDraftDao().deleteByChatId("chat-1")
+
+            assertEquals(null, database.interactiveDraftDao().getByChatId("chat-1"))
         }
 }

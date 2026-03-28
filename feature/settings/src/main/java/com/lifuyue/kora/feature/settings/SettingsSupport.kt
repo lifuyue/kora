@@ -2,6 +2,8 @@ package com.lifuyue.kora.feature.settings
 
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -108,3 +110,24 @@ abstract class SettingsSupportModule {
         fun provideSettingsFeedbackUrl(): String = "https://github.com/lifuyue/kora/issues"
     }
 }
+
+internal fun Context.appString(
+    name: String,
+    vararg args: Any,
+): String {
+    val id = resources.getIdentifier(name, "string", applicationContext.packageName)
+    if (id == 0) {
+        return name
+    }
+    return if (args.isEmpty()) {
+        getString(id)
+    } else {
+        getString(id, *args)
+    }
+}
+
+@Composable
+internal fun appString(
+    name: String,
+    vararg args: Any,
+): String = LocalContext.current.appString(name, *args)
