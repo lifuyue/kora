@@ -17,13 +17,17 @@ object KnowledgeRoutes {
     const val overview = "knowledge"
     const val datasets = "knowledge/datasets"
     const val collections = "knowledge/datasets/{datasetId}/collections"
-    const val chunks = "knowledge/datasets/{datasetId}/collections/{collectionId}"
+    const val chunks = "knowledge/datasets/{datasetId}/collections/{collectionId}?dataId={dataId}"
     const val search = "knowledge/datasets/{datasetId}/search-test"
 
     fun collections(datasetId: String): String = "knowledge/datasets/$datasetId/collections"
 
-    fun chunks(datasetId: String, collectionId: String): String =
-        "knowledge/datasets/$datasetId/collections/$collectionId"
+    fun chunks(datasetId: String, collectionId: String, dataId: String? = null): String =
+        if (dataId.isNullOrBlank()) {
+            "knowledge/datasets/$datasetId/collections/$collectionId?dataId="
+        } else {
+            "knowledge/datasets/$datasetId/collections/$collectionId?dataId=$dataId"
+        }
 
     fun search(datasetId: String): String = "knowledge/datasets/$datasetId/search-test"
 }
@@ -46,6 +50,8 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
             onBack = { navController.popBackStack() },
             onQueryChanged = viewModel::updateQuery,
             onCreateNameChanged = viewModel::updateCreateName,
+            onTypeFilterSelected = viewModel::selectTypeFilter,
+            onStatusFilterSelected = viewModel::selectStatusFilter,
             onRefresh = viewModel::refresh,
             onCreateDataset = viewModel::createDataset,
             onDeleteDataset = viewModel::deleteDataset,
@@ -86,6 +92,11 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
             listOf(
                 navArgument("datasetId") { type = NavType.StringType },
                 navArgument("collectionId") { type = NavType.StringType },
+                navArgument("dataId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
             ),
     ) {
         val viewModel: ChunkViewerViewModel = hiltViewModel()
@@ -96,8 +107,10 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
             onStartEditing = viewModel::startEditing,
             onQuestionChanged = viewModel::updateEditingQuestion,
             onAnswerChanged = viewModel::updateEditingAnswer,
+            onDisabledChanged = viewModel::updateEditingDisabled,
             onSave = viewModel::saveEditing,
             onDelete = viewModel::deleteChunk,
+            onLoadMore = viewModel::loadMore,
         )
     }
     composable(
@@ -115,6 +128,17 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
             onEmbeddingWeightChanged = viewModel::updateEmbeddingWeight,
             onUseReRankChanged = viewModel::updateReRank,
             onSearch = viewModel::search,
+            onOpenResult = { result ->
+                if (!result.datasetId.isNullOrBlank() && !result.collectionId.isNullOrBlank()) {
+                    navController.navigate(
+                        KnowledgeRoutes.chunks(
+                            datasetId = result.datasetId,
+                            collectionId = result.collectionId,
+                            dataId = result.dataId,
+                        ),
+                    )
+                }
+            },
         )
     }
 }

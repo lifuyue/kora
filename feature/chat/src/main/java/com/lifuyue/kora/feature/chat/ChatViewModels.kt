@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 
 @HiltViewModel
 class ConversationListViewModel
@@ -376,3 +378,94 @@ class AppSelectorViewModel @Inject constructor(
         }
     }
 }
+
+@HiltViewModel
+class AppDetailViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val api: FastGptApi,
+) : ViewModel() {
+    private val appId: String = checkNotNull(savedStateHandle["appId"])
+    private val chatId: String? = savedStateHandle["chatId"]
+    private val mutableState = MutableStateFlow(AppDetailUiState(appId = appId))
+    val uiState: StateFlow<AppDetailUiState> = mutableState.asStateFlow()
+
+    init {
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            mutableState.update { it.copy(isLoading = true, errorMessage = null) }
+            runCatching {
+                val apps = api.getAppList().data.orEmpty()
+                val summary = apps.firstOrNull { it.id == appId }
+                val initData = api.initChat(appId = appId, chatId = chatId).data
+                AppDetailUiState(
+                    appId = appId,
+                    appName = summary?.name ?: initData?.app?.readString("name").orEmpty(),
+                    intro = summary?.intro ?: initData?.app?.readString("intro").orEmpty(),
+                    type = summary?.type ?: initData?.app?.readString("type").orEmpty(),
+                    welcomeText = initData?.welcomeText,
+                    sections =
+                        buildList {
+                            initData?.variables?.takeIf { it.isNotEmpty() }?.let { variables ->
+                                add(AppDetailSectionUiModel("变量", listOf("${variables.size} 个变量已配置")))
+                            }
+                            initData?.chatModels?.takeIf { it.isNotEmpty() }?.let { models ->
+                                add(AppDetailSectionUiModel("模型", models.toDisplayItems()))
+                            }
+                            initData?.fileSelectConfig?.takeIf { it.isNotEmpty() }?.let { config ->
+                                add(AppDetailSectionUiModel("附件", config.toDisplayItems()))
+                            }
+                            initData?.ttsConfig?.takeIf { it.isNotEmpty() }?.let { config ->
+                                add(AppDetailSectionUiModel("语音播报", config.toDisplayItems()))
+                            }
+                            initData?.whisperConfig?.takeIf { it.isNotEmpty() }?.let { config ->
+                                add(AppDetailSectionUiModel("语音输入", config.toDisplayItems()))
+                            }
+                            initData?.questionGuide?.let { config ->
+                                add(
+                                    AppDetailSectionUiModel(
+                                        "推荐问题",
+                                        listOf(
+                                            if (config.open) {
+                                                "已开启"
+                                            } else {
+                                                "未开启"
+                                            },
+                                        ),
+                                    ),
+                                )
+                            }
+                        },
+                    isLoading = false,
+                    errorMessage = null,
+                )
+            }.onSuccess { mutableState.value = it }
+                .onFailure { error ->
+                    mutableState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = error.message ?: "加载 App 详情失败",
+                        )
+                    }
+                }
+        }
+    }
+}
+
+private fun JsonArray.toDisplayItems(): List<String> =
+    mapNotNull { element -> element.toString().trim('"').takeIf { it.isNotBlank() } }
+
+private fun JsonObject.toDisplayItems(): List<String> =
+    entries.mapNotNull { (key, value) ->
+        val rendered =
+            value.toString()
+                .trim('"')
+                .replace("\n", " ")
+                .take(48)
+                .ifBlank { return@mapNotNull null }
+        "$key: $rendered"
+    }
+
+private fun JsonObject.readString(key: String): String = this[key]?.toString()?.trim('"').orEmpty()

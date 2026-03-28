@@ -22,6 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -46,10 +50,12 @@ fun ChatScreen(
     onOpenAppSelector: () -> Unit = {},
     onDismissAppSelector: () -> Unit = {},
     onSwitchApp: (String) -> Unit = {},
+    onOpenAppDetail: () -> Unit = {},
     onSuggestedQuestion: (String) -> Unit = {},
     onOpenCitation: (CitationItemUiModel) -> Unit = {},
 ) {
     val clipboardManager = LocalClipboardManager.current
+    var activeCitationMessage by remember { mutableStateOf<ChatMessageUiModel?>(null) }
     if (showAppSelector) {
         ModalBottomSheet(onDismissRequest = onDismissAppSelector) {
             Column(
@@ -77,7 +83,45 @@ fun ChatScreen(
                         }
                     }
                 }
+                TextButton(onClick = onOpenAppDetail, enabled = appSelectorUiState.currentAppId != null) {
+                    Text("查看当前 App 能力")
+                }
                 appSelectorUiState.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        }
+    }
+    activeCitationMessage?.let { message ->
+        ModalBottomSheet(
+            onDismissRequest = { activeCitationMessage = null },
+            modifier = Modifier.testTag(ChatTestTags.citationPanel),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("引用 ${message.citations.size} 条", style = MaterialTheme.typography.titleLarge)
+                message.citations.forEach { citation ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                citation.title.ifBlank { citation.snippet.take(24) },
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            if (citation.snippet.isNotBlank()) {
+                                Text(citation.snippet, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            if (citation.scoreLabel.isNotBlank()) {
+                                Text(citation.scoreLabel, style = MaterialTheme.typography.labelMedium)
+                            }
+                            TextButton(onClick = { onOpenCitation(citation) }) {
+                                Text("查看知识来源")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -95,6 +139,11 @@ fun ChatScreen(
                 navigationIcon = {
                     TextButton(onClick = onBack) {
                         Text("返回")
+                    }
+                },
+                actions = {
+                    TextButton(onClick = onOpenAppDetail) {
+                        Text("能力")
                     }
                 },
             )
@@ -134,7 +183,9 @@ fun ChatScreen(
                         onRegenerate = { onRegenerate(message) },
                         onFeedback = { feedback -> onFeedback(message, feedback) },
                         onSuggestedQuestion = onSuggestedQuestion,
-                        onOpenCitation = onOpenCitation,
+                        onOpenCitation = {
+                            activeCitationMessage = message
+                        },
                     )
                 }
             }
@@ -268,11 +319,11 @@ private fun MessageCard(
                 }
             }
             if (message.citations.isNotEmpty()) {
-                Text("引用 ${message.citations.size} 条", style = MaterialTheme.typography.labelLarge)
-                message.citations.forEach { citation ->
-                    TextButton(onClick = { onOpenCitation(citation) }) {
-                        Text(citation.title.ifBlank { citation.snippet.take(18) })
-                    }
+                OutlinedButton(
+                    onClick = { onOpenCitation(message.citations.first()) },
+                    modifier = Modifier.testTag(ChatTestTags.citationSummary(message.messageId)),
+                ) {
+                    Text("引用 ${message.citations.size} 条")
                 }
             }
             if (message.suggestedQuestions.isNotEmpty()) {

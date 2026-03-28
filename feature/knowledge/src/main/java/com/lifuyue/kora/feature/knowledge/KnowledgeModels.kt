@@ -3,6 +3,13 @@ package com.lifuyue.kora.feature.knowledge
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 
+enum class KnowledgeLoadState {
+    Loading,
+    Content,
+    Empty,
+    Error,
+}
+
 @Immutable
 data class DatasetListItemUiModel(
     val datasetId: String,
@@ -42,10 +49,14 @@ data class ChunkItemUiModel(
     val question: String,
     val answer: String,
     val status: String,
+    val isDisabled: Boolean = false,
+    val isRebuilding: Boolean = false,
 )
 
 @Immutable
 data class SearchResultUiModel(
+    val datasetId: String? = null,
+    val collectionId: String? = null,
     val dataId: String?,
     val title: String,
     val snippet: String,
@@ -56,13 +67,20 @@ data class KnowledgeOverviewUiState(
     val selectedAppId: String? = null,
     val datasetCount: Int = 0,
     val recentDatasets: List<DatasetListItemUiModel> = emptyList(),
+    val status: KnowledgeLoadState = KnowledgeLoadState.Loading,
+    val errorMessage: String? = null,
 )
 
 data class DatasetBrowserUiState(
     val query: String = "",
     val createName: String = "",
     val items: List<DatasetListItemUiModel> = emptyList(),
+    val availableTypes: List<String> = emptyList(),
+    val availableStatuses: List<String> = emptyList(),
+    val selectedTypeFilter: String? = null,
+    val selectedStatusFilter: String? = null,
     val isRefreshing: Boolean = false,
+    val status: KnowledgeLoadState = KnowledgeLoadState.Loading,
     val errorMessage: String? = null,
 )
 
@@ -86,6 +104,7 @@ data class CollectionManagementUiState(
     val selectedDocumentName: String = "",
     val selectedDocumentUri: Uri? = null,
     val isSubmitting: Boolean = false,
+    val status: KnowledgeLoadState = KnowledgeLoadState.Loading,
     val errorMessage: String? = null,
 )
 
@@ -93,9 +112,14 @@ data class ChunkViewerUiState(
     val datasetId: String,
     val collectionId: String,
     val items: List<ChunkItemUiModel> = emptyList(),
+    val highlightedDataId: String? = null,
     val editingChunkId: String? = null,
     val editingQuestion: String = "",
     val editingAnswer: String = "",
+    val editingDisabled: Boolean = false,
+    val isLoading: Boolean = false,
+    val canLoadMore: Boolean = false,
+    val nextOffset: Int = 0,
     val errorMessage: String? = null,
 )
 
@@ -108,6 +132,8 @@ data class SearchTestUiState(
     val useReRank: Boolean = false,
     val results: List<SearchResultUiModel> = emptyList(),
     val duration: String = "",
+    val extensionInfo: String = "",
+    val status: KnowledgeLoadState = KnowledgeLoadState.Content,
     val errorMessage: String? = null,
     val isSearching: Boolean = false,
 )

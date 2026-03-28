@@ -15,6 +15,7 @@ import androidx.navigation.navArgument
 object ChatRoutes {
     const val conversations = "chat/{appId}"
     const val thread = "chat/thread/{appId}?chatId={chatId}"
+    const val appDetail = "chat/app/{appId}?chatId={chatId}"
 
     fun conversations(appId: String): String = "chat/$appId"
 
@@ -23,6 +24,13 @@ object ChatRoutes {
             "chat/thread/$appId?chatId="
         } else {
             "chat/thread/$appId?chatId=$chatId"
+        }
+
+    fun appDetail(appId: String, chatId: String? = null): String =
+        if (chatId == null) {
+            "chat/app/$appId?chatId="
+        } else {
+            "chat/app/$appId?chatId=$chatId"
         }
 }
 
@@ -53,6 +61,20 @@ fun NavGraphBuilder.chatGraph(navController: NavController) {
             ),
     ) {
         ChatRoute(navController = navController, onBack = { navController.popBackStack() })
+    }
+    composable(
+        route = ChatRoutes.appDetail,
+        arguments =
+            listOf(
+                navArgument("appId") { type = NavType.StringType },
+                navArgument("chatId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+    ) {
+        AppDetailRoute(onBack = { navController.popBackStack() })
     }
 }
 
@@ -117,14 +139,47 @@ private fun ChatRoute(
                 }
             }
         },
+        onOpenAppDetail = {
+            navController.navigate(ChatRoutes.appDetail(uiState.value.appId, uiState.value.chatId))
+        },
         onSuggestedQuestion = {
             viewModel.updateInput(it)
             viewModel.send()
         },
         onOpenCitation = { citation ->
             if (!citation.datasetId.isNullOrBlank() && !citation.collectionId.isNullOrBlank()) {
-                navController.navigate("knowledge/datasets/${citation.datasetId}/collections/${citation.collectionId}")
+                navController.navigate(
+                    knowledgeChunkRoute(
+                        datasetId = citation.datasetId,
+                        collectionId = citation.collectionId,
+                        dataId = citation.dataId,
+                    ),
+                )
             }
         },
     )
 }
+
+@Composable
+private fun AppDetailRoute(
+    onBack: () -> Unit,
+    viewModel: AppDetailViewModel = hiltViewModel(),
+) {
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+    AppDetailScreen(
+        uiState = uiState.value,
+        onBack = onBack,
+        onRefresh = viewModel::refresh,
+    )
+}
+
+private fun knowledgeChunkRoute(
+    datasetId: String,
+    collectionId: String,
+    dataId: String?,
+): String =
+    if (dataId.isNullOrBlank()) {
+        "knowledge/datasets/$datasetId/collections/$collectionId?dataId="
+    } else {
+        "knowledge/datasets/$datasetId/collections/$collectionId?dataId=$dataId"
+    }

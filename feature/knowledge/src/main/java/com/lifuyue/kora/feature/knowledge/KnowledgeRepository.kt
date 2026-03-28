@@ -42,6 +42,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 interface KnowledgeRepository {
     fun observeDatasets(): Flow<List<DatasetListItemUiModel>>
 
+    fun observeDataset(datasetId: String): Flow<DatasetListItemUiModel?>
+
     suspend fun refreshDatasets(query: String = "")
 
     suspend fun createDataset(name: String)
@@ -78,12 +80,15 @@ interface KnowledgeRepository {
     suspend fun listChunks(
         datasetId: String,
         collectionId: String,
+        offset: Int = 0,
+        pageSize: Int = 20,
     ): List<ChunkItemUiModel>
 
     suspend fun updateChunk(
         dataId: String,
         question: String,
         answer: String,
+        forbid: Boolean,
     )
 
     suspend fun deleteChunk(dataId: String)
@@ -95,7 +100,7 @@ interface KnowledgeRepository {
         similarity: Double?,
         embeddingWeight: Double?,
         usingReRank: Boolean,
-    ): Pair<String, List<SearchResultUiModel>>
+    ): Triple<String, String, List<SearchResultUiModel>>
 }
 
 @Singleton
@@ -119,6 +124,9 @@ class RoomBackedKnowledgeRepository @Inject constructor(
                 )
             }
         }
+
+    override fun observeDataset(datasetId: String): Flow<DatasetListItemUiModel?> =
+        observeDatasets().map { items -> items.firstOrNull { it.datasetId == datasetId } }
 
     override suspend fun refreshDatasets(query: String) {
         val datasets = api.listDatasets(DatasetListRequest(searchKey = query.takeIf { it.isNotBlank() })).data.orEmpty()
@@ -256,16 +264,26 @@ class RoomBackedKnowledgeRepository @Inject constructor(
     override suspend fun listChunks(
         datasetId: String,
         collectionId: String,
+        offset: Int,
+        pageSize: Int,
     ): List<ChunkItemUiModel> =
-        api.listChunkData(ChunkListRequest(datasetId = datasetId, collectionId = collectionId)).data?.list.orEmpty()
+        api.listChunkData(
+            ChunkListRequest(
+                datasetId = datasetId,
+                collectionId = collectionId,
+                offset = offset,
+                pageSize = pageSize,
+            ),
+        ).data?.list.orEmpty()
             .map { it.toUiModel() }
 
     override suspend fun updateChunk(
         dataId: String,
         question: String,
         answer: String,
+        forbid: Boolean,
     ) {
-        api.updateChunkData(ChunkUpdateRequest(id = dataId, q = question, a = answer))
+        api.updateChunkData(ChunkUpdateRequest(id = dataId, q = question, a = answer, forbid = forbid))
     }
 
     override suspend fun deleteChunk(dataId: String) {
@@ -279,7 +297,7 @@ class RoomBackedKnowledgeRepository @Inject constructor(
         similarity: Double?,
         embeddingWeight: Double?,
         usingReRank: Boolean,
-    ): Pair<String, List<SearchResultUiModel>> {
+    ): Triple<String, String, List<SearchResultUiModel>> {
         val response =
             api.searchTest(
                 SearchTestRequest(
@@ -291,9 +309,13 @@ class RoomBackedKnowledgeRepository @Inject constructor(
                     usingReRank = usingReRank,
                 ),
             ).data ?: SearchTestResponseDto()
-        return response.duration to
+        return Triple(
+            response.duration,
+            response.queryExtensionModel.orEmpty(),
             response.list.map {
                 SearchResultUiModel(
+                    datasetId = it.datasetId,
+                    collectionId = it.collectionId,
                     dataId = it.dataId,
                     title = it.sourceName ?: it.q.orEmpty().take(18).ifBlank { "命中片段" },
                     snippet = listOfNotNull(it.q, it.a).joinToString("\n").ifBlank { "无预览" },
@@ -303,7 +325,8 @@ class RoomBackedKnowledgeRepository @Inject constructor(
                             it.score?.let { score -> String.format("%.3f", score) },
                         ).joinToString(" · "),
                 )
-            }
+            },
+        )
     }
 
     private fun DatasetSummaryDto.toEntity(): CachedDatasetEntity =
@@ -341,6 +364,8 @@ class RoomBackedKnowledgeRepository @Inject constructor(
                     forbid == true -> "disabled"
                     else -> "active"
                 },
+            isDisabled = forbid == true,
+            isRebuilding = rebuilding == true,
         )
 
     private fun task(

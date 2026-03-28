@@ -17,6 +17,8 @@ object ChatTestTags {
     const val renameConversationInput = "rename_conversation_input"
     const val conversationItemPrefix = "conversation_item_"
     const val chatInput = "chat_input"
+    const val citationPanel = "citation_panel"
+    const val citationSummaryPrefix = "citation_summary_"
 
     fun messageCard(messageId: String): String = "message_card_$messageId"
 
@@ -29,4 +31,6 @@ object ChatTestTags {
     fun messageDownvoteAction(messageId: String): String = "message_downvote_$messageId"
 
     fun messageError(messageId: String): String = "message_error_$messageId"
+
+    fun citationSummary(messageId: String): String = "citation_summary_$messageId"
 }

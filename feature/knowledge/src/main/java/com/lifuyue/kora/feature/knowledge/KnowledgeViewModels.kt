@@ -28,6 +28,7 @@ class KnowledgeOverviewViewModel @Inject constructor(
                 selectedAppId = snapshot.selectedAppId,
                 datasetCount = datasets.size,
                 recentDatasets = datasets.take(3),
+                status = if (datasets.isEmpty()) KnowledgeLoadState.Empty else KnowledgeLoadState.Content,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KnowledgeOverviewUiState())
 }
@@ -40,12 +41,24 @@ class DatasetBrowserViewModel @Inject constructor(
 
     val uiState: StateFlow<DatasetBrowserUiState> =
         combine(meta, repository.observeDatasets()) { state, datasets ->
-            state.copy(
-                items = datasets.filter {
-                    state.query.isBlank() ||
+            val filtered =
+                datasets.filter {
+                    (state.query.isBlank() ||
                         it.name.contains(state.query, ignoreCase = true) ||
-                        it.intro.contains(state.query, ignoreCase = true)
-                },
+                        it.intro.contains(state.query, ignoreCase = true)) &&
+                        (state.selectedTypeFilter == null || it.type == state.selectedTypeFilter) &&
+                        (state.selectedStatusFilter == null || it.updateTimeLabel == state.selectedStatusFilter || "active" == state.selectedStatusFilter)
+                }
+            state.copy(
+                items = filtered,
+                availableTypes = datasets.map { it.type }.filter { it.isNotBlank() }.distinct(),
+                availableStatuses = listOf("active"),
+                status =
+                    when {
+                        state.errorMessage != null -> KnowledgeLoadState.Error
+                        filtered.isEmpty() -> KnowledgeLoadState.Empty
+                        else -> KnowledgeLoadState.Content
+                    },
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DatasetBrowserUiState())
 
@@ -61,11 +74,26 @@ class DatasetBrowserViewModel @Inject constructor(
         meta.update { it.copy(createName = value) }
     }
 
+    fun selectTypeFilter(value: String?) {
+        meta.update { it.copy(selectedTypeFilter = value) }
+    }
+
+    fun selectStatusFilter(value: String?) {
+        meta.update { it.copy(selectedStatusFilter = value) }
+    }
+
     fun refresh() {
         viewModelScope.launch {
             meta.update { it.copy(isRefreshing = true, errorMessage = null) }
             runCatching { repository.refreshDatasets(meta.value.query) }
-                .onFailure { meta.update { state -> state.copy(errorMessage = it.message ?: "刷新失败") } }
+                .onFailure {
+                    meta.update { state ->
+                        state.copy(
+                            errorMessage = it.message ?: "刷新失败",
+                            status = KnowledgeLoadState.Error,
+                        )
+                    }
+                }
             meta.update { it.copy(isRefreshing = false) }
         }
     }
@@ -101,14 +129,25 @@ class CollectionManagementViewModel @Inject constructor(
     val uiState: StateFlow<CollectionManagementUiState> =
         combine(
             meta,
+            repository.observeDataset(datasetId),
             repository.observeCollections(datasetId),
             repository.observeImportTasks(datasetId),
-        ) { state, collections, tasks ->
-            state.copy(items = collections, tasks = tasks)
+        ) { state, dataset, collections, tasks ->
+            state.copy(
+                datasetName = dataset?.name.orEmpty(),
+                items = collections,
+                tasks = tasks,
+                status =
+                    when {
+                        state.errorMessage != null -> KnowledgeLoadState.Error
+                        collections.isEmpty() && tasks.isEmpty() -> KnowledgeLoadState.Empty
+                        else -> KnowledgeLoadState.Content
+                    },
+            )
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            CollectionManagementUiState(datasetId = datasetId),
+            CollectionManagementUiState(datasetId = datasetId, status = KnowledgeLoadState.Loading),
         )
 
     init {
@@ -143,7 +182,13 @@ class CollectionManagementViewModel @Inject constructor(
     }
 
     fun setSelectedDocument(uri: Uri?, displayName: String) {
-        meta.update { it.copy(selectedDocumentUri = uri, selectedDocumentName = displayName) }
+        val errorMessage =
+            if (displayName.isNotBlank() && !displayName.isSupportedDocument()) {
+                "仅支持 PDF、DOCX、TXT、MD、CSV、HTML"
+            } else {
+                null
+            }
+        meta.update { it.copy(selectedDocumentUri = uri, selectedDocumentName = displayName, errorMessage = errorMessage) }
     }
 
     fun submit() {
@@ -174,6 +219,7 @@ class CollectionManagementViewModel @Inject constructor(
                         )
                     CollectionCreateMode.FILE -> {
                         val uri = checkNotNull(meta.value.selectedDocumentUri)
+                        check(meta.value.selectedDocumentName.isSupportedDocument()) { "仅支持 PDF、DOCX、TXT、MD、CSV、HTML" }
                         repository.importDocument(
                             datasetId = datasetId,
                             uri = uri,
@@ -192,6 +238,7 @@ class CollectionManagementViewModel @Inject constructor(
                         linkSelector = "",
                         selectedDocumentUri = null,
                         selectedDocumentName = "",
+                        errorMessage = null,
                     )
                 }
             }.onFailure { error ->
@@ -206,9 +253,21 @@ class ChunkViewerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: KnowledgeRepository,
 ) : ViewModel() {
+    companion object {
+        private const val PAGE_SIZE = 20
+    }
+
     private val datasetId: String = checkNotNull(savedStateHandle["datasetId"])
     private val collectionId: String = checkNotNull(savedStateHandle["collectionId"])
-    private val meta = MutableStateFlow(ChunkViewerUiState(datasetId = datasetId, collectionId = collectionId))
+    private val highlightedDataId: String? = savedStateHandle["dataId"]
+    private val meta =
+        MutableStateFlow(
+            ChunkViewerUiState(
+                datasetId = datasetId,
+                collectionId = collectionId,
+                highlightedDataId = highlightedDataId,
+            ),
+        )
 
     val uiState: StateFlow<ChunkViewerUiState> = meta.asStateFlow()
 
@@ -218,9 +277,52 @@ class ChunkViewerViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            runCatching { repository.listChunks(datasetId, collectionId) }
-                .onSuccess { meta.update { state -> state.copy(items = it, errorMessage = null) } }
-                .onFailure { meta.update { state -> state.copy(errorMessage = it.message ?: "加载失败") } }
+            meta.update { it.copy(isLoading = true, nextOffset = 0) }
+            runCatching { repository.listChunks(datasetId, collectionId, offset = 0, pageSize = PAGE_SIZE) }
+                .onSuccess {
+                    meta.update { state ->
+                        state.copy(
+                            items = it,
+                            canLoadMore = it.size >= PAGE_SIZE,
+                            nextOffset = it.size,
+                            isLoading = false,
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure {
+                    meta.update { state ->
+                        state.copy(
+                            isLoading = false,
+                            errorMessage = it.message ?: "加载失败",
+                        )
+                    }
+                }
+        }
+    }
+
+    fun loadMore() {
+        if (meta.value.isLoading || !meta.value.canLoadMore) return
+        viewModelScope.launch {
+            meta.update { it.copy(isLoading = true) }
+            runCatching {
+                repository.listChunks(
+                    datasetId = datasetId,
+                    collectionId = collectionId,
+                    offset = meta.value.nextOffset,
+                    pageSize = PAGE_SIZE,
+                )
+            }.onSuccess { newItems ->
+                meta.update { state ->
+                    state.copy(
+                        items = state.items + newItems,
+                        nextOffset = state.nextOffset + newItems.size,
+                        canLoadMore = newItems.size >= PAGE_SIZE,
+                        isLoading = false,
+                    )
+                }
+            }.onFailure { error ->
+                meta.update { it.copy(isLoading = false, errorMessage = error.message ?: "加载失败") }
+            }
         }
     }
 
@@ -230,6 +332,7 @@ class ChunkViewerViewModel @Inject constructor(
                 editingChunkId = item.dataId,
                 editingQuestion = item.question,
                 editingAnswer = item.answer,
+                editingDisabled = item.isDisabled,
             )
         }
     }
@@ -250,12 +353,24 @@ class ChunkViewerViewModel @Inject constructor(
                     dataId = chunkId,
                     question = meta.value.editingQuestion,
                     answer = meta.value.editingAnswer,
+                    forbid = meta.value.editingDisabled,
                 )
             }.onSuccess {
-                meta.update { it.copy(editingChunkId = null, editingQuestion = "", editingAnswer = "") }
+                meta.update {
+                    it.copy(
+                        editingChunkId = null,
+                        editingQuestion = "",
+                        editingAnswer = "",
+                        editingDisabled = false,
+                    )
+                }
                 refresh()
             }.onFailure { meta.update { state -> state.copy(errorMessage = it.message ?: "保存失败") } }
         }
+    }
+
+    fun updateEditingDisabled(value: Boolean) {
+        meta.update { it.copy(editingDisabled = value) }
     }
 
     fun deleteChunk(chunkId: String) {
@@ -308,11 +423,31 @@ class SearchTestViewModel @Inject constructor(
                     embeddingWeight = mutableState.value.embeddingWeight.toDoubleOrNull(),
                     usingReRank = mutableState.value.useReRank,
                 )
-            }.onSuccess { (duration, results) ->
-                mutableState.update { it.copy(isSearching = false, duration = duration, results = results) }
+            }.onSuccess { (duration, extensionInfo, results) ->
+                mutableState.update {
+                    it.copy(
+                        isSearching = false,
+                        duration = duration,
+                        extensionInfo = extensionInfo,
+                        results = results,
+                        status = if (results.isEmpty()) KnowledgeLoadState.Empty else KnowledgeLoadState.Content,
+                    )
+                }
             }.onFailure { error ->
-                mutableState.update { it.copy(isSearching = false, errorMessage = error.message ?: "检索失败") }
+                mutableState.update {
+                    it.copy(
+                        isSearching = false,
+                        errorMessage = error.message ?: "检索失败",
+                        status = KnowledgeLoadState.Error,
+                    )
+                }
             }
         }
     }
+
+}
+
+private fun String.isSupportedDocument(): Boolean {
+    val extension = substringAfterLast('.', "").lowercase()
+    return extension in setOf("pdf", "docx", "txt", "md", "csv", "html", "htm")
 }

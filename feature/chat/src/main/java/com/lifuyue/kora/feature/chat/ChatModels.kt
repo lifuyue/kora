@@ -136,3 +136,20 @@ data class AppSelectorUiState(
     val items: List<AppSelectorItemUiModel> = emptyList(),
     val errorMessage: String? = null,
 )
+
+@Immutable
+data class AppDetailSectionUiModel(
+    val title: String,
+    val items: List<String>,
+)
+
+data class AppDetailUiState(
+    val appId: String,
+    val appName: String = "",
+    val intro: String = "",
+    val type: String = "",
+    val welcomeText: String? = null,
+    val sections: List<AppDetailSectionUiModel> = emptyList(),
+    val isLoading: Boolean = true,
+    val errorMessage: String? = null,
+)

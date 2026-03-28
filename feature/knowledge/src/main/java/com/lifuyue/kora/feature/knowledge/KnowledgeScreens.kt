@@ -14,6 +14,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -64,6 +65,8 @@ fun DatasetBrowserScreen(
     onBack: () -> Unit,
     onQueryChanged: (String) -> Unit,
     onCreateNameChanged: (String) -> Unit,
+    onTypeFilterSelected: (String?) -> Unit,
+    onStatusFilterSelected: (String?) -> Unit,
     onRefresh: () -> Unit,
     onCreateDataset: () -> Unit,
     onDeleteDataset: (String) -> Unit,
@@ -87,6 +90,34 @@ fun DatasetBrowserScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = state.selectedTypeFilter == null,
+                    onClick = { onTypeFilterSelected(null) },
+                    label = { Text("全部类型") },
+                )
+                state.availableTypes.forEach { type ->
+                    FilterChip(
+                        selected = state.selectedTypeFilter == type,
+                        onClick = { onTypeFilterSelected(type) },
+                        label = { Text(type) },
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = state.selectedStatusFilter == null,
+                    onClick = { onStatusFilterSelected(null) },
+                    label = { Text("全部状态") },
+                )
+                state.availableStatuses.forEach { status ->
+                    FilterChip(
+                        selected = state.selectedStatusFilter == status,
+                        onClick = { onStatusFilterSelected(status) },
+                        label = { Text(status) },
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = state.createName,
                     onValueChange = onCreateNameChanged,
@@ -97,17 +128,21 @@ fun DatasetBrowserScreen(
                 Button(onClick = onRefresh) { Text(if (state.isRefreshing) "刷新中" else "刷新") }
             }
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.items, key = { it.datasetId }) { item ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(item.name, style = MaterialTheme.typography.titleMedium)
-                            Text(item.intro.ifBlank { item.type }, style = MaterialTheme.typography.bodyMedium)
-                            Text("向量模型：${item.vectorModel.ifBlank { "未标注" }}", style = MaterialTheme.typography.bodySmall)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(onClick = { onOpenDataset(item.datasetId) }) { Text("Collections") }
-                                TextButton(onClick = { onOpenSearch(item.datasetId) }) { Text("检索测试") }
-                                TextButton(onClick = { onDeleteDataset(item.datasetId) }) { Text("删除") }
+            when (state.status) {
+                KnowledgeLoadState.Empty -> Text("当前筛选下没有数据集。", style = MaterialTheme.typography.bodyMedium)
+                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(state.items, key = { it.datasetId }) { item ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(item.name, style = MaterialTheme.typography.titleMedium)
+                                Text(item.intro.ifBlank { item.type }, style = MaterialTheme.typography.bodyMedium)
+                                Text("向量模型：${item.vectorModel.ifBlank { "未标注" }}", style = MaterialTheme.typography.bodySmall)
+                                Text("更新时间：${item.updateTimeLabel}", style = MaterialTheme.typography.bodySmall)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = { onOpenDataset(item.datasetId) }) { Text("Collections") }
+                                    TextButton(onClick = { onOpenSearch(item.datasetId) }) { Text("检索测试") }
+                                    TextButton(onClick = { onDeleteDataset(item.datasetId) }) { Text("删除") }
+                                }
                             }
                         }
                     }
@@ -135,7 +170,7 @@ fun CollectionManagementScreen(
 ) {
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Collections") },
+            title = { Text(state.datasetName.ifBlank { "Collections" }) },
             navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
             actions = { TextButton(onClick = onRefresh) { Text("刷新") } },
         )
@@ -209,14 +244,19 @@ fun CollectionManagementScreen(
                 }
             }
             Text("Collection 列表", style = MaterialTheme.typography.titleMedium)
-            state.items.forEach { item ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { onOpenCollection(item.collectionId) },
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(item.name, style = MaterialTheme.typography.titleSmall)
-                        Text("${item.type} · ${item.trainingType} · ${item.status}")
-                        Text(item.sourceName, style = MaterialTheme.typography.bodySmall)
+            if (state.status == KnowledgeLoadState.Empty) {
+                Text("当前数据集还没有 collection。", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                state.items.forEach { item ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable { onOpenCollection(item.collectionId) },
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(item.name, style = MaterialTheme.typography.titleSmall)
+                            Text("${item.type} · ${item.trainingType} · ${item.status}")
+                            Text(item.sourceName, style = MaterialTheme.typography.bodySmall)
+                            Text(item.updateTimeLabel, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }
@@ -232,8 +272,10 @@ fun ChunkViewerScreen(
     onStartEditing: (ChunkItemUiModel) -> Unit,
     onQuestionChanged: (String) -> Unit,
     onAnswerChanged: (String) -> Unit,
+    onDisabledChanged: (Boolean) -> Unit,
     onSave: () -> Unit,
     onDelete: (String) -> Unit,
+    onLoadMore: () -> Unit,
 ) {
     Scaffold(topBar = {
         TopAppBar(
@@ -259,6 +301,10 @@ fun ChunkViewerScreen(
                     label = { Text("答案") },
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("禁用该 Chunk")
+                    Switch(checked = state.editingDisabled, onCheckedChange = onDisabledChanged)
+                }
                 Button(onClick = onSave) { Text("保存") }
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -266,6 +312,9 @@ fun ChunkViewerScreen(
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("#${item.chunkIndex} ${item.status}", style = MaterialTheme.typography.labelLarge)
+                            if (state.highlightedDataId == item.dataId) {
+                                Text("当前引用命中", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                            }
                             Text(item.question, style = MaterialTheme.typography.bodyLarge)
                             if (item.answer.isNotBlank()) {
                                 Text(item.answer, style = MaterialTheme.typography.bodyMedium)
@@ -274,6 +323,13 @@ fun ChunkViewerScreen(
                                 TextButton(onClick = { onStartEditing(item) }) { Text("编辑") }
                                 TextButton(onClick = { onDelete(item.dataId) }) { Text("删除") }
                             }
+                        }
+                    }
+                }
+                if (state.canLoadMore) {
+                    item(key = "load_more") {
+                        Button(onClick = onLoadMore, enabled = !state.isLoading, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (state.isLoading) "加载中..." else "加载更多")
                         }
                     }
                 }
@@ -293,6 +349,7 @@ fun SearchTestScreen(
     onEmbeddingWeightChanged: (String) -> Unit,
     onUseReRankChanged: (Boolean) -> Unit,
     onSearch: () -> Unit,
+    onOpenResult: (SearchResultUiModel) -> Unit,
 ) {
     Scaffold(topBar = {
         TopAppBar(
@@ -338,9 +395,15 @@ fun SearchTestScreen(
             if (state.duration.isNotBlank()) {
                 Text("耗时：${state.duration}")
             }
+            if (state.extensionInfo.isNotBlank()) {
+                Text("扩展查询模型：${state.extensionInfo}", style = MaterialTheme.typography.bodySmall)
+            }
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (state.status == KnowledgeLoadState.Empty && !state.isSearching) {
+                Text("未命中结果。", style = MaterialTheme.typography.bodyMedium)
+            }
             state.results.forEach { item ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth().clickable { onOpenResult(item) }) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(item.title, style = MaterialTheme.typography.titleSmall)
                         Text(item.snippet, style = MaterialTheme.typography.bodyMedium)
