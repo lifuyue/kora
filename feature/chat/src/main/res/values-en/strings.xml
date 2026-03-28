@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_title">Chat</string>
+    <string name="chat_back">Back</string>
+    <string name="chat_capabilities">Capabilities</string>
+    <string name="chat_switch_app_title">Switch app</string>
+    <string name="chat_switch_app_current">Current</string>
+    <string name="chat_switch_app_action">Switch</string>
+    <string name="chat_open_app_detail">View current app capabilities</string>
+    <string name="chat_citations_title">%1$d citations</string>
+    <string name="chat_open_citation">View knowledge source</string>
+    <string name="chat_empty_welcome">Start a new conversation. Messages will render here with Markdown and code blocks.</string>
+    <string name="chat_input_label">Message</string>
+    <string name="chat_stop_generation">Stop</string>
+    <string name="chat_sending">Sending...</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_message_role_you">You</string>
+    <string name="chat_message_role_kora">Kora</string>
+    <string name="chat_message_streaming">Generating</string>
+    <string name="chat_message_failed">Generation failed</string>
+    <string name="chat_message_stopped">Generation stopped</string>
+    <string name="chat_copy">Copy</string>
+    <string name="chat_continue_generation">Continue</string>
+    <string name="chat_regenerate">Regenerate</string>
+    <string name="chat_upvote">Upvote</string>
+    <string name="chat_cancel_upvote">Remove upvote</string>
+    <string name="chat_downvote">Downvote</string>
+    <string name="chat_cancel_downvote">Remove downvote</string>
+    <string name="chat_suggested_questions">Suggested questions</string>
+
+    <string name="conversation_list_title">Conversations</string>
+    <string name="conversation_list_clear_all">Clear all</string>
+    <string name="conversation_list_new_conversation">New conversation</string>
+    <string name="conversation_list_search_label">Search conversations</string>
+    <string name="conversation_list_search_placeholder">Search by title or preview</string>
+    <string name="conversation_list_pinned_section">Pinned</string>
+    <string name="conversation_list_all_section">All conversations</string>
+    <string name="conversation_list_empty_title">No conversations yet</string>
+    <string name="conversation_list_empty_body">Tap the new conversation button to start your first exchange. History will appear here.</string>
+</resources>

@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -62,7 +63,7 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("切换 App", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.chat_switch_app_title), style = MaterialTheme.typography.titleLarge)
                 appSelectorUiState.items.forEach { item ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -78,13 +79,21 @@ fun ChatScreen(
                                 }
                             }
                             TextButton(onClick = { onSwitchApp(item.appId) }) {
-                                Text(if (appSelectorUiState.currentAppId == item.appId) "当前" else "切换")
+                                Text(
+                                    stringResource(
+                                        if (appSelectorUiState.currentAppId == item.appId) {
+                                            R.string.chat_switch_app_current
+                                        } else {
+                                            R.string.chat_switch_app_action
+                                        },
+                                    ),
+                                )
                             }
                         }
                     }
                 }
                 TextButton(onClick = onOpenAppDetail, enabled = appSelectorUiState.currentAppId != null) {
-                    Text("查看当前 App 能力")
+                    Text(stringResource(R.string.chat_open_app_detail))
                 }
                 appSelectorUiState.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
@@ -99,7 +108,10 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("引用 ${message.citations.size} 条", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    stringResource(R.string.chat_citations_title, message.citations.size),
+                    style = MaterialTheme.typography.titleLarge,
+                )
                 message.citations.forEach { citation ->
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(
@@ -117,7 +129,7 @@ fun ChatScreen(
                                 Text(citation.scoreLabel, style = MaterialTheme.typography.labelMedium)
                             }
                             TextButton(onClick = { onOpenCitation(citation) }) {
-                                Text("查看知识来源")
+                                Text(stringResource(R.string.chat_open_citation))
                             }
                         }
                     }
@@ -130,7 +142,7 @@ fun ChatScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("聊天")
+                        Text(stringResource(R.string.chat_title))
                         TextButton(onClick = onOpenAppSelector) {
                             Text(appSelectorUiState.currentAppName.ifBlank { uiState.appId })
                         }
@@ -138,12 +150,12 @@ fun ChatScreen(
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Text("返回")
+                        Text(stringResource(R.string.chat_back))
                     }
                 },
                 actions = {
                     TextButton(onClick = onOpenAppDetail) {
-                        Text("能力")
+                        Text(stringResource(R.string.chat_capabilities))
                     }
                 },
             )
@@ -159,7 +171,7 @@ fun ChatScreen(
         ) {
             if (uiState.messages.isEmpty()) {
                 Text(
-                    text = uiState.welcomeText ?: "开始一个新对话，消息会在这里以 Markdown 和代码块形式渲染。",
+                    text = uiState.welcomeText ?: stringResource(R.string.chat_empty_welcome),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -192,7 +204,7 @@ fun ChatScreen(
             OutlinedTextField(
                 value = uiState.input,
                 onValueChange = onInputChanged,
-                label = { Text("输入消息") },
+                label = { Text(stringResource(R.string.chat_input_label)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { onSend() }),
                 modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
@@ -200,14 +212,22 @@ fun ChatScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (uiState.canStopGeneration) {
                     OutlinedButton(onClick = onStopGenerating) {
-                        Text("停止生成")
+                        Text(stringResource(R.string.chat_stop_generation))
                     }
                 }
                 Button(
                     onClick = onSend,
                     enabled = uiState.input.isNotBlank() && !uiState.isSending && !uiState.canStopGeneration,
                 ) {
-                    Text(if (uiState.isSending) "发送中..." else "发送")
+                    Text(
+                        stringResource(
+                            if (uiState.isSending) {
+                                R.string.chat_sending
+                            } else {
+                                R.string.chat_send
+                            },
+                        ),
+                    )
                 }
             }
         }
@@ -236,7 +256,14 @@ private fun MessageCard(
             modifier = Modifier.padding(12.dp),
         ) {
             Text(
-                text = if (message.role == ChatRole.Human) "你" else "Kora",
+                text =
+                    stringResource(
+                        if (message.role == ChatRole.Human) {
+                            R.string.chat_message_role_you
+                        } else {
+                            R.string.chat_message_role_kora
+                        },
+                    ),
                 style = MaterialTheme.typography.titleSmall,
             )
             MarkdownMessage(
@@ -255,9 +282,11 @@ private fun MessageCard(
                 Text(
                     text =
                         when (message.deliveryState) {
-                            MessageDeliveryState.Streaming -> "生成中"
-                            MessageDeliveryState.Failed -> message.errorMessage ?: "生成失败"
-                            MessageDeliveryState.Stopped -> message.errorMessage ?: "已停止生成"
+                            MessageDeliveryState.Streaming -> stringResource(R.string.chat_message_streaming)
+                            MessageDeliveryState.Failed ->
+                                message.errorMessage ?: stringResource(R.string.chat_message_failed)
+                            MessageDeliveryState.Stopped ->
+                                message.errorMessage ?: stringResource(R.string.chat_message_stopped)
                             MessageDeliveryState.Sent -> ""
                         },
                     style = MaterialTheme.typography.labelMedium,
@@ -274,19 +303,19 @@ private fun MessageCard(
                     onClick = onCopy,
                     modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
                 ) {
-                    Text("复制")
+                    Text(stringResource(R.string.chat_copy))
                 }
                 if (message.role == ChatRole.AI) {
                     if (message.deliveryState == MessageDeliveryState.Stopped) {
                         TextButton(onClick = onContinueGeneration) {
-                            Text("继续生成")
+                            Text(stringResource(R.string.chat_continue_generation))
                         }
                     }
                     TextButton(
                         onClick = onRegenerate,
                         modifier = Modifier.testTag(ChatTestTags.messageRegenerateAction(message.messageId)),
                     ) {
-                        Text("重新生成")
+                        Text(stringResource(R.string.chat_regenerate))
                     }
                     TextButton(
                         onClick = {
@@ -300,7 +329,15 @@ private fun MessageCard(
                         },
                         modifier = Modifier.testTag(ChatTestTags.messageUpvoteAction(message.messageId)),
                     ) {
-                        Text(if (message.feedback == MessageFeedback.Upvote) "取消赞" else "点赞")
+                        Text(
+                            stringResource(
+                                if (message.feedback == MessageFeedback.Upvote) {
+                                    R.string.chat_cancel_upvote
+                                } else {
+                                    R.string.chat_upvote
+                                },
+                            ),
+                        )
                     }
                     TextButton(
                         onClick = {
@@ -314,7 +351,15 @@ private fun MessageCard(
                         },
                         modifier = Modifier.testTag(ChatTestTags.messageDownvoteAction(message.messageId)),
                     ) {
-                        Text(if (message.feedback == MessageFeedback.Downvote) "取消踩" else "点踩")
+                        Text(
+                            stringResource(
+                                if (message.feedback == MessageFeedback.Downvote) {
+                                    R.string.chat_cancel_downvote
+                                } else {
+                                    R.string.chat_downvote
+                                },
+                            ),
+                        )
                     }
                 }
             }
@@ -323,11 +368,11 @@ private fun MessageCard(
                     onClick = { onOpenCitation(message.citations.first()) },
                     modifier = Modifier.testTag(ChatTestTags.citationSummary(message.messageId)),
                 ) {
-                    Text("引用 ${message.citations.size} 条")
+                    Text(stringResource(R.string.chat_citations_title, message.citations.size))
                 }
             }
             if (message.suggestedQuestions.isNotEmpty()) {
-                Text("推荐问题", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.chat_suggested_questions), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     message.suggestedQuestions.forEach { question ->
                         OutlinedButton(onClick = { onSuggestedQuestion(question) }) {

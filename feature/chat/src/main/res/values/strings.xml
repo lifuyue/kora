@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_title">聊天</string>
+    <string name="chat_back">返回</string>
+    <string name="chat_capabilities">能力</string>
+    <string name="chat_switch_app_title">切换 App</string>
+    <string name="chat_switch_app_current">当前</string>
+    <string name="chat_switch_app_action">切换</string>
+    <string name="chat_open_app_detail">查看当前 App 能力</string>
+    <string name="chat_citations_title">引用 %1$d 条</string>
+    <string name="chat_open_citation">查看知识来源</string>
+    <string name="chat_empty_welcome">开始一个新对话，消息会在这里以 Markdown 和代码块形式渲染。</string>
+    <string name="chat_input_label">输入消息</string>
+    <string name="chat_stop_generation">停止生成</string>
+    <string name="chat_sending">发送中...</string>
+    <string name="chat_send">发送</string>
+    <string name="chat_message_role_you">你</string>
+    <string name="chat_message_role_kora">Kora</string>
+    <string name="chat_message_streaming">生成中</string>
+    <string name="chat_message_failed">生成失败</string>
+    <string name="chat_message_stopped">已停止生成</string>
+    <string name="chat_copy">复制</string>
+    <string name="chat_continue_generation">继续生成</string>
+    <string name="chat_regenerate">重新生成</string>
+    <string name="chat_upvote">点赞</string>
+    <string name="chat_cancel_upvote">取消赞</string>
+    <string name="chat_downvote">点踩</string>
+    <string name="chat_cancel_downvote">取消踩</string>
+    <string name="chat_suggested_questions">推荐问题</string>
+
+    <string name="conversation_list_title">会话</string>
+    <string name="conversation_list_clear_all">清空全部</string>
+    <string name="conversation_list_new_conversation">新建会话</string>
+    <string name="conversation_list_search_label">搜索会话</string>
+    <string name="conversation_list_search_placeholder">按标题或预览搜索</string>
+    <string name="conversation_list_pinned_section">置顶会话</string>
+    <string name="conversation_list_all_section">全部会话</string>
+    <string name="conversation_list_empty_title">暂无会话</string>
+    <string name="conversation_list_empty_body">点击右下角的新建会话开始第一轮对话，历史记录会显示在这里。</string>
+</resources>

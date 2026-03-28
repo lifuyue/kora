@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_selected">已选中</string>
+    <string name="settings_summary_not_configured">未配置</string>
+    <string name="settings_summary_not_selected">未选择</string>
+
+    <string name="settings_overview_title">设置</string>
+    <string name="settings_overview_section_connection">连接与账号</string>
+    <string name="settings_overview_section_appearance">外观与主题</string>
+    <string name="settings_overview_section_common">常用与信息</string>
+
+    <string name="settings_connection_title">连接配置</string>
+    <string name="settings_connection_server_url_label">Server URL</string>
+    <string name="settings_connection_api_key_label">API Key</string>
+    <string name="settings_connection_test">测试连接</string>
+    <string name="settings_connection_testing">测试中...</string>
+    <string name="settings_connection_save">保存</string>
+    <string name="settings_connection_saving">保存中...</string>
+    <string name="settings_connection_clear">清除</string>
+    <string name="settings_connection_api_key_summary">当前密钥摘要：%1$s</string>
+    <plurals name="settings_connection_success">
+        <item quantity="other">连接成功，发现 %1$d 个 App，耗时 %2$dms</item>
+    </plurals>
+    <string name="settings_connection_validation_error">校验失败：%1$s</string>
+    <string name="settings_connection_auth_error">认证失败：%1$s</string>
+    <string name="settings_connection_network_error">网络错误：%1$s</string>
+    <string name="settings_connection_server_error">服务端错误：%1$s</string>
+
+    <string name="settings_current_app_title">当前 App</string>
+    <string name="settings_theme_title">主题外观</string>
+    <string name="settings_theme_dynamic_color">动态取色</string>
+    <string name="settings_theme_oled">OLED 深色增强</string>
+    <string name="settings_theme_mode_light">浅色</string>
+    <string name="settings_theme_mode_dark">深色</string>
+    <string name="settings_theme_mode_system">跟随系统</string>
+    <string name="settings_theme_mode_oled_dark">OLED 深色</string>
+
+    <string name="settings_chat_preferences_title">聊天偏好</string>
+    <string name="settings_chat_preferences_summary">流式、滚动、字号与引用</string>
+    <string name="settings_chat_preferences_stream">启用流式输出</string>
+    <string name="settings_chat_preferences_auto_scroll">自动滚动到底部</string>
+    <string name="settings_chat_preferences_citations">默认显示引用</string>
+
+    <string name="settings_language_title">语言</string>
+    <string name="settings_language_follow_system">跟随系统</string>
+
+    <string name="settings_storage_title">缓存</string>
+    <string name="settings_storage_summary">查看并清理临时缓存</string>
+    <string name="settings_storage_bucket_database">数据库</string>
+    <string name="settings_storage_bucket_preferences">偏好设置</string>
+    <string name="settings_storage_bucket_temp_cache">临时缓存</string>
+    <string name="settings_storage_clear">清理缓存</string>
+    <string name="settings_storage_clearing">清理中...</string>
+
+    <string name="settings_about_title">关于</string>
+    <string name="settings_about_summary">Kora Android Client</string>
+    <string name="settings_about_feedback">反馈</string>
+    <string name="settings_about_licenses">开源许可</string>
+</resources>

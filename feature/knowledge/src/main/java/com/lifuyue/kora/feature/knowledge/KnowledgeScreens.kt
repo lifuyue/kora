@@ -25,6 +25,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,15 +37,24 @@ fun KnowledgeOverviewScreen(
     onOpenRecentDataset: (String) -> Unit,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text("知识库") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.knowledge_overview_title)) }) },
     ) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("当前 App：${state.selectedAppId ?: "未选择"}", style = MaterialTheme.typography.bodyMedium)
-            Text("数据集 ${state.datasetCount} 个", style = MaterialTheme.typography.headlineSmall)
-            Button(onClick = onOpenDatasets) { Text("进入数据集") }
+            Text(
+                stringResource(
+                    R.string.knowledge_overview_current_app,
+                    state.selectedAppId ?: stringResource(R.string.knowledge_overview_no_app_selected),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                pluralStringResource(R.plurals.knowledge_overview_dataset_count, state.datasetCount, state.datasetCount),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Button(onClick = onOpenDatasets) { Text(stringResource(R.string.knowledge_overview_open_datasets)) }
             state.recentDatasets.forEach { item ->
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable { onOpenRecentDataset(item.datasetId) },

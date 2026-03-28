@@ -100,15 +100,9 @@ class SettingsOverviewViewModel
             connectionFacade.snapshot
                 .map { snapshot ->
                     SettingsOverviewUiState(
-                        connectionSummary = snapshot.serverBaseUrl ?: "未配置",
-                        selectedAppSummary = snapshot.selectedAppId ?: "未选择",
-                        themeSummary =
-                            when (snapshot.appearancePreferences.themeMode) {
-                                ThemeMode.LIGHT -> "浅色"
-                                ThemeMode.DARK -> "深色"
-                                ThemeMode.SYSTEM -> "跟随系统"
-                                ThemeMode.OLED_DARK -> "OLED 深色"
-                            },
+                        serverBaseUrl = snapshot.serverBaseUrl,
+                        selectedAppId = snapshot.selectedAppId,
+                        themeMode = snapshot.appearancePreferences.themeMode,
                     )
                 }
                 .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsOverviewUiState())
@@ -259,7 +253,7 @@ class CacheSettingsViewModel
                 mutableState.value =
                     mutableState.value.copy(
                         isClearing = false,
-                        cacheSizeLabel = formatBytes(cacheManager.getCacheSizeBytes()),
+                        storageBuckets = cacheManager.getStorageBuckets(),
                     )
             }
         }
@@ -268,7 +262,7 @@ class CacheSettingsViewModel
             viewModelScope.launch {
                 mutableState.value =
                     mutableState.value.copy(
-                        cacheSizeLabel = formatBytes(cacheManager.getCacheSizeBytes()),
+                        storageBuckets = cacheManager.getStorageBuckets(),
                     )
             }
         }
@@ -288,11 +282,4 @@ class AboutViewModel
                     licensesUrl = appInfoProvider.licensesUrl(),
                 ),
             ).asStateFlow()
-    }
-
-private fun formatBytes(bytes: Long): String =
-    when {
-        bytes >= 1024L * 1024L -> String.format("%.1f MB", bytes / 1024f / 1024f)
-        bytes >= 1024L -> String.format("%.1f KB", bytes / 1024f)
-        else -> "$bytes B"
     }

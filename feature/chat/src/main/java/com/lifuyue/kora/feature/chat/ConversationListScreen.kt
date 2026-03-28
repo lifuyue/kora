@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -100,14 +101,14 @@ fun ConversationListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("会话") },
+                title = { Text(stringResource(R.string.conversation_list_title)) },
                 actions = {
                     TextButton(
                         onClick = { showClearAllDialog = true },
                         enabled = uiState.canClear,
                         modifier = Modifier.testTag(ChatTestTags.CONVERSATION_CLEAR_ALL),
                     ) {
-                        Text("清空全部")
+                        Text(stringResource(R.string.conversation_list_clear_all))
                     }
                 },
             )
@@ -117,7 +118,7 @@ fun ConversationListScreen(
                 onClick = onNewConversation,
                 modifier = Modifier.testTag(ChatTestTags.CONVERSATION_FAB),
             ) {
-                Text("新建会话")
+                Text(stringResource(R.string.conversation_list_new_conversation))
             }
         },
     ) { innerPadding ->
@@ -132,8 +133,8 @@ fun ConversationListScreen(
             OutlinedTextField(
                 value = uiState.query,
                 onValueChange = onQueryChanged,
-                label = { Text("搜索会话") },
-                placeholder = { Text("按标题或预览搜索") },
+                label = { Text(stringResource(R.string.conversation_list_search_label)) },
+                placeholder = { Text(stringResource(R.string.conversation_list_search_placeholder)) },
                 singleLine = true,
                 modifier =
                     Modifier
@@ -161,7 +162,7 @@ fun ConversationListScreen(
                 ) {
                     if (uiState.pinnedItems.isNotEmpty()) {
                         item(key = "pinned_header") {
-                            ConversationSectionHeader(title = "置顶会话")
+                            ConversationSectionHeader(title = stringResource(R.string.conversation_list_pinned_section))
                         }
                         items(uiState.pinnedItems, key = { it.chatId }) { item ->
                             ConversationListCard(
@@ -173,7 +174,7 @@ fun ConversationListScreen(
                     }
                     if (uiState.otherItems.isNotEmpty()) {
                         item(key = "all_header") {
-                            ConversationSectionHeader(title = "全部会话")
+                            ConversationSectionHeader(title = stringResource(R.string.conversation_list_all_section))
                         }
                         items(uiState.otherItems, key = { it.chatId }) { item ->
                             ConversationListCard(
@@ -677,12 +678,12 @@ private fun EmptyConversationState(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
         ) {
             Text(
-                text = "暂无会话",
+                text = stringResource(R.string.conversation_list_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "点击右下角的新建会话开始第一轮对话，历史记录会显示在这里。",
+                text = stringResource(R.string.conversation_list_empty_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary,
             )

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="knowledge_overview_title">知识库</string>
+    <string name="knowledge_overview_current_app">当前 App：%1$s</string>
+    <string name="knowledge_overview_no_app_selected">未选择</string>
+    <plurals name="knowledge_overview_dataset_count">
+        <item quantity="other">数据集 %1$d 个</item>
+    </plurals>
+    <string name="knowledge_overview_open_datasets">进入数据集</string>
+</resources>

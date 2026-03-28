@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -29,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.lifuyue.kora.R
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatRoutes
 import com.lifuyue.kora.feature.chat.chatGraph
@@ -114,7 +116,7 @@ private fun BootstrapRoute(
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("正在恢复 Kora", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.bootstrap_restoring), style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -125,9 +127,9 @@ private fun OnboardingRoute(
 ) {
     val pages =
         listOf(
-            "欢迎使用 Kora" to "在手机上配置 FastGPT 连接，进入流式聊天与会话管理。",
-            "核心体验" to "M3 提供引导、设置与主题，M4 打通流式聊天、Markdown 与会话恢复。",
-            "下一步" to "测试连接成功后会自动选中第一个可用 App，并进入主界面。",
+            stringResource(R.string.onboarding_page_1_title) to stringResource(R.string.onboarding_page_1_body),
+            stringResource(R.string.onboarding_page_2_title) to stringResource(R.string.onboarding_page_2_body),
+            stringResource(R.string.onboarding_page_3_title) to stringResource(R.string.onboarding_page_3_body),
         )
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
@@ -137,7 +139,7 @@ private fun OnboardingRoute(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Text(
-            text = "${pagerState.currentPage + 1}/${pages.size}",
+            text = stringResource(R.string.onboarding_page_indicator, pagerState.currentPage + 1, pages.size),
             style = MaterialTheme.typography.labelLarge,
         )
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
@@ -163,17 +165,25 @@ private fun OnboardingRoute(
                 }
             },
         ) {
-            Text(if (pagerState.currentPage == pages.lastIndex) "进入连接配置" else "下一步")
+            Text(
+                stringResource(
+                    if (pagerState.currentPage == pages.lastIndex) {
+                        R.string.onboarding_cta_finish
+                    } else {
+                        R.string.onboarding_cta_next
+                    },
+                ),
+            )
         }
     }
 }
 
 private enum class ShellDestination(
-    val label: String,
+    val labelRes: Int,
 ) {
-    Chat("聊天"),
-    Knowledge("知识库"),
-    Settings("设置"),
+    Chat(R.string.nav_chat),
+    Knowledge(R.string.nav_knowledge),
+    Settings(R.string.nav_settings),
 }
 
 @Composable
@@ -189,6 +199,7 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
         bottomBar = {
             NavigationBar {
                 ShellDestination.entries.forEach { destination ->
+                    val label = stringResource(destination.labelRes)
                     NavigationBarItem(
                         selected = selectedTab == destination,
                         onClick = {
@@ -207,8 +218,8 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
                                 restoreState = true
                             }
                         },
-                        icon = { Text(destination.label.take(1)) },
-                        label = { Text(destination.label) },
+                        icon = { Text(label.take(1)) },
+                        label = { Text(label) },
                     )
                 }
             }

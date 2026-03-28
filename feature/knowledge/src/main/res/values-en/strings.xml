@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="knowledge_overview_title">Knowledge</string>
+    <string name="knowledge_overview_current_app">Current app: %1$s</string>
+    <string name="knowledge_overview_no_app_selected">Not selected</string>
+    <plurals name="knowledge_overview_dataset_count">
+        <item quantity="one">%1$d dataset</item>
+        <item quantity="other">%1$d datasets</item>
+    </plurals>
+    <string name="knowledge_overview_open_datasets">Open datasets</string>
+</resources>

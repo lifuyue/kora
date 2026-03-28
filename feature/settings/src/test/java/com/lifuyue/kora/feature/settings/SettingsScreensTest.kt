@@ -1,16 +1,20 @@
 package com.lifuyue.kora.feature.settings
 
+import android.content.Context
+import android.text.format.Formatter
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
@@ -29,6 +33,7 @@ class SettingsScreensTest {
 
     @Test
     fun connectionScreenShowsSuccessResult() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             ConnectionConfigScreen(
                 state =
@@ -54,18 +59,21 @@ class SettingsScreensTest {
         composeRule.onNodeWithTag("server-url").assertIsDisplayed()
         composeRule.onNodeWithTag("api-key").assertIsDisplayed()
         composeRule.onNodeWithTag("connection-result").assertIsDisplayed()
-        composeRule.onNodeWithText("连接成功，发现 1 个 App，耗时 120ms").assertIsDisplayed()
+        composeRule
+            .onNodeWithText(context.resources.getQuantityString(R.plurals.settings_connection_success, 1, 1, 120))
+            .assertIsDisplayed()
     }
 
     @Test
     fun settingsOverviewShowsSummaries() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             SettingsOverviewScreen(
                 state =
                     SettingsOverviewUiState(
-                        connectionSummary = "已连接到 FastGPT",
-                        themeSummary = "OLED 深色",
-                        selectedAppSummary = "Kora App",
+                        serverBaseUrl = "https://fastgpt.example.com",
+                        themeMode = ThemeMode.OLED_DARK,
+                        selectedAppId = "app-42",
                     ),
                 onOpenConnection = {},
                 onOpenCurrentApp = {},
@@ -77,28 +85,41 @@ class SettingsScreensTest {
             )
         }
 
-        composeRule.onNodeWithText("连接与账号").assertExists()
-        composeRule.onNodeWithText("外观与主题").assertExists()
-        composeRule.onNodeWithText("连接配置").assertIsDisplayed()
-        composeRule.onNodeWithText("已连接到 FastGPT").assertIsDisplayed()
-        composeRule.onNodeWithText("Kora App").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_connection)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_appearance)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.settings_connection_title)).assertIsDisplayed()
+        composeRule.onNodeWithText("https://fastgpt.example.com").assertIsDisplayed()
+        composeRule.onNodeWithText("app-42").assertIsDisplayed()
         composeRule
             .onNodeWithTag("settings-overview-scroll")
-            .performScrollToNode(hasText("OLED 深色"))
-        composeRule.onNodeWithText("OLED 深色").assertIsDisplayed()
+            .performScrollToNode(hasText(context.getString(R.string.settings_theme_mode_oled_dark)))
+        composeRule.onNodeWithText(context.getString(R.string.settings_theme_mode_oled_dark)).assertIsDisplayed()
         composeRule.onNodeWithTag("settings-current-app").performClick()
         composeRule
             .onNodeWithTag("settings-overview-scroll")
             .performScrollToNode(hasTestTag("settings-chat-preferences"))
-        composeRule.onNodeWithText("常用与信息").assertIsDisplayed()
-        assertEquals(1, composeRule.onAllNodesWithText("聊天偏好").fetchSemanticsNodes().size)
-        assertEquals(1, composeRule.onAllNodesWithText("语言").fetchSemanticsNodes().size)
-        assertEquals(1, composeRule.onAllNodesWithText("缓存").fetchSemanticsNodes().size)
-        assertEquals(1, composeRule.onAllNodesWithText("关于").fetchSemanticsNodes().size)
+        composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_common)).assertIsDisplayed()
+        assertEquals(
+            1,
+            composeRule.onAllNodesWithText(context.getString(R.string.settings_chat_preferences_title)).fetchSemanticsNodes().size,
+        )
+        assertEquals(
+            1,
+            composeRule.onAllNodesWithText(context.getString(R.string.settings_language_title)).fetchSemanticsNodes().size,
+        )
+        assertEquals(
+            1,
+            composeRule.onAllNodesWithText(context.getString(R.string.settings_storage_title)).fetchSemanticsNodes().size,
+        )
+        assertEquals(
+            1,
+            composeRule.onAllNodesWithText(context.getString(R.string.settings_about_title)).fetchSemanticsNodes().size,
+        )
     }
 
     @Test
     fun themeScreenDisplaysSwitchesAndSelection() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             ThemeAppearanceScreen(
                 state =
@@ -113,7 +134,7 @@ class SettingsScreensTest {
             )
         }
 
-        composeRule.onNodeWithText("OLED 深色").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_theme_mode_oled_dark)).assertIsDisplayed()
         composeRule.onNodeWithTag("dynamic-color").assertIsDisplayed()
     }
 
@@ -143,6 +164,7 @@ class SettingsScreensTest {
 
     @Test
     fun languageScreenShowsSelectedOption() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             LanguageSettingsScreen(
                 state =
@@ -153,27 +175,64 @@ class SettingsScreensTest {
             )
         }
 
-        composeRule.onNodeWithText("语言").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_language_title)).assertIsDisplayed()
         composeRule.onNodeWithTag("language-option-en").assertIsDisplayed()
         composeRule.onNodeWithText("English").assertIsDisplayed()
     }
 
     @Test
     fun cacheScreenShowsSizeAndAction() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             CacheSettingsScreen(
-                state = CacheSettingsUiState(cacheSizeLabel = "2.0 KB"),
+                state =
+                    CacheSettingsUiState(
+                        storageBuckets =
+                            mapOf(
+                                StorageBucket.DATABASE to 2_048L,
+                                StorageBucket.PREFERENCES to 512L,
+                                StorageBucket.TEMP_CACHE to 1_536L,
+                            ),
+                    ),
                 onClearCache = {},
             )
         }
 
-        composeRule.onNodeWithText("缓存").assertIsDisplayed()
-        composeRule.onNodeWithText("2.0 KB").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_storage_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_storage_bucket_database)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_storage_bucket_preferences)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_storage_bucket_temp_cache)).assertIsDisplayed()
+        composeRule.onNodeWithText(Formatter.formatShortFileSize(context, 2_048L)).assertIsDisplayed()
+        composeRule.onNodeWithText(Formatter.formatShortFileSize(context, 512L)).assertIsDisplayed()
+        composeRule.onNodeWithText(Formatter.formatShortFileSize(context, 1_536L)).assertIsDisplayed()
+        composeRule.onNodeWithTag("clear-cache").assertIsDisplayed()
+    }
+
+    @Test
+    fun cacheScreen_onlyTempCacheShowsClearAction() {
+        composeRule.setContent {
+            CacheSettingsScreen(
+                state =
+                    CacheSettingsUiState(
+                        storageBuckets =
+                            mapOf(
+                                StorageBucket.DATABASE to 256L,
+                                StorageBucket.PREFERENCES to 128L,
+                                StorageBucket.TEMP_CACHE to 64L,
+                            ),
+                    ),
+                onClearCache = {},
+            )
+        }
+
+        assertEquals(0, composeRule.onAllNodesWithTag("clear-cache-database").fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithTag("clear-cache-preferences").fetchSemanticsNodes().size)
         composeRule.onNodeWithTag("clear-cache").assertIsDisplayed()
     }
 
     @Test
     fun aboutScreenShowsVersionAndLinks() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             AboutScreen(
                 state =
@@ -187,7 +246,7 @@ class SettingsScreensTest {
             )
         }
 
-        composeRule.onNodeWithText("关于").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_about_title)).assertIsDisplayed()
         composeRule.onNodeWithText("1.2.3").assertIsDisplayed()
         composeRule.onNodeWithTag("about-feedback").assertIsDisplayed()
         composeRule.onNodeWithTag("about-licenses").assertIsDisplayed()

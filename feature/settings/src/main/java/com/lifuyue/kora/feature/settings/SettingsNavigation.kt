@@ -2,6 +2,7 @@ package com.lifuyue.kora.feature.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -165,9 +166,10 @@ fun AboutRoute(
         hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
     AboutScreen(
         state = uiState,
-        onOpenFeedback = {},
-        onOpenLicenses = {},
+        onOpenFeedback = { uriHandler.openUri(uiState.feedbackUrl) },
+        onOpenLicenses = { uriHandler.openUri(uiState.licensesUrl) },
     )
 }

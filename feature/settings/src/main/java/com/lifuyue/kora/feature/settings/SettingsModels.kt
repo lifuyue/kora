@@ -20,9 +20,9 @@ data class SettingsEntryUiModel(
 )
 
 data class SettingsOverviewUiState(
-    val connectionSummary: String = "未配置",
-    val themeSummary: String = "跟随系统",
-    val selectedAppSummary: String = "未选择",
+    val serverBaseUrl: String? = null,
+    val selectedAppId: String? = null,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
 )
 
 data class ChatPreferencesUiState(
@@ -37,7 +37,7 @@ data class LanguageSettingsUiState(
 )
 
 data class CacheSettingsUiState(
-    val cacheSizeLabel: String = "0 B",
+    val storageBuckets: Map<StorageBucket, Long> = StorageBucket.entries.associateWith { 0L },
     val isClearing: Boolean = false,
 )
 
@@ -52,3 +52,9 @@ data class ThemeAppearanceUiState(
     val dynamicColorEnabled: Boolean = true,
     val oledEnabled: Boolean = false,
 )
+
+enum class StorageBucket {
+    DATABASE,
+    PREFERENCES,
+    TEMP_CACHE,
+}
