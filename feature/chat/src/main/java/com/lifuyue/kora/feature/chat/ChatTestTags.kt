@@ -17,6 +17,10 @@ object ChatTestTags {
     const val RENAME_CONVERSATION_INPUT = "rename_conversation_input"
     const val CONVERSATION_ITEM_PREFIX = "conversation_item_"
     const val CHAT_INPUT = "chat_input"
+    const val CHAT_ATTACHMENT_IMAGE_PICK = "chat_attachment_pick_image"
+    const val CHAT_ATTACHMENT_FILE_PICK = "chat_attachment_pick_file"
+    const val CHAT_ATTACHMENT_LIST = "chat_attachment_list"
+    const val CHAT_ATTACHMENT_ITEM_PREFIX = "chat_attachment_item_"
     const val CHAT_LIST = "chat_list"
     const val CHAT_SKELETON = "chat_skeleton"
     const val AUTO_SCROLL_RESUME = "auto_scroll_resume"
@@ -46,4 +50,6 @@ object ChatTestTags {
     ): String = "interactive_field_${messageId}_$fieldId"
 
     fun interactiveSubmit(messageId: String): String = "interactive_submit_$messageId"
+
+    fun attachmentItem(localUri: String): String = "${CHAT_ATTACHMENT_ITEM_PREFIX}$localUri"
 }

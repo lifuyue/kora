@@ -14,4 +14,17 @@
     <string name="nav_chat">聊天</string>
     <string name="nav_knowledge">知识库</string>
     <string name="nav_settings">设置</string>
+    <string name="chat_attachment_add_image">添加图片</string>
+    <string name="chat_attachment_add_file">添加文件</string>
+    <string name="chat_attachment_remove">移除</string>
+    <string name="chat_attachment_retry">重试</string>
+    <string name="chat_attachment_cancel">取消上传</string>
+    <string name="chat_attachment_uploading">上传中</string>
+    <string name="chat_attachment_failed">上传失败</string>
+    <string name="chat_attachment_uploaded">已上传</string>
+    <string name="chat_attachment_cancelled">已取消</string>
+    <string name="chat_error_attachment_type_not_allowed">所选文件类型不支持</string>
+    <string name="chat_error_attachment_limit_reached">最多只能添加 %1$d 个附件</string>
+    <string name="chat_error_attachment_upload_failed">附件上传失败</string>
+    <string name="chat_attachment_size_bytes">%1$s B</string>
 </resources>

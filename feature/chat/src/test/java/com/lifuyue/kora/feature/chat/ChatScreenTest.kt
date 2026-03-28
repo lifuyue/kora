@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ChatRole
@@ -63,14 +64,86 @@ class ChatScreenTest {
         }
 
         composeRule
-            .onAllNodesWithText(context.getString(R.string.chat_copy), useUnmergedTree = true)
+            .onAllNodesWithText(context.chatString("chat_copy"), useUnmergedTree = true)
             .assertCountEquals(1)
         composeRule
-            .onAllNodesWithText(context.getString(R.string.chat_regenerate), useUnmergedTree = true)
+            .onAllNodesWithText(context.chatString("chat_regenerate"), useUnmergedTree = true)
             .assertCountEquals(1)
         composeRule
             .onAllNodesWithText(context.getString(R.string.markdown_copy_code), useUnmergedTree = true)
             .assertCountEquals(1)
+    }
+
+    @Test
+    fun composerShowsAttachmentActionsAndPreviewControls() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        var pickedImage = false
+        var pickedFile = false
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        attachmentConfig =
+                            ChatAttachmentConfig(
+                                canSelectImg = true,
+                                canSelectFile = true,
+                            ),
+                        attachments =
+                            listOf(
+                                AttachmentDraftUiModel(
+                                    displayName = "picture.png",
+                                    localUri = "content://local/picture.png",
+                                    mimeType = "image/png",
+                                    kind = AttachmentKind.Image,
+                                    uploadStatus = AttachmentUploadStatus.Uploaded,
+                                ),
+                                AttachmentDraftUiModel(
+                                    displayName = "uploading.pdf",
+                                    localUri = "content://local/uploading.pdf",
+                                    mimeType = "application/pdf",
+                                    kind = AttachmentKind.File,
+                                    uploadStatus = AttachmentUploadStatus.Uploading,
+                                    progress = 0.5f,
+                                ),
+                                AttachmentDraftUiModel(
+                                    displayName = "failed.txt",
+                                    localUri = "content://local/failed.txt",
+                                    mimeType = "text/plain",
+                                    kind = AttachmentKind.File,
+                                    uploadStatus = AttachmentUploadStatus.Failed,
+                                    errorMessage = "上传失败",
+                                ),
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onPickImage = { pickedImage = true },
+                onPickFile = { pickedFile = true },
+                onRemoveAttachment = {},
+                onRetryAttachment = {},
+                onCancelAttachmentUpload = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_LIST).assertIsDisplayed()
+        composeRule.onNodeWithText("picture.png").assertIsDisplayed()
+        composeRule.onNodeWithText("uploading.pdf").assertIsDisplayed()
+        composeRule.onNodeWithText("failed.txt").assertExists()
+        composeRule.onNodeWithText(context.chatString("chat_attachment_cancel"), useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText(context.chatString("chat_attachment_retry"), useUnmergedTree = true).assertExists()
+        composeRule.runOnIdle {
+            assertTrue(pickedImage)
+            assertTrue(pickedFile)
+        }
     }
 
     @Test
@@ -130,8 +203,8 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithText(context.getString(R.string.chat_stop_generation)).assertIsDisplayed()
-        composeRule.onNodeWithText(context.getString(R.string.chat_message_streaming)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.chatString("chat_stop_generation")).assertIsDisplayed()
+        composeRule.onNodeWithText(context.chatString("chat_message_streaming")).assertIsDisplayed()
     }
 
     @Test
@@ -167,7 +240,7 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithText(context.getString(R.string.chat_continue_generation)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.chatString("chat_continue_generation")).assertIsDisplayed()
     }
 
     @Test

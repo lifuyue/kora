@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -23,6 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -42,7 +45,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.lifuyue.kora.core.common.ChatRole
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -56,6 +62,11 @@ fun ChatScreen(
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
+    onPickImage: () -> Unit = {},
+    onPickFile: () -> Unit = {},
+    onRemoveAttachment: (String) -> Unit = {},
+    onRetryAttachment: (String) -> Unit = {},
+    onCancelAttachmentUpload: (String) -> Unit = {},
     onStopGenerating: () -> Unit,
     onContinueGeneration: () -> Unit,
     onFeedback: (ChatMessageUiModel, MessageFeedback) -> Unit,
@@ -269,12 +280,27 @@ fun ChatScreen(
                     modifier = Modifier.testTag(ChatTestTags.AUTO_SCROLL_RESUME),
                 )
             }
+            if (uiState.attachments.isNotEmpty() || uiState.attachmentConfig.hasAnySelectionType) {
+                AttachmentComposer(
+                    attachments = uiState.attachments,
+                    canPickImage = uiState.attachmentConfig.canSelectImg,
+                    canPickFile = uiState.attachmentConfig.canSelectFile ||
+                        uiState.attachmentConfig.canSelectVideo ||
+                        uiState.attachmentConfig.canSelectAudio ||
+                        uiState.attachmentConfig.canSelectCustomFileExtension,
+                    onPickImage = onPickImage,
+                    onPickFile = onPickFile,
+                    onRemoveAttachment = onRemoveAttachment,
+                    onRetryAttachment = onRetryAttachment,
+                    onCancelAttachmentUpload = onCancelAttachmentUpload,
+                )
+            }
             OutlinedTextField(
                 value = uiState.input,
                 onValueChange = onInputChanged,
                 label = { Text(stringResource(R.string.chat_input_label)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { onSend() }),
+                keyboardActions = KeyboardActions(onSend = { if (uiState.canSend) onSend() }),
                 modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -285,7 +311,7 @@ fun ChatScreen(
                 }
                 Button(
                     onClick = onSend,
-                    enabled = uiState.input.isNotBlank() && !uiState.isSending && !uiState.canStopGeneration,
+                    enabled = uiState.canSend,
                 ) {
                     Text(
                         stringResource(
@@ -344,6 +370,149 @@ private fun ChatLoadingSkeleton(modifier: Modifier = Modifier) {
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.fillMaxWidth(if (index == 2) 0.6f else 0.82f).height(16.dp),
                     ) {}
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentComposer(
+    attachments: List<AttachmentDraftUiModel>,
+    canPickImage: Boolean,
+    canPickFile: Boolean,
+    onPickImage: () -> Unit,
+    onPickFile: () -> Unit,
+    onRemoveAttachment: (String) -> Unit,
+    onRetryAttachment: (String) -> Unit,
+    onCancelAttachmentUpload: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (canPickImage) {
+                OutlinedButton(onClick = onPickImage, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK)) {
+                    Text(chatString("chat_attachment_add_image"))
+                }
+            }
+            if (canPickFile) {
+                OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK)) {
+                    Text(chatString("chat_attachment_add_file"))
+                }
+            }
+        }
+        if (attachments.isNotEmpty()) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_ATTACHMENT_LIST),
+            ) {
+                attachments.forEach { attachment ->
+                    AttachmentPreviewCard(
+                        attachment = attachment,
+                        onRemoveAttachment = onRemoveAttachment,
+                        onRetryAttachment = onRetryAttachment,
+                        onCancelAttachmentUpload = onCancelAttachmentUpload,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentPreviewCard(
+    attachment: AttachmentDraftUiModel,
+    onRemoveAttachment: (String) -> Unit,
+    onRetryAttachment: (String) -> Unit,
+    onCancelAttachmentUpload: (String) -> Unit,
+) {
+    Surface(
+        tonalElevation = 1.dp,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.attachmentItem(attachment.localUri)),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (attachment.kind == AttachmentKind.Image) {
+                    AsyncImage(
+                        model = Uri.parse(attachment.localUri),
+                        contentDescription = attachment.displayName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(64.dp).clip(MaterialTheme.shapes.small),
+                    )
+                } else {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.size(64.dp),
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            Text(attachment.kind.name, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(attachment.displayName, style = MaterialTheme.typography.titleSmall)
+                    attachment.sizeBytes?.let { sizeBytes ->
+                        val locale = LocalContext.current.resources.configuration.locales[0]
+                        Text(
+                            chatString(
+                                "chat_attachment_size_bytes",
+                                NumberFormat.getIntegerInstance(locale).format(sizeBytes),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    Text(
+                        text =
+                            when (attachment.uploadStatus) {
+                                AttachmentUploadStatus.Idle -> chatString("chat_attachment_uploading")
+                                AttachmentUploadStatus.Uploading -> chatString("chat_attachment_uploading")
+                                AttachmentUploadStatus.Uploaded -> chatString("chat_attachment_uploaded")
+                                AttachmentUploadStatus.Failed -> attachment.errorMessage ?: chatString("chat_attachment_failed")
+                                AttachmentUploadStatus.Cancelled -> chatString("chat_attachment_cancelled")
+                            },
+                        color =
+                            if (attachment.uploadStatus == AttachmentUploadStatus.Failed) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.secondary
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                TextButton(onClick = { onRemoveAttachment(attachment.localUri) }) {
+                    Text(chatString("chat_attachment_remove"))
+                }
+            }
+            if (attachment.uploadStatus == AttachmentUploadStatus.Uploading) {
+                LinearProgressIndicator(
+                    progress = { attachment.progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(onClick = { onCancelAttachmentUpload(attachment.localUri) }) {
+                    Text(chatString("chat_attachment_cancel"))
+                }
+            }
+            if (attachment.uploadStatus == AttachmentUploadStatus.Failed) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { onRetryAttachment(attachment.localUri) }) {
+                        Text(chatString("chat_attachment_retry"))
+                    }
                 }
             }
         }

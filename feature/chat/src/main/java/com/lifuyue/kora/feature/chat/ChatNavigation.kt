@@ -1,5 +1,8 @@
 package com.lifuyue.kora.feature.chat
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -127,6 +130,18 @@ private fun ChatRoute(
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val appSelectorUiState = appSelectorViewModel.uiState.collectAsStateWithLifecycle()
     var showAppSelector by remember { mutableStateOf(false) }
+    val imagePickerLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
+            if (!uris.isNullOrEmpty()) {
+                viewModel.addAttachments(uris)
+            }
+        }
+    val filePickerLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
+            if (!uris.isNullOrEmpty()) {
+                viewModel.addAttachments(uris)
+            }
+        }
     ChatScreen(
         uiState = uiState.value,
         appSelectorUiState = appSelectorUiState.value,
@@ -134,6 +149,23 @@ private fun ChatRoute(
         onBack = onBack,
         onInputChanged = viewModel::updateInput,
         onSend = viewModel::send,
+        onPickImage = {
+            val state = uiState.value
+            val mimeTypes = state.attachmentConfig.allowedMimeTypes(AttachmentKind.Image)
+            if (canLaunchAttachmentPicker(state.attachmentConfig, state.attachments.size, AttachmentKind.Image)) {
+                imagePickerLauncher.launch(mimeTypes)
+            }
+        },
+        onPickFile = {
+            val state = uiState.value
+            val mimeTypes = state.attachmentConfig.allowedMimeTypes(AttachmentKind.File)
+            if (canLaunchAttachmentPicker(state.attachmentConfig, state.attachments.size, AttachmentKind.File)) {
+                filePickerLauncher.launch(mimeTypes)
+            }
+        },
+        onRemoveAttachment = viewModel::removeAttachment,
+        onRetryAttachment = viewModel::retryAttachment,
+        onCancelAttachmentUpload = viewModel::cancelAttachmentUpload,
         onStopGenerating = viewModel::stopGeneration,
         onContinueGeneration = viewModel::continueGeneration,
         onFeedback = viewModel::updateFeedback,

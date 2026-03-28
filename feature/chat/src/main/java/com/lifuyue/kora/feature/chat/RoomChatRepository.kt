@@ -1,6 +1,7 @@
 package com.lifuyue.kora.feature.chat
 
 import android.content.Context
+import android.net.Uri
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.NetworkError
 import com.lifuyue.kora.core.database.dao.ConversationDao
@@ -33,6 +34,7 @@ import com.lifuyue.kora.core.network.SseEventData
 import com.lifuyue.kora.core.network.SseStreamClient
 import com.lifuyue.kora.core.network.UpdateHistoryRequest
 import com.lifuyue.kora.core.network.UpdateUserFeedbackRequest
+import com.lifuyue.kora.core.network.UploadedAssetRef
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +61,12 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
+import java.io.File
 import java.time.Instant
 
 typealias RoomBackedChatRepository = RoomChatRepository
@@ -85,14 +93,18 @@ class RoomChatRepository
         private var localId = 0L
         private var lastCreatedAt = 0L
 
-        override suspend fun bootstrapChat(appId: String): ChatBootstrap {
-            val data = api.initChat(appId = appId, chatId = null).data
-            val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: nextId("chat")
+        override suspend fun bootstrapChat(
+            appId: String,
+            chatId: String?,
+        ): ChatBootstrap {
+            val data = api.initChat(appId = appId, chatId = chatId).data
+            val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: chatId?.takeIf { it.isNotBlank() } ?: nextId("chat")
             return ChatBootstrap(
                 chatId = resolvedChatId,
                 title = data?.title.orEmpty(),
                 welcomeText = data?.welcomeText,
                 questionGuide = data?.questionGuide,
+                attachmentConfig = data?.fileSelectConfig.toChatAttachmentConfig(),
             ).also { chatBootstrapByChatId[resolvedChatId] = it }
         }
 
@@ -382,9 +394,11 @@ class RoomChatRepository
             appId: String,
             chatId: String?,
             text: String,
+            attachments: List<AttachmentDraftUiModel>,
         ): String {
             val prompt = text.trim()
-            require(prompt.isNotEmpty()) { "消息不能为空" }
+            val uploadedAttachments = attachments.filter { it.uploadStatus == AttachmentUploadStatus.Uploaded && it.uploadedRef != null }
+            require(prompt.isNotEmpty() || uploadedAttachments.isNotEmpty()) { "消息不能为空" }
 
             val initData =
                 if (chatId == null) {
@@ -403,16 +417,21 @@ class RoomChatRepository
                         title = initData.title.orEmpty(),
                         welcomeText = initData.welcomeText,
                         questionGuide = initData.questionGuide,
+                        attachmentConfig = initData.fileSelectConfig.toChatAttachmentConfig(),
                     )
             }
             val createdAt = nextCreatedAt()
+            val previewText =
+                prompt.ifBlank {
+                    uploadedAttachments.joinToString(separator = "、") { it.displayName }
+                }
             val humanMessage =
                 newMessageEntity(
                     dataId = nextId("human"),
                     chatId = resolvedChatId,
                     appId = appId,
                     role = ChatRole.Human,
-                    markdown = prompt,
+                    markdown = previewText,
                     sendStatus = "sent",
                     isStreaming = false,
                     createdAt = createdAt,
@@ -430,8 +449,8 @@ class RoomChatRepository
                 title =
                     conversationDao.getConversationByChatId(resolvedChatId)?.displayTitle
                         ?: initData?.title?.takeIf { it.isNotBlank() }
-                        ?: prompt.take(18).ifBlank { context.getString(R.string.chat_repository_new_conversation_title) },
-                preview = prompt,
+                        ?: previewText.take(18).ifBlank { context.getString(R.string.chat_repository_new_conversation_title) },
+                preview = previewText,
             )
             messageDao.upsertAll(listOf(humanMessage, assistantMessage))
 
@@ -440,6 +459,11 @@ class RoomChatRepository
                 chatId = resolvedChatId,
                 prompt = prompt,
                 assistantMessageId = assistantMessage.dataId,
+                userMessage =
+                    ChatCompletionMessageParam(
+                        role = "user",
+                        content = buildChatCompletionContent(prompt, uploadedAttachments),
+                    ),
             )
             return resolvedChatId
         }
@@ -537,6 +561,44 @@ class RoomChatRepository
                     userBadFeedback = if (feedback == MessageFeedback.Downvote) "downvote" else null,
                 ),
             )
+        }
+
+        override suspend fun uploadAttachment(
+            appId: String,
+            chatId: String?,
+            attachment: AttachmentDraftUiModel,
+            onProgress: (Float) -> Unit,
+        ): UploadedAssetRef {
+            val uri = Uri.parse(attachment.localUri)
+            val metadata = resolveAttachmentMetadata(context, uri)
+            val displayName = metadata.displayName.ifBlank { attachment.displayName }
+            val mimeType = metadata.mimeType.ifBlank { attachment.mimeType }.ifBlank { "application/octet-stream" }
+            val tempFile = File.createTempFile("chat-upload-", displayName.sanitizeUploadSuffix(), context.cacheDir)
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    tempFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                } ?: throw IllegalStateException(context.chatString("chat_error_attachment_upload_failed"))
+
+                val response =
+                    api.uploadChatAttachment(
+                        file =
+                            MultipartBody.Part.createFormData(
+                                "file",
+                                displayName,
+                                tempFile.asProgressRequestBody(
+                                    contentType = mimeType.toMediaType(),
+                                    onProgress = onProgress,
+                                ),
+                            ),
+                        appId = appId.toRequestBody("text/plain".toMediaType()),
+                        chatId = chatId?.takeIf(String::isNotBlank)?.toRequestBody("text/plain".toMediaType()),
+                    )
+                return response.data ?: throw IllegalStateException(context.chatString("chat_error_attachment_upload_failed"))
+            } finally {
+                tempFile.delete()
+            }
         }
 
         override suspend fun savePendingInteractiveDraft(
@@ -1689,3 +1751,40 @@ private fun JsonElement.collectCitationCandidates(): List<CitationDto> =
         }
         else -> emptyList()
     }
+
+private fun File.asProgressRequestBody(
+    contentType: okhttp3.MediaType,
+    onProgress: (Float) -> Unit,
+): RequestBody =
+    object : RequestBody() {
+        override fun contentType(): okhttp3.MediaType = contentType
+
+        override fun contentLength(): Long = length()
+
+        override fun writeTo(sink: BufferedSink) {
+            val totalBytes = length().coerceAtLeast(0L)
+            var writtenBytes = 0L
+            inputStream().use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read == -1) {
+                        break
+                    }
+                    sink.write(buffer, 0, read)
+                    writtenBytes += read
+                    if (totalBytes > 0L) {
+                        onProgress((writtenBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f))
+                    }
+                }
+            }
+            if (totalBytes == 0L) {
+                onProgress(1f)
+            }
+        }
+    }
+
+private fun String.sanitizeUploadSuffix(): String {
+    val suffix = substringAfterLast('.', missingDelimiterValue = "").takeIf { it.isNotBlank() }
+    return if (suffix == null) ".bin" else ".$suffix"
+}

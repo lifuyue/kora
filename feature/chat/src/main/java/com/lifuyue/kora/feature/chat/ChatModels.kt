@@ -53,14 +53,35 @@ enum class ConversationExportFormat {
 
 @Immutable
 data class AttachmentDraftUiModel(
+    val displayName: String,
     val localUri: String,
     val mimeType: String,
+    val sizeBytes: Long? = null,
     val kind: AttachmentKind,
     val uploadStatus: AttachmentUploadStatus = AttachmentUploadStatus.Idle,
     val uploadedRef: UploadedAssetRef? = null,
     val progress: Float = 0f,
     val errorMessage: String? = null,
 )
+
+@Immutable
+data class ChatAttachmentConfig(
+    val maxFiles: Int = 10,
+    val canSelectFile: Boolean = false,
+    val canSelectImg: Boolean = false,
+    val canSelectVideo: Boolean = false,
+    val canSelectAudio: Boolean = false,
+    val canSelectCustomFileExtension: Boolean = false,
+    val customFileExtensionList: List<String> = emptyList(),
+) {
+    val hasAnySelectionType: Boolean
+        get() =
+            canSelectFile ||
+                canSelectImg ||
+                canSelectVideo ||
+                canSelectAudio ||
+                canSelectCustomFileExtension
+}
 
 @Immutable
 data class InteractiveFieldUiModel(
@@ -231,6 +252,7 @@ data class ChatUiState(
     val autoScrollEnabled: Boolean = true,
     val isInitialLoading: Boolean = false,
     val attachments: List<AttachmentDraftUiModel> = emptyList(),
+    val attachmentConfig: ChatAttachmentConfig = ChatAttachmentConfig(),
     val pendingInteractiveCard: InteractiveCardUiModel? = null,
     val speechInputState: SpeechInputUiState = SpeechInputUiState(),
     val ttsPlaybackState: TtsPlaybackUiState = TtsPlaybackUiState(),
@@ -238,6 +260,13 @@ data class ChatUiState(
 ) {
     val canStopGeneration: Boolean
         get() = messages.any { it.isStreaming }
+
+    val canSend: Boolean
+        get() =
+            !isSending &&
+                !canStopGeneration &&
+                (input.isNotBlank() || attachments.any { it.uploadStatus == AttachmentUploadStatus.Uploaded }) &&
+                attachments.none { it.uploadStatus == AttachmentUploadStatus.Uploading || it.uploadStatus == AttachmentUploadStatus.Failed }
 }
 
 @Immutable

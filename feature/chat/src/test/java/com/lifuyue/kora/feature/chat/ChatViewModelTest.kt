@@ -1,10 +1,11 @@
 package com.lifuyue.kora.feature.chat
 
-import android.content.ContextWrapper
 import androidx.lifecycle.SavedStateHandle
+import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -12,10 +13,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class ChatViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -28,6 +37,7 @@ class ChatViewModelTest {
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
+                    context = ApplicationProvider.getApplicationContext(),
                     chatRepository = repository,
                     strings = strings,
                 )
@@ -53,6 +63,7 @@ class ChatViewModelTest {
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
+                    context = ApplicationProvider.getApplicationContext(),
                     chatRepository = repository,
                     strings = strings,
                 )
@@ -69,12 +80,51 @@ class ChatViewModelTest {
         }
 
     @Test
+    fun sendIsBlockedWhileAssistantIsStreaming() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val viewModel =
+                ChatViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
+                    context = ApplicationProvider.getApplicationContext(),
+                    chatRepository = repository,
+                    strings = FakeChatStrings(),
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+            repository.emitMessages(
+                "chat-1",
+                listOf(
+                    ChatMessageUiModel(
+                        messageId = "assistant-1",
+                        chatId = "chat-1",
+                        appId = "app-1",
+                        role = ChatRole.AI,
+                        markdown = "streaming",
+                        isStreaming = true,
+                        deliveryState = MessageDeliveryState.Streaming,
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.canSend)
+
+            viewModel.updateInput("should not send")
+            viewModel.send()
+            advanceUntilIdle()
+
+            assertEquals(null, repository.sentText)
+            assertEquals("should not send", viewModel.uiState.value.input)
+            collectJob.cancel()
+        }
+
+    @Test
     fun regenerateStopAndFeedbackDelegateToRepository() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
+                    context = ApplicationProvider.getApplicationContext(),
                     chatRepository = repository,
                     strings = FakeChatStrings(),
                 )
@@ -107,6 +157,7 @@ class ChatViewModelTest {
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
+                    context = ApplicationProvider.getApplicationContext(),
                     chatRepository = repository,
                     strings = FakeChatStrings(),
                 )
@@ -120,12 +171,149 @@ class ChatViewModelTest {
         }
 
     @Test
+    fun addAttachmentsUploadsAndEnforcesLimit() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val strings = FakeChatStrings()
+            val repository = RecordingChatRepository(
+                bootstrapAttachmentConfig =
+                    ChatAttachmentConfig(
+                        maxFiles = 1,
+                        canSelectCustomFileExtension = true,
+                        customFileExtensionList = listOf(".png"),
+                    ),
+            )
+            val viewModel =
+                ChatViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
+                    context = ApplicationProvider.getApplicationContext(),
+                    chatRepository = repository,
+                    strings = FakeChatStrings(),
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            viewModel.addAttachments(listOf(android.net.Uri.parse("content://local/photo.png")))
+            advanceUntilIdle()
+
+            val uploaded = viewModel.uiState.value.attachments.single()
+            assertEquals("photo.png", uploaded.displayName)
+            assertEquals(AttachmentUploadStatus.Uploaded, uploaded.uploadStatus)
+            assertNotNull(uploaded.uploadedRef)
+
+            viewModel.addAttachments(listOf(android.net.Uri.parse("content://local/second.png")))
+            advanceUntilIdle()
+
+            assertEquals(1, viewModel.uiState.value.attachments.size)
+            assertEquals(strings.attachmentLimitReached(1), viewModel.uiState.value.errorMessage)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun failedAttachmentCanRetryAndCancelledAttachmentStopsUploading() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val strings = FakeChatStrings()
+            val startedUpload = CompletableDeferred<Unit>()
+            val attemptsByName = mutableMapOf<String, Int>()
+            val repository =
+                RecordingChatRepository(
+                    bootstrapAttachmentConfig =
+                        ChatAttachmentConfig(
+                            maxFiles = 2,
+                            canSelectCustomFileExtension = true,
+                        customFileExtensionList = listOf(".png"),
+                    ),
+                    uploadBehavior = { attachment, onProgress ->
+                        onProgress(0.5f)
+                        val attempt = (attemptsByName[attachment.displayName] ?: 0) + 1
+                        attemptsByName[attachment.displayName] = attempt
+                        if (attachment.displayName == "cancel.png") {
+                            startedUpload.complete(Unit)
+                            CompletableDeferred<Unit>().await()
+                        }
+                        if (attachment.displayName == "fail.png" && attempt == 1) {
+                            throw IllegalStateException()
+                        }
+                        com.lifuyue.kora.core.network.UploadedAssetRef(
+                            name = attachment.displayName,
+                            url = "https://example.com/${attachment.displayName}",
+                            key = attachment.localUri,
+                            mimeType = attachment.mimeType,
+                            size = attachment.sizeBytes ?: 0L,
+                        )
+                    },
+                )
+            val viewModel =
+                ChatViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
+                    context = ApplicationProvider.getApplicationContext(),
+                    chatRepository = repository,
+                    strings = FakeChatStrings(),
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            viewModel.addAttachments(listOf(android.net.Uri.parse("content://local/fail.png")))
+            advanceUntilIdle()
+            val failed = viewModel.uiState.value.attachments.single()
+            assertEquals(AttachmentUploadStatus.Failed, failed.uploadStatus)
+            assertTrue(failed.errorMessage?.isNotBlank() == true)
+
+            viewModel.retryAttachment(failed.localUri)
+            advanceUntilIdle()
+            val retried = viewModel.uiState.value.attachments.single()
+            assertEquals(AttachmentUploadStatus.Uploaded, retried.uploadStatus)
+            assertNotNull(retried.uploadedRef)
+
+            viewModel.addAttachments(listOf(android.net.Uri.parse("content://local/cancel.png")))
+            startedUpload.await()
+            viewModel.cancelAttachmentUpload("content://local/cancel.png")
+            advanceUntilIdle()
+            val cancelled = viewModel.uiState.value.attachments.first { it.localUri == "content://local/cancel.png" }
+            assertEquals(AttachmentUploadStatus.Cancelled, cancelled.uploadStatus)
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun attachmentOnlySendUsesUploadedAttachments() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository =
+                RecordingChatRepository(
+                    bootstrapAttachmentConfig =
+                        ChatAttachmentConfig(
+                            maxFiles = 2,
+                            canSelectCustomFileExtension = true,
+                            customFileExtensionList = listOf(".png"),
+                        ),
+                )
+            val viewModel =
+                ChatViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
+                    context = ApplicationProvider.getApplicationContext(),
+                    chatRepository = repository,
+                    strings = FakeChatStrings(),
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            viewModel.addAttachments(listOf(android.net.Uri.parse("content://local/photo.png")))
+            advanceUntilIdle()
+            viewModel.send()
+            advanceUntilIdle()
+
+            assertEquals("", repository.sentText)
+            assertEquals(0, viewModel.uiState.value.attachments.size)
+            collectJob.cancel()
+        }
+
+    @Test
     fun uiStateExposesFoundationDefaultsAfterBootstrap() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository()
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to null)),
+                    context = ApplicationProvider.getApplicationContext(),
                     chatRepository = repository,
                     strings = FakeChatStrings(),
                 )
@@ -148,6 +336,7 @@ class ChatViewModelTest {
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
+                    context = ApplicationProvider.getApplicationContext(),
                     chatRepository = repository,
                     strings = FakeChatStrings(),
                 )
@@ -185,6 +374,7 @@ class ChatViewModelTest {
             val viewModel =
                 ChatViewModel(
                     savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
+                    context = ApplicationProvider.getApplicationContext(),
                     chatRepository = repository,
                     strings = FakeChatStrings(),
                 )
@@ -215,7 +405,7 @@ class ChatViewModelTest {
         }
 }
 
-private class FakeChatStrings : ChatStrings(context = ContextWrapper(null)) {
+private class FakeChatStrings : ChatStrings(context = ApplicationProvider.getApplicationContext()) {
     override fun restoreFailed(): String = "恢复历史失败"
 
     override fun bootstrapFailed(): String = "初始化会话失败"
@@ -229,10 +419,28 @@ private class FakeChatStrings : ChatStrings(context = ContextWrapper(null)) {
     override fun loadAppsFailed(): String = "加载 App 失败"
 
     override fun loadAppDetailFailed(): String = "加载 App 详情失败"
+
+    override fun attachmentTypeNotAllowed(): String = "附件类型不支持"
+
+    override fun attachmentLimitReached(maxFiles: Int): String = "最多只能添加 $maxFiles 个附件"
+
+    override fun attachmentUploadFailed(): String = "附件上传失败"
 }
 
 private class RecordingChatRepository(
     private val shouldFailSend: Boolean = false,
+    private val bootstrapAttachmentConfig: ChatAttachmentConfig = ChatAttachmentConfig(),
+    private val uploadBehavior: suspend (AttachmentDraftUiModel, (Float) -> Unit) -> com.lifuyue.kora.core.network.UploadedAssetRef =
+        { attachment, onProgress ->
+            onProgress(1f)
+            com.lifuyue.kora.core.network.UploadedAssetRef(
+                name = attachment.displayName,
+                url = "https://example.com/${attachment.displayName}",
+                key = attachment.localUri,
+                mimeType = attachment.mimeType,
+                size = attachment.sizeBytes ?: 0L,
+            )
+        },
 ) : ChatRepository {
     private val messagesByChat =
         MutableStateFlow<Map<String, List<ChatMessageUiModel>>>(emptyMap())
@@ -245,16 +453,21 @@ private class RecordingChatRepository(
     var submittedInteractiveChatId: String? = null
     var submittedInteractiveCard: InteractiveCardUiModel? = null
     var submittedInteractiveValue: String? = null
+    var uploadAttempts: Int = 0
 
     override fun observeMessages(
         appId: String,
         chatId: String?,
     ): Flow<List<ChatMessageUiModel>> = messagesByChat.map { it[chatId].orEmpty() }
 
-    override suspend fun bootstrapChat(appId: String): ChatBootstrap =
+    override suspend fun bootstrapChat(
+        appId: String,
+        chatId: String?,
+    ): ChatBootstrap =
         ChatBootstrap(
             chatId = "chat-1",
             welcomeText = "欢迎语",
+            attachmentConfig = bootstrapAttachmentConfig,
         )
 
     override suspend fun restoreMessages(
@@ -266,6 +479,7 @@ private class RecordingChatRepository(
         appId: String,
         chatId: String?,
         text: String,
+        attachments: List<AttachmentDraftUiModel>,
     ): String {
         if (shouldFailSend) {
             throw IllegalStateException()
@@ -293,6 +507,14 @@ private class RecordingChatRepository(
         )
         return resolvedChatId
     }
+
+    override suspend fun uploadAttachment(
+        appId: String,
+        chatId: String?,
+        attachment: AttachmentDraftUiModel,
+        onProgress: (Float) -> Unit,
+    ): com.lifuyue.kora.core.network.UploadedAssetRef =
+        uploadBehavior(attachment, onProgress).also { uploadAttempts += 1 }
 
     override suspend fun stopStreaming(
         appId: String,

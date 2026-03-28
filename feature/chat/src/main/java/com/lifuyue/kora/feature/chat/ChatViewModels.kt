@@ -1,6 +1,7 @@
 package com.lifuyue.kora.feature.chat
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,6 +10,7 @@ import com.lifuyue.kora.core.network.FastGptApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -202,6 +205,7 @@ class ChatViewModel
     @Inject
     constructor(
         savedStateHandle: SavedStateHandle,
+        @ApplicationContext private val context: Context,
         private val chatRepository: ChatRepository,
         private val strings: ChatStrings,
     ) : ViewModel() {
@@ -209,46 +213,41 @@ class ChatViewModel
         private val chatId = MutableStateFlow(savedStateHandle.get<String?>("chatId"))
         private val input = MutableStateFlow("")
         private val metaState = MutableStateFlow(ChatMetaState())
+        private val attachments = MutableStateFlow<List<AttachmentDraftUiModel>>(emptyList())
+        private val attachmentConfig = MutableStateFlow(ChatAttachmentConfig())
+        private val uploadJobs = linkedMapOf<String, Job>()
 
         init {
             viewModelScope.launch {
                 val existingChatId = chatId.value
+                runCatching { chatRepository.bootstrapChat(appId, existingChatId) }
+                    .onSuccess { bootstrap ->
+                        if (existingChatId == null) {
+                            chatId.value = bootstrap.chatId
+                        }
+                        attachmentConfig.value = bootstrap.attachmentConfig
+                        metaState.update {
+                            it.copy(
+                                isLoading = false,
+                                welcomeText = bootstrap.welcomeText,
+                                errorMessage = null,
+                            )
+                        }
+                    }.onFailure { error ->
+                        metaState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = error.message ?: strings.bootstrapFailed(),
+                            )
+                        }
+                    }
+
                 if (existingChatId != null) {
                     runCatching { chatRepository.restoreMessages(appId, existingChatId) }
                         .onSuccess {
-                            metaState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    errorMessage = null,
-                                )
-                            }
-                        }
-                        .onFailure { error ->
-                            metaState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    errorMessage = error.message ?: strings.restoreFailed(),
-                                )
-                            }
-                        }
-                } else {
-                    runCatching { chatRepository.bootstrapChat(appId) }
-                        .onSuccess { bootstrap ->
-                            chatId.value = bootstrap.chatId
-                            metaState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    welcomeText = bootstrap.welcomeText,
-                                    errorMessage = null,
-                                )
-                            }
+                            metaState.update { it.copy(errorMessage = null) }
                         }.onFailure { error ->
-                            metaState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    errorMessage = error.message ?: strings.bootstrapFailed(),
-                                )
-                            }
+                            metaState.update { it.copy(errorMessage = error.message ?: strings.restoreFailed()) }
                         }
                 }
             }
@@ -259,7 +258,9 @@ class ChatViewModel
                 input,
                 metaState,
                 observeMessages(),
-            ) { currentInput, meta, messages ->
+                attachments,
+                attachmentConfig,
+            ) { currentInput, meta, messages, currentAttachments, currentAttachmentConfig ->
                 val pendingInteractiveCard =
                     messages.lastOrNull { it.interactiveCard?.status == InteractiveCardStatus.Pending }?.interactiveCard
                 ChatUiState(
@@ -271,6 +272,8 @@ class ChatViewModel
                     errorMessage = meta.errorMessage,
                     messages = messages,
                     isInitialLoading = meta.isLoading && messages.isEmpty(),
+                    attachments = currentAttachments,
+                    attachmentConfig = currentAttachmentConfig,
                     pendingInteractiveCard = pendingInteractiveCard,
                 )
             }.stateIn(
@@ -281,6 +284,8 @@ class ChatViewModel
                     chatId = chatId.value,
                     welcomeText = metaState.value.welcomeText,
                     isInitialLoading = metaState.value.isLoading,
+                    attachments = attachments.value,
+                    attachmentConfig = attachmentConfig.value,
                 ),
             )
 
@@ -288,9 +293,90 @@ class ChatViewModel
             input.value = value
         }
 
+        fun addAttachments(uris: List<Uri>) {
+            val config = attachmentConfig.value
+            if (uris.isEmpty() || !config.hasAnySelectionType) {
+                return
+            }
+
+            viewModelScope.launch {
+                val currentAttachments = attachments.value
+                val availableSlots = config.maxFiles - currentAttachments.size
+                if (availableSlots <= 0) {
+                    metaState.update { it.copy(errorMessage = strings.attachmentLimitReached(config.maxFiles)) }
+                    return@launch
+                }
+
+                val accepted =
+                    uris.asSequence()
+                        .map { uri ->
+                            val metadata = resolveAttachmentMetadata(context, uri)
+                            Triple(uri, metadata, config.canAcceptSelection(metadata.mimeType, metadata.displayName))
+                        }
+                        .filter { (_, metadata, allowed) -> allowed && config.canAddMore(attachments.value.size) && metadata.displayName.isNotBlank() }
+                        .take(availableSlots)
+                        .toList()
+
+                if (accepted.isEmpty()) {
+                    metaState.update { it.copy(errorMessage = strings.attachmentTypeNotAllowed()) }
+                    return@launch
+                }
+
+                val drafts =
+                    accepted.map { (uri, metadata, _) ->
+                        AttachmentDraftUiModel(
+                            displayName = metadata.displayName,
+                            localUri = uri.toString(),
+                            mimeType = metadata.mimeType,
+                            sizeBytes = metadata.sizeBytes,
+                            kind = resolveAttachmentKind(metadata.mimeType, metadata.displayName),
+                        )
+                    }
+
+                attachments.update { currentAttachments + drafts }
+                drafts.forEach { startAttachmentUpload(it) }
+            }
+        }
+
+        fun removeAttachment(localUri: String) {
+            uploadJobs.remove(localUri)?.cancel()
+            attachments.update { items -> items.filterNot { it.localUri == localUri } }
+        }
+
+        fun retryAttachment(localUri: String) {
+            val attachment = attachments.value.firstOrNull { it.localUri == localUri } ?: return
+            startAttachmentUpload(
+                attachment.copy(
+                    uploadStatus = AttachmentUploadStatus.Idle,
+                    progress = 0f,
+                    errorMessage = null,
+                    uploadedRef = null,
+                ),
+            )
+        }
+
+        fun cancelAttachmentUpload(localUri: String) {
+            uploadJobs.remove(localUri)?.cancel()
+            attachments.update { items ->
+                items.map { attachment ->
+                    if (attachment.localUri == localUri) {
+                        attachment.copy(uploadStatus = AttachmentUploadStatus.Cancelled, errorMessage = null)
+                    } else {
+                        attachment
+                    }
+                }
+            }
+        }
+
         fun send() {
             val text = input.value.trim()
-            if (text.isEmpty() || metaState.value.isSending || uiState.value.canStopGeneration) {
+            val sendableAttachments = attachments.value.filter { it.uploadStatus == AttachmentUploadStatus.Uploaded && it.uploadedRef != null }
+            if (
+                metaState.value.isSending ||
+                    uiState.value.canStopGeneration ||
+                    attachments.value.any { it.uploadStatus == AttachmentUploadStatus.Uploading || it.uploadStatus == AttachmentUploadStatus.Failed } ||
+                    (text.isEmpty() && sendableAttachments.isEmpty())
+            ) {
                 return
             }
 
@@ -301,10 +387,12 @@ class ChatViewModel
                         appId = appId,
                         chatId = chatId.value,
                         text = text,
+                        attachments = sendableAttachments,
                     )
                 }.onSuccess { resolvedChatId ->
                     chatId.value = resolvedChatId
                     input.value = ""
+                    attachments.value = emptyList()
                     metaState.update { it.copy(isSending = false) }
                 }.onFailure { error ->
                     metaState.update {
@@ -418,6 +506,80 @@ class ChatViewModel
                     chatRepository.observeMessages(appId, resolvedChatId)
                 }
             }
+
+        private fun startAttachmentUpload(attachment: AttachmentDraftUiModel) {
+            val resolvedChatId = chatId.value
+            uploadJobs.remove(attachment.localUri)?.cancel()
+            uploadJobs[attachment.localUri] =
+                viewModelScope.launch {
+                    attachments.update { items ->
+                        items.map { current ->
+                            if (current.localUri == attachment.localUri) {
+                                current.copy(uploadStatus = AttachmentUploadStatus.Uploading, progress = 0f, errorMessage = null)
+                            } else {
+                                current
+                            }
+                        }
+                    }
+                    try {
+                        val uploaded =
+                            chatRepository.uploadAttachment(
+                                appId = appId,
+                                chatId = resolvedChatId,
+                                attachment = attachment,
+                            ) { progress ->
+                                attachments.update { items ->
+                                    items.map { current ->
+                                        if (current.localUri == attachment.localUri) {
+                                            current.copy(progress = progress.coerceIn(0f, 1f))
+                                        } else {
+                                            current
+                                        }
+                                    }
+                                }
+                            }
+                        attachments.update { items ->
+                            items.map { current ->
+                                if (current.localUri == attachment.localUri) {
+                                    current.copy(
+                                        uploadStatus = AttachmentUploadStatus.Uploaded,
+                                        uploadedRef = uploaded,
+                                        progress = 1f,
+                                        errorMessage = null,
+                                    )
+                                } else {
+                                    current
+                                }
+                            }
+                        }
+                    } catch (_: CancellationException) {
+                        attachments.update { items ->
+                            items.map { current ->
+                                if (current.localUri == attachment.localUri) {
+                                    current.copy(uploadStatus = AttachmentUploadStatus.Cancelled)
+                                } else {
+                                    current
+                                }
+                            }
+                        }
+                    } catch (error: Throwable) {
+                        attachments.update { items ->
+                            items.map { current ->
+                                if (current.localUri == attachment.localUri) {
+                                    current.copy(
+                                        uploadStatus = AttachmentUploadStatus.Failed,
+                                        errorMessage = error.message ?: strings.attachmentUploadFailed(),
+                                    )
+                                } else {
+                                    current
+                                }
+                            }
+                        }
+                    } finally {
+                        uploadJobs.remove(attachment.localUri)
+                    }
+                }
+        }
     }
 
 private data class ChatMetaState(
@@ -572,19 +734,26 @@ open class ChatStrings
     constructor(
         @ApplicationContext private val context: Context,
     ) {
-        open fun restoreFailed(): String = context.getString(R.string.chat_error_restore_failed)
+        open fun restoreFailed(): String = context.chatString("chat_error_restore_failed")
 
-        open fun bootstrapFailed(): String = context.getString(R.string.chat_error_bootstrap_failed)
+        open fun bootstrapFailed(): String = context.chatString("chat_error_bootstrap_failed")
 
-        open fun sendFailed(): String = context.getString(R.string.chat_error_send_failed)
+        open fun sendFailed(): String = context.chatString("chat_error_send_failed")
 
-        open fun continueFailed(): String = context.getString(R.string.chat_error_continue_failed)
+        open fun continueFailed(): String = context.chatString("chat_error_continue_failed")
 
-        open fun regenerateFailed(): String = context.getString(R.string.chat_error_regenerate_failed)
+        open fun regenerateFailed(): String = context.chatString("chat_error_regenerate_failed")
 
-        open fun loadAppsFailed(): String = context.getString(R.string.chat_error_load_apps_failed)
+        open fun loadAppsFailed(): String = context.chatString("chat_error_load_apps_failed")
 
-        open fun loadAppDetailFailed(): String = context.getString(R.string.chat_error_load_app_detail_failed)
+        open fun loadAppDetailFailed(): String = context.chatString("chat_error_load_app_detail_failed")
+
+        open fun attachmentTypeNotAllowed(): String = context.chatString("chat_error_attachment_type_not_allowed")
+
+        open fun attachmentLimitReached(maxFiles: Int): String =
+            context.chatString("chat_error_attachment_limit_reached", maxFiles)
+
+        open fun attachmentUploadFailed(): String = context.chatString("chat_error_attachment_upload_failed")
     }
 
 private fun JsonArray.toDisplayItems(): List<String> = mapNotNull { element -> element.toString().trim('"').takeIf { it.isNotBlank() } }

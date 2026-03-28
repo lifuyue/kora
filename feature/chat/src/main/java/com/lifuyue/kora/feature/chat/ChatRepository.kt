@@ -105,7 +105,10 @@ interface ChatRepository {
         chatId: String?,
     ): Flow<List<ChatMessageUiModel>>
 
-    suspend fun bootstrapChat(appId: String): ChatBootstrap
+    suspend fun bootstrapChat(
+        appId: String,
+        chatId: String? = null,
+    ): ChatBootstrap
 
     suspend fun restoreMessages(
         appId: String,
@@ -116,6 +119,7 @@ interface ChatRepository {
         appId: String,
         chatId: String?,
         text: String,
+        attachments: List<AttachmentDraftUiModel> = emptyList(),
     ): String
 
     suspend fun stopStreaming(
@@ -145,6 +149,7 @@ interface ChatRepository {
         appId: String,
         chatId: String?,
         attachment: AttachmentDraftUiModel,
+        onProgress: (Float) -> Unit = {},
     ): UploadedAssetRef {
         throw UnsupportedOperationException("Attachment upload foundation is not implemented yet")
     }
@@ -189,6 +194,7 @@ data class ChatBootstrap(
     val title: String = "",
     val welcomeText: String? = null,
     val questionGuide: AppQuestionGuideConfigDto? = null,
+    val attachmentConfig: ChatAttachmentConfig = ChatAttachmentConfig(),
 )
 
 data class AssistantResponseRequest(

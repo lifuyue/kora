@@ -70,6 +70,32 @@ class RoomBackedChatRepositoryTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
+    fun bootstrapChatMapsFileSelectConfigToAttachmentConfig() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.api.fileSelectConfig =
+                    JsonObject(
+                        mapOf(
+                            "maxFiles" to JsonPrimitive(3),
+                            "canSelectImg" to JsonPrimitive(true),
+                            "canSelectFile" to JsonPrimitive(false),
+                            "canSelectVideo" to JsonPrimitive(false),
+                            "canSelectAudio" to JsonPrimitive(false),
+                            "canSelectCustomFileExtension" to JsonPrimitive(true),
+                            "customFileExtensionList" to JsonArray(listOf(JsonPrimitive(".md"), JsonPrimitive("pdf"))),
+                        ),
+                    )
+
+                val bootstrap = fixture.repository.bootstrapChat(appId = "app-1", chatId = "chat-existing")
+
+                assertEquals(3, bootstrap.attachmentConfig.maxFiles)
+                assertTrue(bootstrap.attachmentConfig.canSelectImg)
+                assertTrue(bootstrap.attachmentConfig.canSelectCustomFileExtension)
+                assertEquals(listOf(".md", ".pdf"), bootstrap.attachmentConfig.customFileExtensionList)
+            }
+        }
+
+    @Test
     fun refreshConversationsCachesHistoriesAndOrdersPinnedThenUpdateTimeThenChatId() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             newFixture().use { fixture ->
@@ -616,6 +642,7 @@ private class FakeFastGptApi : FastGptApi {
     val initChatCalls = mutableListOf<String>()
     var histories: List<ChatHistoryItemDto> = emptyList()
     val recordsByChat = linkedMapOf<String, List<ChatRecordItemDto>>()
+    var fileSelectConfig: JsonObject? = null
 
     override suspend fun listApps(body: JsonObject): ResponseEnvelope<List<AppListItemDto>> =
         ResponseEnvelope(code = 200, data = emptyList())
@@ -633,6 +660,7 @@ private class FakeFastGptApi : FastGptApi {
                             ?.also { initChatCalls += "$appId:$chatId" }
                             ?: chatId.also { initChatCalls += "$appId:$chatId" },
                     appId = appId,
+                    fileSelectConfig = fileSelectConfig,
                 ),
         )
 
