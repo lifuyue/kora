@@ -120,6 +120,8 @@ data class ChatUiState(
     val isSending: Boolean = false,
     val errorMessage: String? = null,
     val messages: List<ChatMessageUiModel> = emptyList(),
+    val autoScrollEnabled: Boolean = true,
+    val isInitialLoading: Boolean = false,
 ) {
     val canStopGeneration: Boolean
         get() = messages.any { it.isStreaming }

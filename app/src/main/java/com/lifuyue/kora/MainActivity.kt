@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -12,8 +11,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.core.os.LocaleListCompat
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import com.lifuyue.kora.i18n.AppLocaleController
 import com.lifuyue.kora.navigation.KoraNavGraph
 import com.lifuyue.kora.testing.KoraTestOverrides
 import com.lifuyue.kora.ui.theme.KoraTheme
@@ -29,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installDebugDemoOverrides(intent)
+        AppLocaleController.apply(connectionRepository.snapshot.value.appearancePreferences.languageTag)
         enableEdgeToEdge()
         setContent {
             KoraApp(connectionRepository = connectionRepository)
@@ -46,15 +46,7 @@ private fun KoraApp(connectionRepository: ConnectionRepository) {
     val languageTag = snapshot.appearancePreferences.languageTag
 
     LaunchedEffect(languageTag) {
-        val locales =
-            if (languageTag.isNullOrBlank()) {
-                LocaleListCompat.getEmptyLocaleList()
-            } else {
-                LocaleListCompat.forLanguageTags(languageTag)
-            }
-        if (AppCompatDelegate.getApplicationLocales() != locales) {
-            AppCompatDelegate.setApplicationLocales(locales)
-        }
+        AppLocaleController.apply(languageTag)
     }
 
     KoraTheme(

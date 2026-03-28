@@ -14,6 +14,7 @@
     <string name="chat_empty_welcome">开始一个新对话，消息会在这里以 Markdown 和代码块形式渲染。</string>
     <string name="chat_input_label">输入消息</string>
     <string name="chat_stop_generation">停止生成</string>
+    <string name="chat_resume_auto_scroll">回到底部</string>
     <string name="chat_sending">发送中...</string>
     <string name="chat_send">发送</string>
     <string name="chat_error_restore_failed">恢复历史失败</string>

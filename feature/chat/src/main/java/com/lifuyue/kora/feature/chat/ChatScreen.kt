@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,13 +21,17 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -35,6 +42,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.lifuyue.kora.core.common.ChatRole
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +66,39 @@ fun ChatScreen(
     onOpenCitation: (CitationItemUiModel) -> Unit = {},
 ) {
     val clipboardManager = LocalClipboardManager.current
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     var activeCitationMessage by remember { mutableStateOf<ChatMessageUiModel?>(null) }
+    var autoScrollPaused by rememberSaveable { mutableStateOf(false) }
+    var hasInitializedScroll by rememberSaveable(uiState.chatId) { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.chatId, uiState.messages.isEmpty()) {
+        if (uiState.messages.isEmpty()) {
+            autoScrollPaused = false
+            hasInitializedScroll = false
+        }
+    }
+
+    LaunchedEffect(uiState.messages.size, uiState.autoScrollEnabled, autoScrollPaused) {
+        if (!uiState.autoScrollEnabled || uiState.messages.isEmpty() || autoScrollPaused) {
+            return@LaunchedEffect
+        }
+        listState.scrollToItem(uiState.messages.lastIndex)
+        hasInitializedScroll = true
+    }
+
+    LaunchedEffect(
+        listState.firstVisibleItemIndex,
+        listState.layoutInfo.totalItemsCount,
+        uiState.autoScrollEnabled,
+    ) {
+        if (!uiState.autoScrollEnabled || !hasInitializedScroll || uiState.messages.isEmpty()) {
+            autoScrollPaused = false
+            return@LaunchedEffect
+        }
+        autoScrollPaused = !isNearListBottom(listState, uiState.messages.lastIndex)
+    }
+
     if (showAppSelector) {
         ModalBottomSheet(onDismissRequest = onDismissAppSelector) {
             Column(
@@ -180,28 +220,48 @@ fun ChatScreen(
             if (uiState.errorMessage != null) {
                 Text(uiState.errorMessage, color = MaterialTheme.colorScheme.error)
             }
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(uiState.messages, key = { it.messageId }) { message ->
-                    MessageCard(
-                        message = message,
-                        onCopy = {
-                            clipboardManager.setText(AnnotatedString(message.markdown))
-                        },
-                        onCopyCode = { code ->
-                            clipboardManager.setText(AnnotatedString(code))
-                        },
-                        onContinueGeneration = onContinueGeneration,
-                        onRegenerate = { onRegenerate(message) },
-                        onFeedback = { feedback -> onFeedback(message, feedback) },
-                        onSuggestedQuestion = onSuggestedQuestion,
-                        onOpenCitation = {
-                            activeCitationMessage = message
-                        },
-                    )
+            if (uiState.isInitialLoading) {
+                ChatLoadingSkeleton(modifier = Modifier.weight(1f).testTag(ChatTestTags.CHAT_SKELETON))
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f).testTag(ChatTestTags.CHAT_LIST),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(uiState.messages, key = { it.messageId }) { message ->
+                        MessageCard(
+                            message = message,
+                            onCopy = {
+                                clipboardManager.setText(AnnotatedString(message.markdown))
+                            },
+                            onCopyCode = { code ->
+                                clipboardManager.setText(AnnotatedString(code))
+                            },
+                            onContinueGeneration = onContinueGeneration,
+                            onRegenerate = { onRegenerate(message) },
+                            onFeedback = { feedback -> onFeedback(message, feedback) },
+                            onSuggestedQuestion = onSuggestedQuestion,
+                            onOpenCitation = {
+                                activeCitationMessage = message
+                            },
+                        )
+                    }
                 }
+            }
+            if (uiState.autoScrollEnabled && autoScrollPaused) {
+                AssistChip(
+                    onClick = {
+                        scope.launch {
+                            if (uiState.messages.isNotEmpty()) {
+                                listState.scrollToItem(uiState.messages.lastIndex)
+                            }
+                            hasInitializedScroll = true
+                            autoScrollPaused = false
+                        }
+                    },
+                    label = { Text(stringResource(R.string.chat_resume_auto_scroll)) },
+                    modifier = Modifier.testTag(ChatTestTags.AUTO_SCROLL_RESUME),
+                )
             }
             OutlinedTextField(
                 value = uiState.input,
@@ -230,6 +290,54 @@ fun ChatScreen(
                             },
                         ),
                     )
+                }
+            }
+        }
+    }
+}
+
+private fun isNearListBottom(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    lastIndex: Int,
+): Boolean {
+    if (lastIndex < 0) {
+        return true
+    }
+    val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: return false
+    return lastVisible >= lastIndex - 1
+}
+
+@Composable
+private fun ChatLoadingSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        repeat(3) { index ->
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth(0.35f).height(14.dp),
+                    ) {}
+                    Surface(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth(if (index == 1) 0.9f else 0.75f).height(16.dp),
+                    ) {}
+                    Surface(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth(if (index == 2) 0.6f else 0.82f).height(16.dp),
+                    ) {}
                 }
             }
         }

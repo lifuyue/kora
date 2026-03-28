@@ -14,6 +14,7 @@
     <string name="chat_empty_welcome">Start a new conversation. Messages will render here with Markdown and code blocks.</string>
     <string name="chat_input_label">Message</string>
     <string name="chat_stop_generation">Stop</string>
+    <string name="chat_resume_auto_scroll">Jump to latest</string>
     <string name="chat_sending">Sending...</string>
     <string name="chat_send">Send</string>
     <string name="chat_error_restore_failed">Failed to restore history</string>

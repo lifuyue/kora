@@ -1,9 +1,11 @@
 package com.lifuyue.kora
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -11,14 +13,17 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.core.os.LocaleListCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.testing.MockWebServerRule
 import com.lifuyue.kora.feature.chat.ChatTestTags
 import com.lifuyue.kora.testing.AcceptanceAppHarnessRule
 import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
@@ -34,6 +39,16 @@ class MainActivityM3AcceptanceTest {
 
     @get:Rule
     val ruleChain: RuleChain = RuleChain.outerRule(serverRule).around(harnessRule).around(composeRule)
+
+    @Before
+    fun setUp() {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    }
+
+    @After
+    fun tearDown() {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    }
 
     @Test
     fun firstLaunchRunsOnboardingRealConnectionAndArrivesAtShell() {
@@ -125,6 +140,7 @@ class MainActivityM3AcceptanceTest {
         composeRule.onNodeWithText(context.getString(R.string.onboarding_cta_next)).performClick()
         composeRule.onNodeWithText(context.getString(R.string.onboarding_cta_finish)).performClick()
 
+        waitForNodeTag("server-url")
         composeRule.onNodeWithTag("server-url").performTextClearance()
         composeRule.onNodeWithTag("server-url").performTextInput(serverRule.url("/api/").toString())
         composeRule.onNodeWithTag("api-key").performTextInput("fastgpt-secret")
@@ -172,6 +188,12 @@ class MainActivityM3AcceptanceTest {
                 .onAllNodesWithText(text, substring = true, useUnmergedTree = true)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
+        }
+    }
+
+    private fun waitForNodeTag(tag: String) {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
 }

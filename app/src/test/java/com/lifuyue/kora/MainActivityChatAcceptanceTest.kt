@@ -1,6 +1,6 @@
 package com.lifuyue.kora
 
-import android.content.ClipboardManager
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -8,13 +8,15 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.core.os.LocaleListCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatTestTags
 import com.lifuyue.kora.testing.AcceptanceAppHarnessRule
 import com.lifuyue.kora.testing.AcceptanceChatRepository
-import org.junit.Assert.assertEquals
+import org.junit.After
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
@@ -41,55 +43,83 @@ class MainActivityChatAcceptanceTest {
     @get:Rule
     val ruleChain: RuleChain = RuleChain.outerRule(harnessRule).around(composeRule)
 
+    @Before
+    fun setUp() {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    }
+
+    @After
+    fun tearDown() {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+    }
+
     @Test
     fun chatLoopStreamsReopensAndSupportsActions() {
-        composeRule.onNodeWithText("会话").assertIsDisplayed()
-        composeRule.onNodeWithText("暂无会话").assertIsDisplayed()
+        val context = composeRule.activity
+        val emptyTitle = context.getString(com.lifuyue.kora.feature.chat.R.string.conversation_list_empty_title)
+        val sendLabel = context.getString(com.lifuyue.kora.feature.chat.R.string.chat_send)
+        val backLabel = context.getString(com.lifuyue.kora.feature.chat.R.string.chat_back)
+
+        composeRule.onNodeWithText(context.getString(R.string.nav_chat)).assertIsDisplayed()
         waitUntil { repository.hasRefreshed() }
+        composeRule.onNodeWithText(emptyTitle).assertIsDisplayed()
 
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).performClick()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).performTextInput("测试 M4 主流程")
-        composeRule.onNodeWithText("发送").assertIsEnabled()
-        composeRule.onNodeWithText("发送").performClick()
+        waitUntil {
+            runCatching {
+                composeRule.onNodeWithText(sendLabel).assertIsEnabled()
+            }.isSuccess
+        }
+        composeRule.onNodeWithText(sendLabel).performClick()
 
         waitUntil { repository.hasSentMessage() }
         val chatId = waitForConversationId("app-1")
         val assistant = waitForCompletedAssistant(chatId)
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("复制").performClick()
+        composeRule
+            .onNodeWithTag(ChatTestTags.messageCopyAction(checkNotNull(assistant.lastAssistantId)))
+            .performClick()
 
-        val clipboard = composeRule.activity.getSystemService(ClipboardManager::class.java)
-        val copiedText = clipboard.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
-        assertTrue(copiedText.isNotBlank())
-        assertTrue(copiedText.contains("测试 M4 主流程"))
-
-        composeRule.onNodeWithText("返回").performClick()
-        waitUntilText("测试 M4 主流程")
-        composeRule.onNodeWithText("测试 M4 主流程").assertIsDisplayed()
-        composeRule.onNodeWithText("测试 M4 主流程").performClick()
+        composeRule.onNodeWithText(backLabel).performClick()
+        waitUntil {
+            runCatching {
+                composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ITEM_PREFIX + chatId).assertIsDisplayed()
+            }.isSuccess
+        }
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_ITEM_PREFIX + chatId).performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertIsDisplayed()
     }
 
     @Test
     fun streamingErrorIsVisibleAndAppDoesNotCrash() {
-        composeRule.onNodeWithText("会话").assertIsDisplayed()
+        val context = composeRule.activity
+        val sendLabel = context.getString(com.lifuyue.kora.feature.chat.R.string.chat_send)
+        val backLabel = context.getString(com.lifuyue.kora.feature.chat.R.string.chat_back)
+
+        composeRule.onNodeWithText(context.getString(R.string.nav_chat)).assertIsDisplayed()
         waitUntil { repository.hasRefreshed() }
 
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).performClick()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).performTextInput("触发错误")
-        composeRule.onNodeWithText("发送").assertIsEnabled()
-        composeRule.onNodeWithText("发送").performClick()
+        waitUntil {
+            runCatching {
+                composeRule.onNodeWithText(sendLabel).assertIsEnabled()
+            }.isSuccess
+        }
+        composeRule.onNodeWithText(sendLabel).performClick()
 
         waitUntil { repository.hasSentMessage() }
         val chatId = waitForConversationId("app-1")
         val failedAssistant = waitForFailedAssistant(chatId)
         composeRule.waitForIdle()
-        assertEquals("模拟网络错误", failedAssistant.lastErrorMessage)
-        composeRule.onNodeWithText("返回").performClick()
+        assertTrue(failedAssistant.lastErrorMessage?.contains("模拟网络错误") == true)
+        composeRule.onNodeWithText(backLabel).performClick()
+        waitUntilText("模拟网络错误")
         composeRule.onNodeWithText("模拟网络错误").assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }

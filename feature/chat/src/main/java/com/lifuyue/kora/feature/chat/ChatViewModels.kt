@@ -214,8 +214,21 @@ class ChatViewModel
                 val existingChatId = chatId.value
                 if (existingChatId != null) {
                     runCatching { chatRepository.restoreMessages(appId, existingChatId) }
+                        .onSuccess {
+                            metaState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    errorMessage = null,
+                                )
+                            }
+                        }
                         .onFailure { error ->
-                            metaState.update { it.copy(errorMessage = error.message ?: strings.restoreFailed()) }
+                            metaState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    errorMessage = error.message ?: strings.restoreFailed(),
+                                )
+                            }
                         }
                 } else {
                     runCatching { chatRepository.bootstrapChat(appId) }
@@ -223,12 +236,18 @@ class ChatViewModel
                             chatId.value = bootstrap.chatId
                             metaState.update {
                                 it.copy(
+                                    isLoading = false,
                                     welcomeText = bootstrap.welcomeText,
                                     errorMessage = null,
                                 )
                             }
                         }.onFailure { error ->
-                            metaState.update { it.copy(errorMessage = error.message ?: strings.bootstrapFailed()) }
+                            metaState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    errorMessage = error.message ?: strings.bootstrapFailed(),
+                                )
+                            }
                         }
                 }
             }
@@ -248,11 +267,17 @@ class ChatViewModel
                     isSending = meta.isSending,
                     errorMessage = meta.errorMessage,
                     messages = messages,
+                    isInitialLoading = meta.isLoading && messages.isEmpty(),
                 )
             }.stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
-                ChatUiState(appId = appId, chatId = chatId.value, welcomeText = metaState.value.welcomeText),
+                ChatUiState(
+                    appId = appId,
+                    chatId = chatId.value,
+                    welcomeText = metaState.value.welcomeText,
+                    isInitialLoading = metaState.value.isLoading,
+                ),
             )
 
         fun updateInput(value: String) {
@@ -343,6 +368,7 @@ class ChatViewModel
     }
 
 private data class ChatMetaState(
+    val isLoading: Boolean = true,
     val isSending: Boolean = false,
     val errorMessage: String? = null,
     val welcomeText: String? = null,
