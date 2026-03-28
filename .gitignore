@@ -36,3 +36,6 @@ gen/
 
 # Local reference repositories
 .reference/
+
+# Git worktrees
+.worktrees/
