@@ -25,9 +25,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import java.text.DateFormat
+import java.text.NumberFormat
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +65,8 @@ fun KnowledgeOverviewScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(item.name, style = MaterialTheme.typography.titleMedium)
-                        Text(item.intro.ifBlank { item.type }, style = MaterialTheme.typography.bodyMedium)
+                        Text(item.intro.ifBlank { knowledgeTypeLabel(item.type) }, style = MaterialTheme.typography.bodyMedium)
+                        Text(datasetSummaryLabel(item.type, item.status), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -110,7 +115,7 @@ fun DatasetBrowserScreen(
                     FilterChip(
                         selected = state.selectedTypeFilter == type,
                         onClick = { onTypeFilterSelected(type) },
-                        label = { Text(type) },
+                        label = { Text(knowledgeTypeLabel(type)) },
                     )
                 }
             }
@@ -124,7 +129,7 @@ fun DatasetBrowserScreen(
                     FilterChip(
                         selected = state.selectedStatusFilter == status,
                         onClick = { onStatusFilterSelected(status) },
-                        label = { Text(status) },
+                        label = { Text(knowledgeStatusLabel(status)) },
                     )
                 }
             }
@@ -154,7 +159,8 @@ fun DatasetBrowserScreen(
                             Card(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(item.name, style = MaterialTheme.typography.titleMedium)
-                                    Text(item.intro.ifBlank { item.type }, style = MaterialTheme.typography.bodyMedium)
+                                    Text(item.intro.ifBlank { knowledgeTypeLabel(item.type) }, style = MaterialTheme.typography.bodyMedium)
+                                    Text(datasetSummaryLabel(item.type, item.status), style = MaterialTheme.typography.bodySmall)
                                     Text(
                                         stringResource(
                                             R.string.knowledge_dataset_vector_model,
@@ -163,7 +169,7 @@ fun DatasetBrowserScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                     Text(
-                                        stringResource(R.string.knowledge_updated_at, item.updateTimeLabel),
+                                        stringResource(R.string.knowledge_updated_at, formatKnowledgeDate(item.updateTime)),
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -317,7 +323,7 @@ fun CollectionManagementScreen(
                                 ),
                             )
                             Text(item.sourceName, style = MaterialTheme.typography.bodySmall)
-                            Text(item.updateTimeLabel, style = MaterialTheme.typography.labelSmall)
+                            Text(formatKnowledgeDate(item.updateTime), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -458,13 +464,29 @@ private fun knowledgeStatusLabel(value: String): String {
             "active" -> R.string.knowledge_label_status_active
             "running" -> R.string.knowledge_label_status_running
             "syncing" -> R.string.knowledge_label_status_syncing
-            "failed" -> R.string.knowledge_label_status_failed
-            "success" -> R.string.knowledge_label_status_success
+            "done",
+            "success",
+            -> R.string.knowledge_label_status_success
+            "error",
+            "failed",
+            -> R.string.knowledge_label_status_failed
             "pending" -> R.string.knowledge_label_status_pending
             "disabled" -> R.string.knowledge_label_status_disabled
             else -> return value
         }
     return stringResource(resId)
+}
+
+@Composable
+private fun datasetSummaryLabel(
+    type: String,
+    status: String,
+): String = stringResource(R.string.knowledge_dataset_summary, knowledgeTypeLabel(type), knowledgeStatusLabel(status))
+
+@Composable
+private fun formatKnowledgeDate(epochMillis: Long): String {
+    val locale = LocalContext.current.resources.configuration.locales[0]
+    return DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(Date(epochMillis))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -541,14 +563,44 @@ fun SearchTestScreen(
             state.results.forEach { item ->
                 Card(modifier = Modifier.fillMaxWidth().clickable { onOpenResult(item) }) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(item.title, style = MaterialTheme.typography.titleSmall)
-                        Text(item.snippet, style = MaterialTheme.typography.bodyMedium)
-                        if (item.scoreLabel.isNotBlank()) {
-                            Text(item.scoreLabel, style = MaterialTheme.typography.bodySmall)
+                        Text(searchResultTitle(item), style = MaterialTheme.typography.titleSmall)
+                        Text(searchResultSnippet(item), style = MaterialTheme.typography.bodyMedium)
+                        searchResultScoreLabel(item)?.let { scoreLabel ->
+                            Text(scoreLabel, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun searchResultTitle(item: SearchResultUiModel): String =
+    item.sourceName.ifBlank {
+        item.question.take(18).ifBlank { stringResource(R.string.knowledge_search_result_title_fallback) }
+    }
+
+@Composable
+private fun searchResultSnippet(item: SearchResultUiModel): String =
+    listOf(item.question, item.answer).filter { it.isNotBlank() }.joinToString("\n").ifBlank {
+        stringResource(R.string.knowledge_search_result_snippet_fallback)
+    }
+
+@Composable
+private fun searchResultScoreLabel(item: SearchResultUiModel): String? {
+    val locale = LocalContext.current.resources.configuration.locales[0]
+    val formattedScore =
+        item.score?.let { score ->
+            NumberFormat.getNumberInstance(locale).apply {
+                maximumFractionDigits = 3
+                minimumFractionDigits = 0
+            }.format(score)
+        }
+    return when {
+        item.scoreType.isNullOrBlank() && formattedScore == null -> null
+        item.scoreType.isNullOrBlank() -> formattedScore
+        formattedScore == null -> item.scoreType
+        else -> stringResource(R.string.knowledge_score_summary, item.scoreType, formattedScore)
     }
 }

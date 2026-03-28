@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -53,16 +54,12 @@ class DatasetBrowserViewModel
                                 it.intro.contains(state.query, ignoreCase = true)
                         ) &&
                             (state.selectedTypeFilter == null || it.type == state.selectedTypeFilter) &&
-                            (
-                                state.selectedStatusFilter == null ||
-                                    it.updateTimeLabel == state.selectedStatusFilter ||
-                                    "active" == state.selectedStatusFilter
-                            )
+                            (state.selectedStatusFilter == null || it.status == state.selectedStatusFilter)
                     }
                 state.copy(
                     items = filtered,
                     availableTypes = datasets.map { it.type }.filter { it.isNotBlank() }.distinct(),
-                    availableStatuses = listOf("active"),
+                    availableStatuses = datasets.map { it.status }.filter { it.isNotBlank() }.distinct(),
                     status =
                         when {
                             state.errorMessage != null -> KnowledgeLoadState.Error
@@ -134,6 +131,7 @@ class CollectionManagementViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val repository: KnowledgeRepository,
+        @ApplicationContext private val context: android.content.Context,
     ) : ViewModel() {
         val datasetId: String = checkNotNull(savedStateHandle["datasetId"])
         private val meta = MutableStateFlow(CollectionManagementUiState(datasetId = datasetId))
@@ -257,7 +255,12 @@ class CollectionManagementViewModel
                         )
                     }
                 }.onFailure { error ->
-                    meta.update { it.copy(isSubmitting = false, errorMessage = error.message ?: "提交失败") }
+                    val message =
+                        when (error) {
+                            SelectedDocumentUnreadableException -> context.getString(R.string.knowledge_selected_document_unreadable)
+                            else -> error.message ?: "提交失败"
+                        }
+                    meta.update { it.copy(isSubmitting = false, errorMessage = message) }
                 }
             }
         }

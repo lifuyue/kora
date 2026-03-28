@@ -29,10 +29,12 @@
     <string name="knowledge_dataset_create_name_label">新数据集名称</string>
     <string name="knowledge_dataset_empty">当前筛选下没有数据集。</string>
     <string name="knowledge_dataset_vector_model">向量模型：%1$s</string>
+    <string name="knowledge_dataset_summary">%1$s · %2$s</string>
 
     <string name="knowledge_collections_title">Collections</string>
     <string name="knowledge_pick_file">选择文件</string>
     <string name="knowledge_selected_document">已选择：%1$s</string>
+    <string name="knowledge_selected_document_unreadable">无法读取所选文件</string>
     <string name="knowledge_link_urls_label">URL，每行一个</string>
     <string name="knowledge_link_selector_label">Selector（可选）</string>
     <string name="knowledge_qa_content">Q/A 内容</string>
@@ -80,4 +82,7 @@
     <string name="knowledge_duration">耗时：%1$s</string>
     <string name="knowledge_extension_model">扩展查询模型：%1$s</string>
     <string name="knowledge_search_empty">未命中结果。</string>
+    <string name="knowledge_search_result_title_fallback">命中片段</string>
+    <string name="knowledge_search_result_snippet_fallback">暂无预览</string>
+    <string name="knowledge_score_summary">%1$s · %2$s</string>
 </resources>

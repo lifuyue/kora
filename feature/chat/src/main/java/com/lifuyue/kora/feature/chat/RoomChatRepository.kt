@@ -889,8 +889,10 @@ private data class CitationPayload(
     val collectionId: String? = null,
     val dataId: String? = null,
     val title: String = "",
+    val sourceName: String = "",
     val snippet: String = "",
-    val scoreLabel: String = "",
+    val scoreType: String? = null,
+    val score: Double? = null,
 )
 
 private fun ChatHistoryItemDto.toConversationEntity(
@@ -1021,8 +1023,10 @@ private fun String.toStoredPayload(json: Json): StoredMessagePayload =
                                     collectionId = citation["collectionId"].stringContentOrNull(),
                                     dataId = citation["dataId"].stringContentOrNull(),
                                     title = citation["title"].stringContentOrNull().orEmpty(),
+                                    sourceName = citation["sourceName"].stringContentOrNull().orEmpty(),
                                     snippet = citation["snippet"].stringContentOrNull().orEmpty(),
-                                    scoreLabel = citation["scoreLabel"].stringContentOrNull().orEmpty(),
+                                    scoreType = citation["scoreType"].stringContentOrNull(),
+                                    score = citation["score"]?.jsonPrimitive?.content?.toDoubleOrNull(),
                                 )
                             }
                         }.orEmpty(),
@@ -1139,8 +1143,10 @@ private fun StoredMessagePayload.toJsonString(): String =
                                 it.collectionId?.let { collectionId -> put("collectionId", JsonPrimitive(collectionId)) }
                                 it.dataId?.let { dataId -> put("dataId", JsonPrimitive(dataId)) }
                                 put("title", JsonPrimitive(it.title))
+                                put("sourceName", JsonPrimitive(it.sourceName))
                                 put("snippet", JsonPrimitive(it.snippet))
-                                put("scoreLabel", JsonPrimitive(it.scoreLabel))
+                                it.scoreType?.let { scoreType -> put("scoreType", JsonPrimitive(scoreType)) }
+                                it.score?.let { score -> put("score", JsonPrimitive(score)) }
                             },
                         )
                     },
@@ -1157,8 +1163,10 @@ private fun CitationPayload.toUiModel(): CitationItemUiModel =
         collectionId = collectionId,
         dataId = dataId,
         title = title,
+        sourceName = sourceName,
         snippet = snippet,
-        scoreLabel = scoreLabel,
+        scoreType = scoreType,
+        score = score,
     )
 
 private fun CitationDto.toPayload(): CitationPayload =
@@ -1166,13 +1174,11 @@ private fun CitationDto.toPayload(): CitationPayload =
         datasetId = datasetId,
         collectionId = collectionId,
         dataId = dataId,
-        title = title.ifBlank { sourceName.ifBlank { "引用" } },
+        title = title,
+        sourceName = sourceName.orEmpty(),
         snippet = snippet,
-        scoreLabel =
-            listOfNotNull(
-                scoreType,
-                score?.let { String.format("%.3f", it) },
-            ).joinToString(" · "),
+        scoreType = scoreType,
+        score = score,
     )
 
 private fun JsonArray.extractCitations(): List<CitationDto> {

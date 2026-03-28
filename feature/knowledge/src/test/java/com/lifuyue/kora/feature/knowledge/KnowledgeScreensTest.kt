@@ -60,15 +60,18 @@ class KnowledgeScreensTest {
             DatasetBrowserScreen(
                 state =
                     DatasetBrowserUiState(
+                        availableTypes = listOf("qa"),
+                        availableStatuses = listOf("active"),
                         items =
                             listOf(
                                 DatasetListItemUiModel(
                                     datasetId = "dataset-1",
                                     name = "Dataset A",
-                                    intro = "Intro",
+                                    intro = "",
                                     type = "qa",
+                                    status = "active",
                                     vectorModel = "",
-                                    updateTimeLabel = "2026-03-28",
+                                    updateTime = 1_743_120_000_000,
                                 ),
                             ),
                     ),
@@ -89,8 +92,8 @@ class KnowledgeScreensTest {
         composeRule.onNodeWithText("Search datasets").assertExists()
         composeRule.onNodeWithText("Create").assertExists()
         composeRule.onNodeWithText("Refresh").assertExists()
+        composeRule.onNodeWithText("Q&A · Active").assertExists()
         composeRule.onNodeWithText("Vector model: Unspecified").assertExists()
-        composeRule.onNodeWithText("Updated: 2026-03-28").assertExists()
         composeRule.onNodeWithText("Collections").assertExists()
         composeRule.onNodeWithText("Search test").assertExists()
         composeRule.onNodeWithText("Delete").assertExists()
@@ -110,6 +113,19 @@ class KnowledgeScreensTest {
                         embeddingWeight = "0.5",
                         duration = "120 ms",
                         extensionInfo = "gpt-4.1",
+                        results =
+                            listOf(
+                                SearchResultUiModel(
+                                    datasetId = "dataset-1",
+                                    collectionId = "collection-1",
+                                    dataId = "data-1",
+                                    sourceName = "",
+                                    question = "",
+                                    answer = "",
+                                    scoreType = "semantic",
+                                    score = 0.98,
+                                ),
+                            ),
                         status = KnowledgeLoadState.Empty,
                     ),
                 onBack = {},
@@ -129,7 +145,9 @@ class KnowledgeScreensTest {
         composeRule.onNodeWithText("Start search").assertExists()
         composeRule.onNodeWithText("Duration: 120 ms").assertExists()
         composeRule.onNodeWithText("Query extension model: gpt-4.1").assertExists()
-        composeRule.onNodeWithText("No results found.").assertExists()
+        composeRule.onNodeWithText("Matched snippet").assertExists()
+        composeRule.onNodeWithText("No preview available").assertExists()
+        composeRule.onNodeWithText("semantic · 0.98").assertExists()
     }
 
     @Test
@@ -162,7 +180,7 @@ class KnowledgeScreensTest {
                                     trainingType = "chunk",
                                     status = "active",
                                     sourceName = "doc.pdf",
-                                    updateTimeLabel = "2026-03-28",
+                                    updateTime = 1_743_120_000_000,
                                 ),
                             ),
                         status = KnowledgeLoadState.Content,
@@ -218,5 +236,36 @@ class KnowledgeScreensTest {
         }
 
         composeRule.onNodeWithText("Chunk 1 · Active").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun overviewRecentDatasetUsesLocalizedTypeLabelInEnglish() {
+        composeRule.setContent {
+            KnowledgeOverviewScreen(
+                state =
+                    KnowledgeOverviewUiState(
+                        selectedAppId = "app-1",
+                        datasetCount = 1,
+                        recentDatasets =
+                            listOf(
+                                DatasetListItemUiModel(
+                                    datasetId = "dataset-1",
+                                    name = "Dataset A",
+                                    intro = "",
+                                    type = "qa",
+                                    status = "active",
+                                    vectorModel = "",
+                                    updateTime = 1L,
+                                ),
+                            ),
+                        status = KnowledgeLoadState.Content,
+                    ),
+                onOpenDatasets = {},
+                onOpenRecentDataset = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Q&A").assertExists()
     }
 }

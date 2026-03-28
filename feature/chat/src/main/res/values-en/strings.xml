@@ -9,6 +9,8 @@
     <string name="chat_open_app_detail">View current app capabilities</string>
     <string name="chat_citations_title">%1$d citations</string>
     <string name="chat_open_citation">View knowledge source</string>
+    <string name="chat_citation_title_fallback">Citation</string>
+    <string name="chat_score_summary">%1$s · %2$s</string>
     <string name="chat_empty_welcome">Start a new conversation. Messages will render here with Markdown and code blocks.</string>
     <string name="chat_input_label">Message</string>
     <string name="chat_stop_generation">Stop</string>

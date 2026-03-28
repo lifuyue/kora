@@ -16,8 +16,9 @@ data class DatasetListItemUiModel(
     val name: String,
     val intro: String,
     val type: String,
+    val status: String,
     val vectorModel: String,
-    val updateTimeLabel: String,
+    val updateTime: Long,
 )
 
 @Immutable
@@ -29,7 +30,7 @@ data class CollectionListItemUiModel(
     val trainingType: String,
     val status: String,
     val sourceName: String,
-    val updateTimeLabel: String,
+    val updateTime: Long,
 )
 
 @Immutable
@@ -58,9 +59,11 @@ data class SearchResultUiModel(
     val datasetId: String? = null,
     val collectionId: String? = null,
     val dataId: String?,
-    val title: String,
-    val snippet: String,
-    val scoreLabel: String,
+    val sourceName: String = "",
+    val question: String = "",
+    val answer: String = "",
+    val scoreType: String? = null,
+    val score: Double? = null,
 )
 
 data class KnowledgeOverviewUiState(

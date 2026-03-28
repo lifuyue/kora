@@ -31,8 +31,10 @@ data class CitationItemUiModel(
     val collectionId: String? = null,
     val dataId: String? = null,
     val title: String,
+    val sourceName: String = "",
     val snippet: String,
-    val scoreLabel: String = "",
+    val scoreType: String? = null,
+    val score: Double? = null,
 )
 
 @Immutable

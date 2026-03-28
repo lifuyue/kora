@@ -30,10 +30,12 @@
     <string name="knowledge_dataset_create_name_label">New dataset name</string>
     <string name="knowledge_dataset_empty">No datasets match the current filters.</string>
     <string name="knowledge_dataset_vector_model">Vector model: %1$s</string>
+    <string name="knowledge_dataset_summary">%1$s · %2$s</string>
 
     <string name="knowledge_collections_title">Collections</string>
     <string name="knowledge_pick_file">Choose file</string>
     <string name="knowledge_selected_document">Selected: %1$s</string>
+    <string name="knowledge_selected_document_unreadable">Unable to read the selected file</string>
     <string name="knowledge_link_urls_label">URL, one per line</string>
     <string name="knowledge_link_selector_label">Selector (optional)</string>
     <string name="knowledge_qa_content">Q/A content</string>
@@ -81,4 +83,7 @@
     <string name="knowledge_duration">Duration: %1$s</string>
     <string name="knowledge_extension_model">Query extension model: %1$s</string>
     <string name="knowledge_search_empty">No results found.</string>
+    <string name="knowledge_search_result_title_fallback">Matched snippet</string>
+    <string name="knowledge_search_result_snippet_fallback">No preview available</string>
+    <string name="knowledge_score_summary">%1$s · %2$s</string>
 </resources>

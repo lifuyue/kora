@@ -179,6 +179,7 @@ class ChatScreenTest {
                                                 collectionId = "collection-1",
                                                 dataId = "data-1",
                                                 title = "来源文档",
+                                                sourceName = "来源文档",
                                                 snippet = "命中片段",
                                             ),
                                         ),
@@ -199,5 +200,54 @@ class ChatScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.CITATION_PANEL).assertIsDisplayed()
         composeRule.onNodeWithText("来源文档").assertIsDisplayed()
         composeRule.onNodeWithText("命中片段").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun citationSheetFormatsScoreAndUsesSourceNameFallbackInEnglish() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "assistant-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "answer",
+                                    citations =
+                                        listOf(
+                                            CitationItemUiModel(
+                                                datasetId = "dataset-1",
+                                                collectionId = "collection-1",
+                                                dataId = "data-1",
+                                                title = "",
+                                                sourceName = "Knowledge Source",
+                                                snippet = "Evidence snippet",
+                                                scoreType = "semantic",
+                                                score = 0.875,
+                                            ),
+                                        ),
+                                ),
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.citationSummary("assistant-1")).performClick()
+        composeRule.onNodeWithText("Knowledge Source").assertIsDisplayed()
+        composeRule.onNodeWithText("Evidence snippet").assertIsDisplayed()
+        composeRule.onNodeWithText("semantic · 0.875").assertIsDisplayed()
     }
 }

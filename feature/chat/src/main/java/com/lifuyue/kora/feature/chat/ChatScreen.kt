@@ -28,12 +28,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.lifuyue.kora.core.common.ChatRole
+import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,14 +121,14 @@ fun ChatScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Text(
-                                citation.title.ifBlank { citation.snippet.take(24) },
+                                citationDisplayTitle(citation),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             if (citation.snippet.isNotBlank()) {
                                 Text(citation.snippet, style = MaterialTheme.typography.bodyMedium)
                             }
-                            if (citation.scoreLabel.isNotBlank()) {
-                                Text(citation.scoreLabel, style = MaterialTheme.typography.labelMedium)
+                            citationScoreLabel(citation)?.let { scoreLabel ->
+                                Text(scoreLabel, style = MaterialTheme.typography.labelMedium)
                             }
                             TextButton(onClick = { onOpenCitation(citation) }) {
                                 Text(stringResource(R.string.chat_open_citation))
@@ -231,6 +233,32 @@ fun ChatScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun citationDisplayTitle(citation: CitationItemUiModel): String =
+    citation.title.ifBlank {
+        citation.sourceName.ifBlank {
+            citation.snippet.take(24).ifBlank { stringResource(R.string.chat_citation_title_fallback) }
+        }
+    }
+
+@Composable
+private fun citationScoreLabel(citation: CitationItemUiModel): String? {
+    val locale = LocalContext.current.resources.configuration.locales[0]
+    val formattedScore =
+        citation.score?.let { score ->
+            NumberFormat.getNumberInstance(locale).apply {
+                maximumFractionDigits = 3
+                minimumFractionDigits = 0
+            }.format(score)
+        }
+    return when {
+        citation.scoreType.isNullOrBlank() && formattedScore == null -> null
+        citation.scoreType.isNullOrBlank() -> formattedScore
+        formattedScore == null -> citation.scoreType
+        else -> stringResource(R.string.chat_score_summary, citation.scoreType, formattedScore)
     }
 }
 
