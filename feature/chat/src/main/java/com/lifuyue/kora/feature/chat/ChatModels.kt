@@ -63,14 +63,22 @@ data class AttachmentDraftUiModel(
 )
 
 @Immutable
+data class InteractiveFieldUiModel(
+    val id: String,
+    val label: String,
+    val value: String = "",
+    val required: Boolean = true,
+)
+
+@Immutable
 data class InteractiveCardUiModel(
     val kind: InteractiveCardKind,
     val messageDataId: String,
     val responseValueId: String? = null,
     val status: InteractiveCardStatus = InteractiveCardStatus.Pending,
-    val fields: List<String> = emptyList(),
+    val fields: List<InteractiveFieldUiModel> = emptyList(),
     val options: List<String> = emptyList(),
-    val draftValue: String = "",
+    val selectedOption: String? = null,
 )
 
 @Immutable

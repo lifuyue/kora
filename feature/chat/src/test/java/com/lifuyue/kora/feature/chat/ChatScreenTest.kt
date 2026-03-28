@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -13,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -385,5 +388,55 @@ class ChatScreenTest {
         composeRule.runOnIdle {
             assertEquals("Alpha", submittedValue)
         }
+    }
+
+    @Test
+    fun collectionFormRendersMultipleInputsAndRequiresAllValuesBeforeSubmit() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "assistant-2",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "填写信息",
+                                    interactiveCard =
+                                        InteractiveCardUiModel(
+                                            kind = InteractiveCardKind.CollectionForm,
+                                            messageDataId = "assistant-2",
+                                            responseValueId = "response-2",
+                                            fields =
+                                                listOf(
+                                                    InteractiveFieldUiModel(id = "topic", label = "Topic"),
+                                                    InteractiveFieldUiModel(id = "details", label = "Details"),
+                                                ),
+                                        ),
+                                ),
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.interactiveFieldInput("assistant-2", "topic"), useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.interactiveFieldInput("assistant-2", "details"), useUnmergedTree = true).fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.interactiveSubmit("assistant-2")).assertIsNotEnabled()
+
+        composeRule.onNodeWithTag(ChatTestTags.interactiveFieldInput("assistant-2", "topic")).performTextInput("Kotlin")
+        composeRule.onNodeWithTag(ChatTestTags.interactiveSubmit("assistant-2")).assertIsNotEnabled()
+        composeRule.onNodeWithTag(ChatTestTags.interactiveFieldInput("assistant-2", "details")).performTextInput("Flow")
+        composeRule.onNodeWithTag(ChatTestTags.interactiveSubmit("assistant-2")).assertIsEnabled()
     }
 }

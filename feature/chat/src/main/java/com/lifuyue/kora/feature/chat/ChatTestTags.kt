@@ -39,4 +39,11 @@ object ChatTestTags {
     fun citationSummary(messageId: String): String = "${CITATION_SUMMARY_PREFIX}$messageId"
 
     fun interactiveCard(messageId: String): String = "interactive_card_$messageId"
+
+    fun interactiveFieldInput(
+        messageId: String,
+        fieldId: String,
+    ): String = "interactive_field_${messageId}_$fieldId"
+
+    fun interactiveSubmit(messageId: String): String = "interactive_submit_$messageId"
 }

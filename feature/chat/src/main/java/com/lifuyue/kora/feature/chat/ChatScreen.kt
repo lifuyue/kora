@@ -548,7 +548,16 @@ private fun InteractiveCard(
     onSubmit: (ChatMessageUiModel, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var draftValue by rememberSaveable(messageId, card.draftValue) { mutableStateOf(card.draftValue) }
+    var fieldValues by rememberSaveable(messageId, card.fields) {
+        mutableStateOf(card.fields.associate { it.id to it.value })
+    }
+    val canEdit = card.status == InteractiveCardStatus.Pending
+    val canSubmit =
+        canEdit &&
+            when (card.kind) {
+                InteractiveCardKind.UserSelect -> true
+                else -> card.fields.all { !it.required || !fieldValues[it.id].isNullOrBlank() }
+            }
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
@@ -563,6 +572,9 @@ private fun InteractiveCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary,
             )
+            card.selectedOption?.takeIf { it.isNotBlank() }?.let { selected ->
+                Text(selected, style = MaterialTheme.typography.bodyMedium)
+            }
             if (card.options.isNotEmpty()) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -571,7 +583,7 @@ private fun InteractiveCard(
                     card.options.forEach { option ->
                         OutlinedButton(
                             onClick = { onSubmit(message, option) },
-                            enabled = card.status == InteractiveCardStatus.Pending,
+                            enabled = canEdit,
                         ) {
                             Text(option)
                         }
@@ -580,21 +592,28 @@ private fun InteractiveCard(
             }
             if (card.fields.isNotEmpty()) {
                 card.fields.forEach { field ->
-                    Text(field, style = MaterialTheme.typography.bodyMedium)
+                    OutlinedTextField(
+                        value = fieldValues[field.id].orEmpty(),
+                        onValueChange = { value ->
+                            fieldValues = fieldValues.toMutableMap().apply { put(field.id, value) }
+                            onDraftChanged(message, interactiveFieldValuesToJson(fieldValues))
+                        },
+                        label = { Text(field.label) },
+                        enabled = canEdit,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .testTag(ChatTestTags.interactiveFieldInput(messageId, field.id)),
+                    )
                 }
+            } else if (card.kind != InteractiveCardKind.UserSelect) {
+                Text(card.selectedOption.orEmpty(), style = MaterialTheme.typography.bodyMedium)
             }
             if (card.kind != InteractiveCardKind.UserSelect) {
-                OutlinedTextField(
-                    value = draftValue,
-                    onValueChange = {
-                        draftValue = it
-                        onDraftChanged(message, it)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
                 Button(
-                    onClick = { onSubmit(message, draftValue) },
-                    enabled = draftValue.isNotBlank() && card.status == InteractiveCardStatus.Pending,
+                    onClick = { onSubmit(message, interactiveFieldValuesToJson(fieldValues)) },
+                    enabled = canSubmit,
+                    modifier = Modifier.testTag(ChatTestTags.interactiveSubmit(messageId)),
                 ) {
                     Text(stringResource(R.string.chat_send))
                 }
@@ -602,3 +621,13 @@ private fun InteractiveCard(
         }
     }
 }
+
+private fun interactiveFieldValuesToJson(values: Map<String, String>): String =
+    kotlinx.serialization.json.JsonObject(
+        mapOf(
+            "fieldValues" to
+                kotlinx.serialization.json.JsonObject(
+                    values.mapValues { (_, value) -> kotlinx.serialization.json.JsonPrimitive(value) },
+                ),
+        ),
+    ).toString()

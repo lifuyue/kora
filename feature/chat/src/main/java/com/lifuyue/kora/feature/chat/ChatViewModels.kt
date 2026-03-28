@@ -372,7 +372,7 @@ class ChatViewModel
                     appId = appId,
                     chatId = resolvedChatId,
                     card = card,
-                    draftPayloadJson = """{"value":${JsonPrimitive(value)}}""",
+                    draftPayloadJson = value,
                 )
             }
         }

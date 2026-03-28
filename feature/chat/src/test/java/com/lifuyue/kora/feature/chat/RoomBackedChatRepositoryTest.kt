@@ -407,7 +407,7 @@ class RoomBackedChatRepositoryTest {
                 val interactiveCard = restored.single().interactiveCard
                 assertNotNull(interactiveCard)
                 assertEquals(InteractiveCardKind.CollectionForm, interactiveCard?.kind)
-                assertEquals(listOf("Topic", "details"), interactiveCard?.fields)
+                assertEquals(listOf("Topic", "details"), interactiveCard?.fields?.map { it.label })
                 assertEquals("response-2", interactiveCard?.responseValueId)
             }
         }
@@ -441,6 +441,27 @@ class RoomBackedChatRepositoryTest {
                         updatedAt = 1L,
                     ),
                 )
+                fixture.database.messageDao().upsert(
+                    com.lifuyue.kora.core.database.entity.MessageEntity(
+                        dataId = "assistant-1",
+                        chatId = "chat-existing",
+                        appId = "app-1",
+                        role = ChatRole.AI.name,
+                        payloadJson =
+                            """
+                            {
+                              "markdown": "请选择",
+                              "eventPayloads": [
+                                {"type":"userSelect","responseValueId":"response-1","options":[{"label":"Alpha"}]}
+                              ]
+                            }
+                            """.trimIndent(),
+                        createdAt = 1L,
+                        isStreaming = false,
+                        sendStatus = "sent",
+                        errorCode = null,
+                    ),
+                )
 
                 val chatId =
                     fixture.repository.submitInteractiveResponse(
@@ -458,10 +479,86 @@ class RoomBackedChatRepositoryTest {
                 advanceUntilIdle()
 
                 assertEquals("chat-existing", chatId)
-                val messages = fixture.database.messageDao().getMessagesForChat("chat-existing")
-                assertEquals(ChatRole.Human.name, messages[messages.lastIndex - 1].role)
-                assertTrue(messages[messages.lastIndex - 1].payloadJson.contains("Alpha"))
+                val restored = fixture.repository.observeMessages("app-1", "chat-existing").first()
+                assertEquals(3, restored.size)
+                assertEquals(InteractiveCardStatus.Resolved, restored.first().interactiveCard?.status)
+                assertEquals(ChatRole.Human, restored[1].role)
+                assertEquals("Alpha", restored[1].markdown)
                 assertEquals(null, fixture.database.interactiveDraftDao().getByChatId("chat-existing"))
+            }
+        }
+
+    @Test
+    fun observeMessagesRestoresSubmittingCollectionFormDraft() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.database.conversationDao().upsert(
+                    ConversationEntity(
+                        chatId = "chat-form",
+                        appId = "app-1",
+                        title = "Form",
+                        customTitle = null,
+                        isPinned = false,
+                        source = "online",
+                        updateTime = 1L,
+                        lastMessagePreview = null,
+                        hasDraft = false,
+                        isDeleted = false,
+                        isArchived = false,
+                    ),
+                )
+                fixture.database.messageDao().upsert(
+                    com.lifuyue.kora.core.database.entity.MessageEntity(
+                        dataId = "assistant-form",
+                        chatId = "chat-form",
+                        appId = "app-1",
+                        role = ChatRole.AI.name,
+                        payloadJson =
+                            """
+                            {
+                              "markdown": "填写信息",
+                              "eventPayloads": [
+                                {
+                                  "type": "collectionForm",
+                                  "fields": [
+                                    {"name": "topic", "label": "Topic"},
+                                    {"name": "details", "label": "Details"}
+                                  ],
+                                  "responseValueId": "response-form"
+                                }
+                              ]
+                            }
+                            """.trimIndent(),
+                        createdAt = 1L,
+                        isStreaming = false,
+                        sendStatus = "sent",
+                        errorCode = null,
+                    ),
+                )
+                fixture.database.interactiveDraftDao().upsert(
+                    com.lifuyue.kora.core.database.entity.InteractiveDraftEntity(
+                        chatId = "chat-form",
+                        messageDataId = "assistant-form",
+                        responseValueId = "response-form",
+                        rawPayloadJson =
+                            """
+                            {"type":"collectionForm","fields":[{"name":"topic","label":"Topic"},{"name":"details","label":"Details"}]}
+                            """.trimIndent(),
+                        draftPayloadJson =
+                            """
+                            {"status":"Submitting","fieldValues":{"topic":"Kotlin","details":"Flow"}}
+                            """.trimIndent(),
+                        updatedAt = 1L,
+                    ),
+                )
+
+                val restored = fixture.repository.observeMessages("app-1", "chat-form").first()
+
+                val card = restored.single().interactiveCard
+                assertNotNull(card)
+                assertEquals(InteractiveCardStatus.Submitting, card?.status)
+                assertEquals("Kotlin", card?.fields?.firstOrNull { it.id == "topic" }?.value)
+                assertEquals("Flow", card?.fields?.firstOrNull { it.id == "details" }?.value)
             }
         }
 }

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.lifuyue.kora.core.database.entity.InteractiveDraftEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface InteractiveDraftDao {
@@ -13,6 +14,9 @@ interface InteractiveDraftDao {
 
     @Query("SELECT * FROM interactive_drafts WHERE chatId = :chatId LIMIT 1")
     fun getByChatId(chatId: String): InteractiveDraftEntity?
+
+    @Query("SELECT * FROM interactive_drafts WHERE chatId = :chatId LIMIT 1")
+    fun observeByChatId(chatId: String): Flow<InteractiveDraftEntity?>
 
     @Query("DELETE FROM interactive_drafts WHERE chatId = :chatId")
     suspend fun deleteByChatId(chatId: String)

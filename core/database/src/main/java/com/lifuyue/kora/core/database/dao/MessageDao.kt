@@ -33,6 +33,9 @@ interface MessageDao {
     )
     fun observeMessagesForChat(chatId: String): Flow<List<MessageEntity>>
 
+    @Query("SELECT * FROM messages WHERE dataId = :dataId LIMIT 1")
+    fun getMessageById(dataId: String): MessageEntity?
+
     @Query(
         """
         UPDATE messages
