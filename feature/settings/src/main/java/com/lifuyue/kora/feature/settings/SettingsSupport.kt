@@ -91,7 +91,7 @@ class AndroidAppInfoProvider
 
         override fun feedbackUrl(): String = "https://github.com/lifuyue/kora/issues"
 
-        override fun licensesUrl(): String = "https://github.com/lifuyue/kora"
+        override fun licensesUrl(): String = "https://github.com/lifuyue/kora/blob/main/LICENSE"
     }
 
 @Module

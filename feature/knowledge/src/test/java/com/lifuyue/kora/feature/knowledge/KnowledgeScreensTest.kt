@@ -131,4 +131,92 @@ class KnowledgeScreensTest {
         composeRule.onNodeWithText("Query extension model: gpt-4.1").assertExists()
         composeRule.onNodeWithText("No results found.").assertExists()
     }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun collectionAndChunkSummariesUseLocalizedLabelsInEnglish() {
+        composeRule.setContent {
+            CollectionManagementScreen(
+                state =
+                    CollectionManagementUiState(
+                        datasetId = "dataset-1",
+                        datasetName = "",
+                        createMode = CollectionCreateMode.TEXT,
+                        tasks =
+                            listOf(
+                                ImportTaskUiModel(
+                                    taskId = "task-1",
+                                    displayName = "Task A",
+                                    sourceType = "file",
+                                    status = "running",
+                                    progress = 40,
+                                ),
+                            ),
+                        items =
+                            listOf(
+                                CollectionListItemUiModel(
+                                    collectionId = "collection-1",
+                                    datasetId = "dataset-1",
+                                    name = "Collection A",
+                                    type = "file",
+                                    trainingType = "chunk",
+                                    status = "active",
+                                    sourceName = "doc.pdf",
+                                    updateTimeLabel = "2026-03-28",
+                                ),
+                            ),
+                        status = KnowledgeLoadState.Content,
+                    ),
+                onBack = {},
+                onRefresh = {},
+                onModeChanged = {},
+                onTextNameChanged = {},
+                onTextValueChanged = {},
+                onLinkValueChanged = {},
+                onLinkSelectorChanged = {},
+                onPickDocument = {},
+                onSubmit = {},
+                onOpenCollection = {},
+                onOpenSearch = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Text").assertExists()
+        composeRule.onNodeWithText("File · Running · 40%").assertExists()
+        composeRule.onNodeWithText("File · Chunked · Active").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun chunkViewerHeaderUsesLocalizedStatusInEnglish() {
+        composeRule.setContent {
+            ChunkViewerScreen(
+                state =
+                    ChunkViewerUiState(
+                        datasetId = "dataset-1",
+                        collectionId = "collection-1",
+                        items =
+                            listOf(
+                                ChunkItemUiModel(
+                                    dataId = "data-1",
+                                    chunkIndex = 1,
+                                    question = "Question A",
+                                    answer = "Answer B",
+                                    status = "active",
+                                ),
+                            ),
+                    ),
+                onBack = {},
+                onStartEditing = {},
+                onQuestionChanged = {},
+                onAnswerChanged = {},
+                onDisabledChanged = {},
+                onSave = {},
+                onDelete = {},
+                onLoadMore = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Chunk 1 · Active").assertExists()
+    }
 }

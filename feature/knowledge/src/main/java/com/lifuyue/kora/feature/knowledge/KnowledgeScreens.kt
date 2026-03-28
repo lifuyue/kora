@@ -216,7 +216,7 @@ fun CollectionManagementScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CollectionCreateMode.entries.forEach { mode ->
                     Text(
-                        text = mode.name,
+                        text = collectionCreateModeLabel(mode),
                         modifier = Modifier.selectable(selected = state.createMode == mode, onClick = { onModeChanged(mode) }),
                         color = if (state.createMode == mode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
@@ -285,7 +285,14 @@ fun CollectionManagementScreen(
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(task.displayName, style = MaterialTheme.typography.titleSmall)
-                            Text("${task.sourceType} · ${task.status} · ${task.progress}%")
+                            Text(
+                                stringResource(
+                                    R.string.knowledge_import_task_summary,
+                                    knowledgeTypeLabel(task.sourceType),
+                                    knowledgeStatusLabel(task.status),
+                                    task.progress,
+                                ),
+                            )
                             task.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                         }
                     }
@@ -301,7 +308,14 @@ fun CollectionManagementScreen(
                     ) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(item.name, style = MaterialTheme.typography.titleSmall)
-                            Text("${item.type} · ${item.trainingType} · ${item.status}")
+                            Text(
+                                stringResource(
+                                    R.string.knowledge_collection_summary,
+                                    knowledgeTypeLabel(item.type),
+                                    knowledgeTrainingTypeLabel(item.trainingType),
+                                    knowledgeStatusLabel(item.status),
+                                ),
+                            )
                             Text(item.sourceName, style = MaterialTheme.typography.bodySmall)
                             Text(item.updateTimeLabel, style = MaterialTheme.typography.labelSmall)
                         }
@@ -359,7 +373,14 @@ fun ChunkViewerScreen(
                 items(state.items, key = { it.dataId }) { item ->
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("#${item.chunkIndex} ${item.status}", style = MaterialTheme.typography.labelLarge)
+                            Text(
+                                stringResource(
+                                    R.string.knowledge_chunk_header,
+                                    item.chunkIndex,
+                                    knowledgeStatusLabel(item.status),
+                                ),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
                             if (state.highlightedDataId == item.dataId) {
                                 Text(
                                     stringResource(R.string.knowledge_highlighted_hit),
@@ -392,6 +413,58 @@ fun ChunkViewerScreen(
             }
         }
     }
+}
+
+@Composable
+private fun collectionCreateModeLabel(mode: CollectionCreateMode): String =
+    stringResource(
+        when (mode) {
+            CollectionCreateMode.FILE -> R.string.knowledge_collection_mode_file
+            CollectionCreateMode.LINK -> R.string.knowledge_collection_mode_link
+            CollectionCreateMode.TEXT -> R.string.knowledge_collection_mode_text
+            CollectionCreateMode.QA -> R.string.knowledge_collection_mode_qa
+        },
+    )
+
+@Composable
+private fun knowledgeTypeLabel(value: String): String {
+    val resId =
+        when (value.lowercase()) {
+            "file" -> R.string.knowledge_label_type_file
+            "link" -> R.string.knowledge_label_type_link
+            "text" -> R.string.knowledge_label_type_text
+            "qa" -> R.string.knowledge_label_type_qa
+            "url" -> R.string.knowledge_label_type_url
+            else -> return value
+        }
+    return stringResource(resId)
+}
+
+@Composable
+private fun knowledgeTrainingTypeLabel(value: String): String {
+    val resId =
+        when (value.lowercase()) {
+            "chunk" -> R.string.knowledge_label_training_chunk
+            "qa" -> R.string.knowledge_label_training_qa
+            else -> return value
+        }
+    return stringResource(resId)
+}
+
+@Composable
+private fun knowledgeStatusLabel(value: String): String {
+    val resId =
+        when (value.lowercase()) {
+            "active" -> R.string.knowledge_label_status_active
+            "running" -> R.string.knowledge_label_status_running
+            "syncing" -> R.string.knowledge_label_status_syncing
+            "failed" -> R.string.knowledge_label_status_failed
+            "success" -> R.string.knowledge_label_status_success
+            "pending" -> R.string.knowledge_label_status_pending
+            "disabled" -> R.string.knowledge_label_status_disabled
+            else -> return value
+        }
+    return stringResource(resId)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
