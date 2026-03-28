@@ -27,6 +27,9 @@
     <string name="chat_downvote">点踩</string>
     <string name="chat_cancel_downvote">取消踩</string>
     <string name="chat_suggested_questions">推荐问题</string>
+    <string name="markdown_code_language_fallback">code</string>
+    <string name="markdown_copy_code">复制代码</string>
+    <string name="markdown_mermaid_fallback_title">Mermaid 图表暂不渲染</string>
 
     <string name="conversation_list_title">会话</string>
     <string name="conversation_list_clear_all">清空全部</string>

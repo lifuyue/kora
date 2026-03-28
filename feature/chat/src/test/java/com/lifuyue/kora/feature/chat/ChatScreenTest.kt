@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.Context
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -7,6 +8,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ChatRole
 import org.junit.Rule
@@ -22,6 +24,7 @@ class ChatScreenTest {
 
     @Test
     fun assistantMessageShowsActionsAndCodeCopyButton() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             ChatScreen(
                 uiState =
@@ -50,13 +53,40 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onAllNodesWithText("复制", useUnmergedTree = true).assertCountEquals(1)
-        composeRule.onAllNodesWithText("重新生成", useUnmergedTree = true).assertCountEquals(1)
-        composeRule.onAllNodesWithText("复制代码", useUnmergedTree = true).assertCountEquals(1)
+        composeRule
+            .onAllNodesWithText(context.getString(R.string.chat_copy), useUnmergedTree = true)
+            .assertCountEquals(1)
+        composeRule
+            .onAllNodesWithText(context.getString(R.string.chat_regenerate), useUnmergedTree = true)
+            .assertCountEquals(1)
+        composeRule
+            .onAllNodesWithText(context.getString(R.string.markdown_copy_code), useUnmergedTree = true)
+            .assertCountEquals(1)
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun markdownMessageLocalizesMermaidFallbackAndCopyCodeAction() {
+        composeRule.setContent {
+            MarkdownMessage(
+                markdown =
+                    """
+                    ```mermaid
+                    graph TD
+                    A-->B
+                    ```
+                    """.trimIndent(),
+                onCopyCode = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Copy code").assertIsDisplayed()
+        composeRule.onNodeWithText("Mermaid diagrams are not rendered yet").assertIsDisplayed()
     }
 
     @Test
     fun streamingStateShowsStopButtonAndInlineStatus() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             ChatScreen(
                 uiState =
@@ -86,12 +116,13 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithText("停止生成").assertIsDisplayed()
-        composeRule.onNodeWithText("生成中").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.chat_stop_generation)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.chat_message_streaming)).assertIsDisplayed()
     }
 
     @Test
     fun stoppedAssistantShowsContinueGenerationAction() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             ChatScreen(
                 uiState =
@@ -122,7 +153,7 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithText("继续生成").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.chat_continue_generation)).assertIsDisplayed()
     }
 
     @Test

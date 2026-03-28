@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -44,7 +45,6 @@ import android.graphics.Color as AndroidColor
 private val codeFenceRegex = Regex("```([A-Za-z0-9_+-]*)\\n([\\s\\S]*?)```")
 private val richInlineRegex =
     Regex("""(?s)!\[([^\]]*)]\(([^)]+)\)|\$\$(.+?)\$\$|(?<!\$)\$([^\n$]+?)\$(?!\$)""")
-private const val MERMAID_FALLBACK_TITLE = "Mermaid 图表暂不渲染"
 
 internal sealed interface MarkdownRenderNode {
     data class MarkdownText(val markdown: String) : MarkdownRenderNode
@@ -494,16 +494,16 @@ private fun CodeFenceCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = if (language.isBlank()) "code" else language,
+                    text = if (language.isBlank()) stringResource(R.string.markdown_code_language_fallback) else language,
                     style = MaterialTheme.typography.labelLarge,
                 )
                 TextButton(onClick = { onCopyCode(code) }) {
-                    Text("复制代码")
+                    Text(stringResource(R.string.markdown_copy_code))
                 }
             }
             if (isMermaidFallback) {
                 Text(
-                    text = MERMAID_FALLBACK_TITLE,
+                    text = stringResource(R.string.markdown_mermaid_fallback_title),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )

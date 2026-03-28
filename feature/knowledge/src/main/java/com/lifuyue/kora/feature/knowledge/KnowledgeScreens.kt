@@ -86,8 +86,8 @@ fun DatasetBrowserScreen(
 ) {
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("数据集") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+            title = { Text(stringResource(R.string.knowledge_dataset_browser_title)) },
+            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) } },
         )
     }) { innerPadding ->
         Column(
@@ -97,14 +97,14 @@ fun DatasetBrowserScreen(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChanged,
-                label = { Text("搜索数据集") },
+                label = { Text(stringResource(R.string.knowledge_dataset_search_label)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = state.selectedTypeFilter == null,
                     onClick = { onTypeFilterSelected(null) },
-                    label = { Text("全部类型") },
+                    label = { Text(stringResource(R.string.knowledge_dataset_filter_all_types)) },
                 )
                 state.availableTypes.forEach { type ->
                     FilterChip(
@@ -118,7 +118,7 @@ fun DatasetBrowserScreen(
                 FilterChip(
                     selected = state.selectedStatusFilter == null,
                     onClick = { onStatusFilterSelected(null) },
-                    label = { Text("全部状态") },
+                    label = { Text(stringResource(R.string.knowledge_dataset_filter_all_statuses)) },
                 )
                 state.availableStatuses.forEach { status ->
                     FilterChip(
@@ -132,15 +132,22 @@ fun DatasetBrowserScreen(
                 OutlinedTextField(
                     value = state.createName,
                     onValueChange = onCreateNameChanged,
-                    label = { Text("新数据集名称") },
+                    label = { Text(stringResource(R.string.knowledge_dataset_create_name_label)) },
                     modifier = Modifier.weight(1f),
                 )
-                Button(onClick = onCreateDataset) { Text("创建") }
-                Button(onClick = onRefresh) { Text(if (state.isRefreshing) "刷新中" else "刷新") }
+                Button(onClick = onCreateDataset) { Text(stringResource(R.string.knowledge_create)) }
+                Button(onClick = onRefresh) {
+                    Text(
+                        stringResource(
+                            if (state.isRefreshing) R.string.knowledge_refreshing else R.string.knowledge_refresh,
+                        ),
+                    )
+                }
             }
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             when (state.status) {
-                KnowledgeLoadState.Empty -> Text("当前筛选下没有数据集。", style = MaterialTheme.typography.bodyMedium)
+                KnowledgeLoadState.Empty ->
+                    Text(stringResource(R.string.knowledge_dataset_empty), style = MaterialTheme.typography.bodyMedium)
                 else ->
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(state.items, key = { it.datasetId }) { item ->
@@ -148,12 +155,27 @@ fun DatasetBrowserScreen(
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(item.name, style = MaterialTheme.typography.titleMedium)
                                     Text(item.intro.ifBlank { item.type }, style = MaterialTheme.typography.bodyMedium)
-                                    Text("向量模型：${item.vectorModel.ifBlank { "未标注" }}", style = MaterialTheme.typography.bodySmall)
-                                    Text("更新时间：${item.updateTimeLabel}", style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        stringResource(
+                                            R.string.knowledge_dataset_vector_model,
+                                            item.vectorModel.ifBlank { stringResource(R.string.knowledge_unspecified) },
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        stringResource(R.string.knowledge_updated_at, item.updateTimeLabel),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(onClick = { onOpenDataset(item.datasetId) }) { Text("Collections") }
-                                        TextButton(onClick = { onOpenSearch(item.datasetId) }) { Text("检索测试") }
-                                        TextButton(onClick = { onDeleteDataset(item.datasetId) }) { Text("删除") }
+                                        TextButton(onClick = { onOpenDataset(item.datasetId) }) {
+                                            Text(stringResource(R.string.knowledge_collections_title))
+                                        }
+                                        TextButton(onClick = { onOpenSearch(item.datasetId) }) {
+                                            Text(stringResource(R.string.knowledge_search_test_title))
+                                        }
+                                        TextButton(onClick = { onDeleteDataset(item.datasetId) }) {
+                                            Text(stringResource(R.string.knowledge_delete))
+                                        }
                                     }
                                 }
                             }
@@ -182,9 +204,9 @@ fun CollectionManagementScreen(
 ) {
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(state.datasetName.ifBlank { "Collections" }) },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
-            actions = { TextButton(onClick = onRefresh) { Text("刷新") } },
+            title = { Text(state.datasetName.ifBlank { stringResource(R.string.knowledge_collections_title) }) },
+            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) } },
+            actions = { TextButton(onClick = onRefresh) { Text(stringResource(R.string.knowledge_refresh)) } },
         )
     }) { innerPadding ->
         Column(
@@ -202,22 +224,22 @@ fun CollectionManagementScreen(
             }
             when (state.createMode) {
                 CollectionCreateMode.FILE -> {
-                    Button(onClick = onPickDocument) { Text("选择文件") }
+                    Button(onClick = onPickDocument) { Text(stringResource(R.string.knowledge_pick_file)) }
                     if (state.selectedDocumentName.isNotBlank()) {
-                        Text("已选择：${state.selectedDocumentName}")
+                        Text(stringResource(R.string.knowledge_selected_document, state.selectedDocumentName))
                     }
                 }
                 CollectionCreateMode.LINK -> {
                     OutlinedTextField(
                         value = state.linkDraftValue,
                         onValueChange = onLinkValueChanged,
-                        label = { Text("URL，每行一个") },
+                        label = { Text(stringResource(R.string.knowledge_link_urls_label)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = state.linkSelector,
                         onValueChange = onLinkSelectorChanged,
-                        label = { Text("Selector（可选）") },
+                        label = { Text(stringResource(R.string.knowledge_link_selector_label)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -227,24 +249,38 @@ fun CollectionManagementScreen(
                     OutlinedTextField(
                         value = state.textDraftName,
                         onValueChange = onTextNameChanged,
-                        label = { Text("名称") },
+                        label = { Text(stringResource(R.string.knowledge_name)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = state.textDraftValue,
                         onValueChange = onTextValueChanged,
-                        label = { Text(if (state.createMode == CollectionCreateMode.QA) "Q/A 内容" else "文本内容") },
+                        label = {
+                            Text(
+                                stringResource(
+                                    if (state.createMode == CollectionCreateMode.QA) {
+                                        R.string.knowledge_qa_content
+                                    } else {
+                                        R.string.knowledge_text_content
+                                    },
+                                ),
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
             Button(onClick = onSubmit, enabled = !state.isSubmitting) {
-                Text(if (state.isSubmitting) "提交中..." else "创建导入")
+                Text(
+                    stringResource(
+                        if (state.isSubmitting) R.string.knowledge_submitting else R.string.knowledge_create_import,
+                    ),
+                )
             }
-            TextButton(onClick = onOpenSearch) { Text("进入检索测试") }
+            TextButton(onClick = onOpenSearch) { Text(stringResource(R.string.knowledge_open_search_test)) }
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (state.tasks.isNotEmpty()) {
-                Text("导入任务", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.knowledge_import_tasks), style = MaterialTheme.typography.titleMedium)
                 state.tasks.forEach { task ->
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -255,9 +291,9 @@ fun CollectionManagementScreen(
                     }
                 }
             }
-            Text("Collection 列表", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.knowledge_collection_list), style = MaterialTheme.typography.titleMedium)
             if (state.status == KnowledgeLoadState.Empty) {
-                Text("当前数据集还没有 collection。", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.knowledge_collection_empty), style = MaterialTheme.typography.bodyMedium)
             } else {
                 state.items.forEach { item ->
                     Card(
@@ -291,8 +327,8 @@ fun ChunkViewerScreen(
 ) {
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Chunk Viewer") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+            title = { Text(stringResource(R.string.knowledge_chunk_viewer_title)) },
+            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) } },
         )
     }) { innerPadding ->
         Column(
@@ -304,20 +340,20 @@ fun ChunkViewerScreen(
                 OutlinedTextField(
                     value = state.editingQuestion,
                     onValueChange = onQuestionChanged,
-                    label = { Text("问题") },
+                    label = { Text(stringResource(R.string.knowledge_question)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = state.editingAnswer,
                     onValueChange = onAnswerChanged,
-                    label = { Text("答案") },
+                    label = { Text(stringResource(R.string.knowledge_answer)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("禁用该 Chunk")
+                    Text(stringResource(R.string.knowledge_disable_chunk))
                     Switch(checked = state.editingDisabled, onCheckedChange = onDisabledChanged)
                 }
-                Button(onClick = onSave) { Text("保存") }
+                Button(onClick = onSave) { Text(stringResource(R.string.knowledge_save)) }
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(state.items, key = { it.dataId }) { item ->
@@ -325,15 +361,19 @@ fun ChunkViewerScreen(
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("#${item.chunkIndex} ${item.status}", style = MaterialTheme.typography.labelLarge)
                             if (state.highlightedDataId == item.dataId) {
-                                Text("当前引用命中", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                                Text(
+                                    stringResource(R.string.knowledge_highlighted_hit),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
                             }
                             Text(item.question, style = MaterialTheme.typography.bodyLarge)
                             if (item.answer.isNotBlank()) {
                                 Text(item.answer, style = MaterialTheme.typography.bodyMedium)
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(onClick = { onStartEditing(item) }) { Text("编辑") }
-                                TextButton(onClick = { onDelete(item.dataId) }) { Text("删除") }
+                                TextButton(onClick = { onStartEditing(item) }) { Text(stringResource(R.string.knowledge_edit)) }
+                                TextButton(onClick = { onDelete(item.dataId) }) { Text(stringResource(R.string.knowledge_delete)) }
                             }
                         }
                     }
@@ -341,7 +381,11 @@ fun ChunkViewerScreen(
                 if (state.canLoadMore) {
                     item(key = "load_more") {
                         Button(onClick = onLoadMore, enabled = !state.isLoading, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (state.isLoading) "加载中..." else "加载更多")
+                            Text(
+                                stringResource(
+                                    if (state.isLoading) R.string.knowledge_loading else R.string.knowledge_load_more,
+                                ),
+                            )
                         }
                     }
                 }
@@ -365,8 +409,8 @@ fun SearchTestScreen(
 ) {
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("检索测试") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+            title = { Text(stringResource(R.string.knowledge_search_test_title)) },
+            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) } },
         )
     }) { innerPadding ->
         Column(
@@ -376,43 +420,50 @@ fun SearchTestScreen(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChanged,
-                label = { Text("问题") },
+                label = { Text(stringResource(R.string.knowledge_question)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = state.searchMode,
                 onValueChange = onSearchModeChanged,
-                label = { Text("Search Mode") },
+                label = { Text(stringResource(R.string.knowledge_search_mode)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = state.similarity,
                 onValueChange = onSimilarityChanged,
-                label = { Text("Similarity") },
+                label = { Text(stringResource(R.string.knowledge_similarity)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = state.embeddingWeight,
                 onValueChange = onEmbeddingWeightChanged,
-                label = { Text("Embedding Weight") },
+                label = { Text(stringResource(R.string.knowledge_embedding_weight)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text("使用 ReRank")
+                Text(stringResource(R.string.knowledge_use_rerank))
                 Switch(checked = state.useReRank, onCheckedChange = onUseReRankChanged)
             }
             Button(onClick = onSearch, enabled = !state.isSearching) {
-                Text(if (state.isSearching) "检索中..." else "开始检索")
+                Text(
+                    stringResource(
+                        if (state.isSearching) R.string.knowledge_searching else R.string.knowledge_start_search,
+                    ),
+                )
             }
             if (state.duration.isNotBlank()) {
-                Text("耗时：${state.duration}")
+                Text(stringResource(R.string.knowledge_duration, state.duration))
             }
             if (state.extensionInfo.isNotBlank()) {
-                Text("扩展查询模型：${state.extensionInfo}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    stringResource(R.string.knowledge_extension_model, state.extensionInfo),
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (state.status == KnowledgeLoadState.Empty && !state.isSearching) {
-                Text("未命中结果。", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.knowledge_search_empty), style = MaterialTheme.typography.bodyMedium)
             }
             state.results.forEach { item ->
                 Card(modifier = Modifier.fillMaxWidth().clickable { onOpenResult(item) }) {

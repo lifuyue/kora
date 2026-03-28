@@ -89,7 +89,7 @@ class AndroidAppInfoProvider
             return context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "dev"
         }
 
-        override fun feedbackUrl(): String = "mailto:kora@example.com"
+        override fun feedbackUrl(): String = "https://github.com/lifuyue/kora/issues"
 
         override fun licensesUrl(): String = "https://github.com/lifuyue/kora"
     }
@@ -105,6 +105,6 @@ abstract class SettingsSupportModule {
 
     companion object {
         @Provides
-        fun provideSettingsFeedbackUrl(): String = "mailto:kora@example.com"
+        fun provideSettingsFeedbackUrl(): String = "https://github.com/lifuyue/kora/issues"
     }
 }

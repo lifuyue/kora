@@ -1,5 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
+import android.content.Context
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -26,10 +28,11 @@ class ConversationListScreenTest {
 
     @Test
     fun pinnedAndRegularSectionsAreGrouped() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.renderConversationList()
 
         composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").fetchSemanticsNode()
-        composeRule.onNodeWithText("清空全部").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_clear_all)).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FOLDER_FILTER).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_TAG_FILTER).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
@@ -60,11 +63,12 @@ class ConversationListScreenTest {
 
     @Test
     fun clearAllUsesExplicitConfirmation() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         var cleared = false
 
         composeRule.renderConversationList(onClearConversations = { cleared = true })
 
-        composeRule.onNodeWithText("清空全部").performClick()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_clear_all)).performClick()
         composeRule.onNodeWithText("清空所有会话？").assertIsDisplayed()
         composeRule.onNodeWithText("确认清空").performClick()
 
@@ -73,11 +77,12 @@ class ConversationListScreenTest {
 
     @Test
     fun emptyStateStillShowsSearchAndCreateEntry() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.renderConversationList(
             uiState = ConversationListUiState(items = emptyList()),
         )
 
-        composeRule.onNodeWithText("暂无会话").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_empty_title)).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_SEARCH).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }

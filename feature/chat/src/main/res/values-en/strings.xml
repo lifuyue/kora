@@ -27,6 +27,9 @@
     <string name="chat_downvote">Downvote</string>
     <string name="chat_cancel_downvote">Remove downvote</string>
     <string name="chat_suggested_questions">Suggested questions</string>
+    <string name="markdown_code_language_fallback">code</string>
+    <string name="markdown_copy_code">Copy code</string>
+    <string name="markdown_mermaid_fallback_title">Mermaid diagrams are not rendered yet</string>
 
     <string name="conversation_list_title">Conversations</string>
     <string name="conversation_list_clear_all">Clear all</string>

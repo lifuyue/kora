@@ -140,6 +140,7 @@ class SettingsScreensTest {
 
     @Test
     fun chatPreferencesScreenShowsPersistedTogglesAndSlider() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             ChatPreferencesScreen(
                 state =
@@ -159,7 +160,31 @@ class SettingsScreensTest {
         composeRule.onNodeWithTag("chat-pref-stream").assertIsOff()
         composeRule.onNodeWithTag("chat-pref-auto-scroll").assertIsOn()
         composeRule.onNodeWithTag("chat-pref-citations").assertIsOff()
-        composeRule.onNodeWithText("120%").assertIsDisplayed()
+        composeRule
+            .onNodeWithText(context.getString(R.string.settings_chat_preferences_font_scale, 120))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun chatPreferencesScreenUsesLocalizedFontScaleLabel() {
+        composeRule.setContent {
+            ChatPreferencesScreen(
+                state =
+                    ChatPreferencesUiState(
+                        streamEnabled = true,
+                        autoScroll = true,
+                        showCitationsByDefault = true,
+                        fontSizeScale = 1.2f,
+                    ),
+                onStreamEnabledChange = {},
+                onAutoScrollChange = {},
+                onShowCitationsChange = {},
+                onFontSizeScaleChange = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Text size 120%").assertIsDisplayed()
     }
 
     @Test
@@ -177,6 +202,21 @@ class SettingsScreensTest {
 
         composeRule.onNodeWithText(context.getString(R.string.settings_language_title)).assertIsDisplayed()
         composeRule.onNodeWithTag("language-option-en").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_language_english)).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun languageScreenLocalizesOptionLabelsInEnglish() {
+        composeRule.setContent {
+            LanguageSettingsScreen(
+                state = LanguageSettingsUiState(selectedLanguageTag = null),
+                onLanguageTagChange = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Follow system").assertIsDisplayed()
+        composeRule.onNodeWithText("Simplified Chinese").assertIsDisplayed()
         composeRule.onNodeWithText("English").assertIsDisplayed()
     }
 

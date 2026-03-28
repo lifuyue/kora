@@ -361,7 +361,7 @@ fun ChatPreferencesScreen(
                 modifier = Modifier.semantics { testTag = "chat-pref-citations" },
             )
         }
-        Text("${"%.0f".format(state.fontSizeScale * 100)}%")
+        Text(stringResource(R.string.settings_chat_preferences_font_scale, (state.fontSizeScale * 100).toInt()))
         Slider(
             value = state.fontSizeScale,
             onValueChange = onFontSizeScaleChange,
@@ -393,13 +393,13 @@ fun LanguageSettingsScreen(
         )
         LanguageOption(
             tag = "language-option-zh-CN",
-            label = "简体中文",
+            label = stringResource(R.string.settings_language_simplified_chinese),
             selected = state.selectedLanguageTag == "zh-CN",
             onClick = { onLanguageTagChange("zh-CN") },
         )
         LanguageOption(
             tag = "language-option-en",
-            label = "English",
+            label = stringResource(R.string.settings_language_english),
             selected = state.selectedLanguageTag == "en",
             onClick = { onLanguageTagChange("en") },
         )

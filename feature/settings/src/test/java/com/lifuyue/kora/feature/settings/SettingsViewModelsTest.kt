@@ -205,13 +205,13 @@ class SettingsViewModelsTest {
                     appInfoProvider =
                         FakeAppInfoProvider(
                             versionName = "1.2.3",
-                            feedbackUrl = "mailto:kora@example.com",
+                            feedbackUrl = "https://github.com/lifuyue/kora/issues",
                             licensesUrl = "https://example.com/licenses",
                         ),
                 )
 
             assertEquals("1.2.3", viewModel.uiState.value.versionName)
-            assertEquals("mailto:kora@example.com", viewModel.uiState.value.feedbackUrl)
+            assertEquals("https://github.com/lifuyue/kora/issues", viewModel.uiState.value.feedbackUrl)
             assertEquals("https://example.com/licenses", viewModel.uiState.value.licensesUrl)
         }
 }

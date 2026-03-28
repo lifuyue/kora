@@ -41,9 +41,12 @@
     <string name="settings_chat_preferences_stream">Enable streaming output</string>
     <string name="settings_chat_preferences_auto_scroll">Auto-scroll to bottom</string>
     <string name="settings_chat_preferences_citations">Show citations by default</string>
+    <string name="settings_chat_preferences_font_scale">Text size %1$d%%</string>
 
     <string name="settings_language_title">Language</string>
     <string name="settings_language_follow_system">Follow system</string>
+    <string name="settings_language_simplified_chinese">Simplified Chinese</string>
+    <string name="settings_language_english">English</string>
 
     <string name="settings_storage_title">Storage</string>
     <string name="settings_storage_summary">Inspect storage usage and clear temporary cache</string>
