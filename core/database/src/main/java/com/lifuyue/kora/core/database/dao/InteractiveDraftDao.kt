@@ -12,7 +12,7 @@ interface InteractiveDraftDao {
     suspend fun upsert(entity: InteractiveDraftEntity)
 
     @Query("SELECT * FROM interactive_drafts WHERE chatId = :chatId LIMIT 1")
-    suspend fun getByChatId(chatId: String): InteractiveDraftEntity?
+    fun getByChatId(chatId: String): InteractiveDraftEntity?
 
     @Query("DELETE FROM interactive_drafts WHERE chatId = :chatId")
     suspend fun deleteByChatId(chatId: String)

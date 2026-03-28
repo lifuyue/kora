@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import javax.inject.Inject
 
 @HiltViewModel
@@ -259,6 +260,8 @@ class ChatViewModel
                 metaState,
                 observeMessages(),
             ) { currentInput, meta, messages ->
+                val pendingInteractiveCard =
+                    messages.lastOrNull { it.interactiveCard?.status == InteractiveCardStatus.Pending }?.interactiveCard
                 ChatUiState(
                     appId = appId,
                     chatId = chatId.value,
@@ -268,6 +271,7 @@ class ChatViewModel
                     errorMessage = meta.errorMessage,
                     messages = messages,
                     isInitialLoading = meta.isLoading && messages.isEmpty(),
+                    pendingInteractiveCard = pendingInteractiveCard,
                 )
             }.stateIn(
                 viewModelScope,
@@ -354,6 +358,55 @@ class ChatViewModel
                     messageId = message.messageId,
                     feedback = feedback,
                 )
+            }
+        }
+
+        fun updateInteractiveDraft(
+            message: ChatMessageUiModel,
+            value: String,
+        ) {
+            val resolvedChatId = chatId.value ?: message.chatId
+            val card = message.interactiveCard ?: return
+            viewModelScope.launch {
+                chatRepository.savePendingInteractiveDraft(
+                    appId = appId,
+                    chatId = resolvedChatId,
+                    card = card,
+                    draftPayloadJson = """{"value":${JsonPrimitive(value)}}""",
+                )
+            }
+        }
+
+        fun submitInteractiveResponse(
+            message: ChatMessageUiModel,
+            value: String,
+        ) {
+            val resolvedChatId = chatId.value ?: message.chatId
+            val card = message.interactiveCard ?: return
+            val trimmed = value.trim()
+            if (trimmed.isEmpty()) {
+                return
+            }
+            viewModelScope.launch {
+                metaState.update { it.copy(isSending = true, errorMessage = null) }
+                runCatching {
+                    chatRepository.submitInteractiveResponse(
+                        appId = appId,
+                        chatId = resolvedChatId,
+                        card = card,
+                        value = trimmed,
+                    )
+                }.onSuccess { updatedChatId ->
+                    chatId.value = updatedChatId
+                    metaState.update { it.copy(isSending = false, errorMessage = null) }
+                }.onFailure { error ->
+                    metaState.update {
+                        it.copy(
+                            isSending = false,
+                            errorMessage = error.message ?: strings.sendFailed(),
+                        )
+                    }
+                }
             }
         }
 

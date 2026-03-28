@@ -54,6 +54,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -267,6 +268,200 @@ class RoomBackedChatRepositoryTest {
 
                 assertTrue(fixture.database.conversationFolderDao().observeAssignments("app-1").first().isEmpty())
                 assertTrue(fixture.database.conversationTagDao().observeAssignments("app-1").first().isEmpty())
+            }
+        }
+
+    @Test
+    fun observeMessagesRestoresInteractiveCardAndPendingDraftFromHistory() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.database.conversationDao().upsert(
+                    ConversationEntity(
+                        chatId = "chat-existing",
+                        appId = "app-1",
+                        title = "Existing",
+                        customTitle = null,
+                        isPinned = false,
+                        source = "online",
+                        updateTime = 1L,
+                        lastMessagePreview = null,
+                        hasDraft = false,
+                        isDeleted = false,
+                        isArchived = false,
+                    ),
+                )
+                fixture.api.recordsByChat["chat-existing"] =
+                    listOf(
+                        ChatRecordItemDto(
+                            dataId = "assistant-1",
+                            obj = "AI",
+                            value =
+                                JsonArray(
+                                    listOf(
+                                        JsonObject(
+                                            mapOf(
+                                                "text" to JsonObject(mapOf("content" to JsonPrimitive("请选择"))),
+                                            ),
+                                        ),
+                                        JsonObject(
+                                            mapOf(
+                                                "interactive" to
+                                                    JsonObject(
+                                                        mapOf(
+                                                            "type" to JsonPrimitive("userSelect"),
+                                                            "header" to JsonPrimitive("请选择一个方案"),
+                                                            "responseValueId" to JsonPrimitive("response-1"),
+                                                            "options" to
+                                                                JsonArray(
+                                                                    listOf(
+                                                                        JsonObject(mapOf("label" to JsonPrimitive("Alpha"))),
+                                                                        JsonObject(mapOf("label" to JsonPrimitive("Beta"))),
+                                                                    ),
+                                                                ),
+                                                        ),
+                                                    ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                        ),
+                    )
+                fixture.database.interactiveDraftDao().upsert(
+                    com.lifuyue.kora.core.database.entity.InteractiveDraftEntity(
+                        chatId = "chat-existing",
+                        messageDataId = "assistant-1",
+                        responseValueId = "response-1",
+                        rawPayloadJson =
+                            """
+                            {"type":"userSelect","header":"请选择一个方案","options":[{"label":"Alpha"},{"label":"Beta"}]}
+                            """.trimIndent(),
+                        draftPayloadJson = """{"selected":"Beta"}""",
+                        updatedAt = 1L,
+                    ),
+                )
+
+                fixture.repository.observeMessages("app-1", "chat-existing").first()
+                advanceUntilIdle()
+                val restored = fixture.repository.observeMessages("app-1", "chat-existing").first()
+
+                val interactiveCard = restored.single().interactiveCard
+                assertNotNull(interactiveCard)
+                assertEquals(InteractiveCardKind.UserSelect, interactiveCard?.kind)
+                assertEquals("assistant-1", interactiveCard?.messageDataId)
+                assertEquals("response-1", interactiveCard?.responseValueId)
+                assertEquals(listOf("Alpha", "Beta"), interactiveCard?.options)
+                assertEquals(InteractiveCardStatus.Pending, interactiveCard?.status)
+            }
+        }
+
+    @Test
+    fun observeMessagesNormalizesCollectionFormFromCachedSsePayload() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.database.conversationDao().upsert(
+                    ConversationEntity(
+                        chatId = "chat-stream",
+                        appId = "app-1",
+                        title = "Streaming",
+                        customTitle = null,
+                        isPinned = false,
+                        source = "online",
+                        updateTime = 1L,
+                        lastMessagePreview = null,
+                        hasDraft = false,
+                        isDeleted = false,
+                        isArchived = false,
+                    ),
+                )
+                fixture.database.messageDao().upsert(
+                    com.lifuyue.kora.core.database.entity.MessageEntity(
+                        dataId = "assistant-1",
+                        chatId = "chat-stream",
+                        appId = "app-1",
+                        role = ChatRole.AI.name,
+                        payloadJson =
+                            """
+                            {
+                              "markdown": "填写信息",
+                              "reasoning": "",
+                              "eventPayloads": [
+                                {
+                                  "fields": [
+                                    {"label": "Topic"},
+                                    {"name": "details"}
+                                  ],
+                                  "responseValueId": "response-2"
+                                }
+                              ]
+                            }
+                            """.trimIndent(),
+                        createdAt = 1L,
+                        isStreaming = false,
+                        sendStatus = "sent",
+                        errorCode = null,
+                    ),
+                )
+
+                val restored = fixture.repository.observeMessages("app-1", "chat-stream").first()
+
+                val interactiveCard = restored.single().interactiveCard
+                assertNotNull(interactiveCard)
+                assertEquals(InteractiveCardKind.CollectionForm, interactiveCard?.kind)
+                assertEquals(listOf("Topic", "details"), interactiveCard?.fields)
+                assertEquals("response-2", interactiveCard?.responseValueId)
+            }
+        }
+
+    @Test
+    fun submitInteractiveResponseCreatesHumanReplyAndClearsDraft() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.database.conversationDao().upsert(
+                    ConversationEntity(
+                        chatId = "chat-existing",
+                        appId = "app-1",
+                        title = "Existing",
+                        customTitle = null,
+                        isPinned = false,
+                        source = "online",
+                        updateTime = 1L,
+                        lastMessagePreview = null,
+                        hasDraft = false,
+                        isDeleted = false,
+                        isArchived = false,
+                    ),
+                )
+                fixture.database.interactiveDraftDao().upsert(
+                    com.lifuyue.kora.core.database.entity.InteractiveDraftEntity(
+                        chatId = "chat-existing",
+                        messageDataId = "assistant-1",
+                        responseValueId = "response-1",
+                        rawPayloadJson = """{"type":"userSelect","options":[{"label":"Alpha"}]}""",
+                        draftPayloadJson = null,
+                        updatedAt = 1L,
+                    ),
+                )
+
+                val chatId =
+                    fixture.repository.submitInteractiveResponse(
+                        appId = "app-1",
+                        chatId = "chat-existing",
+                        card =
+                            InteractiveCardUiModel(
+                                kind = InteractiveCardKind.UserSelect,
+                                messageDataId = "assistant-1",
+                                responseValueId = "response-1",
+                                options = listOf("Alpha"),
+                            ),
+                        value = "Alpha",
+                    )
+                advanceUntilIdle()
+
+                assertEquals("chat-existing", chatId)
+                val messages = fixture.database.messageDao().getMessagesForChat("chat-existing")
+                assertEquals(ChatRole.Human.name, messages[messages.lastIndex - 1].role)
+                assertTrue(messages[messages.lastIndex - 1].payloadJson.contains("Alpha"))
+                assertEquals(null, fixture.database.interactiveDraftDao().getByChatId("chat-existing"))
             }
         }
 }

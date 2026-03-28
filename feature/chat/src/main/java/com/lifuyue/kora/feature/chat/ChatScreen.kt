@@ -3,6 +3,7 @@ package com.lifuyue.kora.feature.chat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,6 +41,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.lifuyue.kora.core.common.ChatRole
 import kotlinx.coroutines.launch
@@ -64,6 +66,8 @@ fun ChatScreen(
     onOpenAppDetail: () -> Unit = {},
     onSuggestedQuestion: (String) -> Unit = {},
     onOpenCitation: (CitationItemUiModel) -> Unit = {},
+    onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit = { _, _ -> },
+    onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit = { _, _ -> },
 ) {
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
@@ -244,6 +248,8 @@ fun ChatScreen(
                             onOpenCitation = {
                                 activeCitationMessage = message
                             },
+                            onUpdateInteractiveDraft = onUpdateInteractiveDraft,
+                            onSubmitInteractiveResponse = onSubmitInteractiveResponse,
                         )
                     }
                 }
@@ -380,6 +386,8 @@ private fun MessageCard(
     onFeedback: (MessageFeedback) -> Unit,
     onSuggestedQuestion: (String) -> Unit,
     onOpenCitation: (CitationItemUiModel) -> Unit,
+    onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit,
+    onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit,
 ) {
     Card(
         modifier =
@@ -412,6 +420,16 @@ private fun MessageCard(
                     text = message.reasoning,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            message.interactiveCard?.let { card ->
+                InteractiveCard(
+                    message = message,
+                    messageId = message.messageId,
+                    card = card,
+                    onDraftChanged = onUpdateInteractiveDraft,
+                    onSubmit = onSubmitInteractiveResponse,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             if (message.deliveryState != MessageDeliveryState.Sent) {
@@ -515,6 +533,70 @@ private fun MessageCard(
                             Text(question)
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InteractiveCard(
+    message: ChatMessageUiModel,
+    messageId: String,
+    card: InteractiveCardUiModel,
+    onDraftChanged: (ChatMessageUiModel, String) -> Unit,
+    onSubmit: (ChatMessageUiModel, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var draftValue by rememberSaveable(messageId, card.draftValue) { mutableStateOf(card.draftValue) }
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier.testTag(ChatTestTags.interactiveCard(messageId)),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(12.dp),
+        ) {
+            Text(
+                text = card.kind.name,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            if (card.options.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.wrapContentWidth(Alignment.Start),
+                ) {
+                    card.options.forEach { option ->
+                        OutlinedButton(
+                            onClick = { onSubmit(message, option) },
+                            enabled = card.status == InteractiveCardStatus.Pending,
+                        ) {
+                            Text(option)
+                        }
+                    }
+                }
+            }
+            if (card.fields.isNotEmpty()) {
+                card.fields.forEach { field ->
+                    Text(field, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            if (card.kind != InteractiveCardKind.UserSelect) {
+                OutlinedTextField(
+                    value = draftValue,
+                    onValueChange = {
+                        draftValue = it
+                        onDraftChanged(message, it)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = { onSubmit(message, draftValue) },
+                    enabled = draftValue.isNotBlank() && card.status == InteractiveCardStatus.Pending,
+                ) {
+                    Text(stringResource(R.string.chat_send))
                 }
             }
         }

@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import org.junit.Assert.assertEquals
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ChatRole
@@ -337,5 +338,52 @@ class ChatScreenTest {
         composeRule.onNodeWithText("Knowledge Source").assertIsDisplayed()
         composeRule.onNodeWithText("Evidence snippet").assertIsDisplayed()
         composeRule.onNodeWithText("semantic · 0.875").assertIsDisplayed()
+    }
+
+    @Test
+    fun assistantMessageShowsInlineInteractiveOptions() {
+        var submittedValue: String? = null
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "assistant-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "请选择一个方案",
+                                    interactiveCard =
+                                        InteractiveCardUiModel(
+                                            kind = InteractiveCardKind.UserSelect,
+                                            messageDataId = "assistant-1",
+                                            responseValueId = "response-1",
+                                            options = listOf("Alpha", "Beta"),
+                                        ),
+                                ),
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+                onSubmitInteractiveResponse = { _, value -> submittedValue = value },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.interactiveCard("assistant-1")).assertIsDisplayed()
+        composeRule.onNodeWithText("Alpha").assertIsDisplayed()
+        composeRule.onNodeWithText("Beta").assertIsDisplayed()
+        composeRule.onNodeWithText("Alpha").performClick()
+        composeRule.runOnIdle {
+            assertEquals("Alpha", submittedValue)
+        }
     }
 }

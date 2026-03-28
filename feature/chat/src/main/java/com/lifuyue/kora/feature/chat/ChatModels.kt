@@ -70,6 +70,7 @@ data class InteractiveCardUiModel(
     val status: InteractiveCardStatus = InteractiveCardStatus.Pending,
     val fields: List<String> = emptyList(),
     val options: List<String> = emptyList(),
+    val draftValue: String = "",
 )
 
 @Immutable
@@ -148,6 +149,7 @@ data class ChatMessageUiModel(
     val feedback: MessageFeedback = MessageFeedback.None,
     val citations: List<CitationItemUiModel> = emptyList(),
     val suggestedQuestions: List<String> = emptyList(),
+    val interactiveCard: InteractiveCardUiModel? = null,
 ) {
     val blocks: List<AssistantBlock>
         get() = parseAssistantBlocks(markdown)

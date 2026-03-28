@@ -37,4 +37,6 @@ object ChatTestTags {
     fun messageError(messageId: String): String = "message_error_$messageId"
 
     fun citationSummary(messageId: String): String = "${CITATION_SUMMARY_PREFIX}$messageId"
+
+    fun interactiveCard(messageId: String): String = "interactive_card_$messageId"
 }

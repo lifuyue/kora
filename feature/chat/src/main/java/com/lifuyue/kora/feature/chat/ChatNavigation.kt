@@ -156,6 +156,8 @@ private fun ChatRoute(
             viewModel.updateInput(it)
             viewModel.send()
         },
+        onUpdateInteractiveDraft = viewModel::updateInteractiveDraft,
+        onSubmitInteractiveResponse = viewModel::submitInteractiveResponse,
         onOpenCitation = { citation ->
             if (!citation.datasetId.isNullOrBlank() && !citation.collectionId.isNullOrBlank()) {
                 navController.navigate(

@@ -140,6 +140,79 @@ class ChatViewModelTest {
             assertEquals(null, state.shareExportState.selection)
             collectJob.cancel()
         }
+
+    @Test
+    fun uiStatePromotesLastPendingInteractiveCardFromMessages() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val viewModel =
+                ChatViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
+                    chatRepository = repository,
+                    strings = FakeChatStrings(),
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val card =
+                InteractiveCardUiModel(
+                    kind = InteractiveCardKind.UserSelect,
+                    messageDataId = "assistant-1",
+                    responseValueId = "response-1",
+                    options = listOf("Alpha", "Beta"),
+                )
+            repository.emitMessages(
+                "chat-1",
+                listOf(
+                    ChatMessageUiModel(
+                        messageId = "assistant-1",
+                        chatId = "chat-1",
+                        appId = "app-1",
+                        role = ChatRole.AI,
+                        markdown = "请选择",
+                        interactiveCard = card,
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            assertEquals(card, viewModel.uiState.value.pendingInteractiveCard)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun submitInteractiveResponseDelegatesToRepository() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val viewModel =
+                ChatViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("appId" to "app-1", "chatId" to "chat-1")),
+                    chatRepository = repository,
+                    strings = FakeChatStrings(),
+                )
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val message =
+                ChatMessageUiModel(
+                    messageId = "assistant-1",
+                    chatId = "chat-1",
+                    appId = "app-1",
+                    role = ChatRole.AI,
+                    markdown = "请选择",
+                    interactiveCard =
+                        InteractiveCardUiModel(
+                            kind = InteractiveCardKind.UserSelect,
+                            messageDataId = "assistant-1",
+                            responseValueId = "response-1",
+                            options = listOf("Alpha"),
+                        ),
+                )
+
+            viewModel.submitInteractiveResponse(message, "Alpha")
+            advanceUntilIdle()
+
+            assertEquals("chat-1", repository.submittedInteractiveChatId)
+            assertEquals("assistant-1", repository.submittedInteractiveCard?.messageDataId)
+            assertEquals("Alpha", repository.submittedInteractiveValue)
+            collectJob.cancel()
+        }
 }
 
 private class FakeChatStrings : ChatStrings(context = ContextWrapper(null)) {
@@ -169,6 +242,9 @@ private class RecordingChatRepository(
     var stoppedChatId: String? = null
     var continuedChatId: String? = null
     var feedback: MessageFeedback? = null
+    var submittedInteractiveChatId: String? = null
+    var submittedInteractiveCard: InteractiveCardUiModel? = null
+    var submittedInteractiveValue: String? = null
 
     override fun observeMessages(
         appId: String,
@@ -249,6 +325,18 @@ private class RecordingChatRepository(
         feedback: MessageFeedback,
     ) {
         this.feedback = feedback
+    }
+
+    override suspend fun submitInteractiveResponse(
+        appId: String,
+        chatId: String,
+        card: InteractiveCardUiModel,
+        value: String,
+    ): String {
+        submittedInteractiveChatId = chatId
+        submittedInteractiveCard = card
+        submittedInteractiveValue = value
+        return chatId
     }
 
     fun emitMessages(

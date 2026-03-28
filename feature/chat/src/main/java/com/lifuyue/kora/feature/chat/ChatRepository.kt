@@ -165,6 +165,15 @@ interface ChatRepository {
         throw UnsupportedOperationException("Interactive draft foundation is not implemented yet")
     }
 
+    suspend fun submitInteractiveResponse(
+        appId: String,
+        chatId: String,
+        card: InteractiveCardUiModel,
+        value: String,
+    ): String {
+        throw UnsupportedOperationException("Interactive submission is not implemented yet")
+    }
+
     suspend fun buildShareExportPreview(
         appId: String,
         chatId: String,
