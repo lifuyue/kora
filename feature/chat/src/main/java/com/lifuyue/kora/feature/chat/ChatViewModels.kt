@@ -39,13 +39,15 @@ class ConversationListViewModel
         private val query = MutableStateFlow("")
         private val selectedFolderId = MutableStateFlow<String?>(null)
         private val selectedTagId = MutableStateFlow<String?>(null)
+        private val showArchived = MutableStateFlow(false)
         private val isRefreshing = MutableStateFlow(false)
         private val filters =
-            combine(query, selectedFolderId, selectedTagId, isRefreshing) { currentQuery, folderId, tagId, refreshing ->
+            combine(query, selectedFolderId, selectedTagId, showArchived, isRefreshing) { currentQuery, folderId, tagId, archived, refreshing ->
                 ConversationListFilters(
                     query = currentQuery,
                     folderId = folderId,
                     tagId = tagId,
+                    showArchived = archived,
                     isRefreshing = refreshing,
                 )
             }
@@ -65,7 +67,8 @@ class ConversationListViewModel
                                 item.preview.contains(filters.query, ignoreCase = true)
                         val matchesFolder = filters.folderId == null || item.folderId == filters.folderId
                         val matchesTag = filters.tagId == null || item.tags.any { it.tagId == filters.tagId }
-                        matchesQuery && matchesFolder && matchesTag
+                        val matchesArchive = item.isArchived == filters.showArchived
+                        matchesQuery && matchesFolder && matchesTag && matchesArchive
                     }
                 ConversationListUiState(
                     query = filters.query,
@@ -74,6 +77,7 @@ class ConversationListViewModel
                     tags = tags,
                     selectedFolderId = filters.folderId,
                     selectedTagId = filters.tagId,
+                    showArchived = filters.showArchived,
                     isRefreshing = filters.isRefreshing,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConversationListUiState())
@@ -94,6 +98,10 @@ class ConversationListViewModel
             selectedTagId.value = tagId
         }
 
+        fun toggleShowArchived(enabled: Boolean) {
+            showArchived.value = enabled
+        }
+
         fun refresh() {
             viewModelScope.launch {
                 isRefreshing.value = true
@@ -108,6 +116,13 @@ class ConversationListViewModel
 
         fun clearConversations() {
             viewModelScope.launch { conversationRepository.clearConversations(appId) }
+        }
+
+        fun setArchived(
+            chatId: String,
+            archived: Boolean,
+        ) {
+            viewModelScope.launch { conversationRepository.setConversationArchived(appId, chatId, archived) }
         }
 
         fun renameConversation(
@@ -852,6 +867,7 @@ private data class ConversationListFilters(
     val query: String = "",
     val folderId: String? = null,
     val tagId: String? = null,
+    val showArchived: Boolean = false,
     val isRefreshing: Boolean = false,
 )
 

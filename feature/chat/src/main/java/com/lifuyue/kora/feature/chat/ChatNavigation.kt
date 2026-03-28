@@ -116,6 +116,7 @@ private fun ConversationListRoute(
         onDeleteConversation = viewModel::deleteConversation,
         onRenameConversation = viewModel::renameConversation,
         onTogglePin = viewModel::togglePin,
+        onSetArchived = viewModel::setArchived,
         onClearConversations = viewModel::clearConversations,
         onCreateFolder = viewModel::createFolder,
         onRenameFolder = viewModel::renameFolder,
@@ -125,6 +126,7 @@ private fun ConversationListRoute(
         onDeleteTag = viewModel::deleteTag,
         onMoveConversationToFolder = viewModel::moveConversation,
         onSetConversationTags = viewModel::setConversationTags,
+        onToggleShowArchived = viewModel::toggleShowArchived,
     )
 }
 

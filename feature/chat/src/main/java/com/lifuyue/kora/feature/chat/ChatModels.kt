@@ -194,6 +194,7 @@ data class ConversationListItemUiModel(
     val folderName: String? = null,
     val tags: List<ConversationTagUiModel> = emptyList(),
     val isPinned: Boolean = false,
+    val isArchived: Boolean = false,
     val updateTime: Long = 0L,
 )
 

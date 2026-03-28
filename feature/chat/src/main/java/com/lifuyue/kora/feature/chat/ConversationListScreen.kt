@@ -59,11 +59,13 @@ fun ConversationListScreen(
     onQueryChanged: (String) -> Unit,
     onSelectFolderFilter: (String?) -> Unit,
     onSelectTagFilter: (String?) -> Unit,
+    onToggleShowArchived: (Boolean) -> Unit,
     onOpenConversation: (String) -> Unit,
     onNewConversation: () -> Unit,
     onDeleteConversation: (String) -> Unit,
     onRenameConversation: (String, String) -> Unit,
     onTogglePin: (String, Boolean) -> Unit,
+    onSetArchived: (String, Boolean) -> Unit,
     onClearConversations: () -> Unit,
     onCreateFolder: (String) -> Unit,
     onRenameFolder: (String, String) -> Unit,
@@ -153,6 +155,18 @@ fun ConversationListScreen(
                     onClick = { activeSheet = ConversationOrganizerSheet.TagFilter },
                 )
             }
+            OutlinedActionChip(
+                label =
+                    appString(
+                        if (uiState.showArchived) {
+                            "conversation_list_filter_archived"
+                        } else {
+                            "conversation_list_filter_active"
+                        },
+                    ),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onToggleShowArchived(!uiState.showArchived) },
+            )
             if (uiState.isEmpty) {
                 EmptyConversationState(modifier = Modifier.fillMaxWidth())
             } else {
@@ -253,6 +267,21 @@ fun ConversationListScreen(
                     testTag = ChatTestTags.CONVERSATION_ACTION_TOGGLE_PIN,
                     onClick = {
                         onTogglePin(selectedConversation.chatId, !selectedConversation.isPinned)
+                        selectedChatId = null
+                    },
+                )
+                SheetAction(
+                    label =
+                        appString(
+                            if (selectedConversation.isArchived) {
+                                "conversation_list_action_unarchive"
+                            } else {
+                                "conversation_list_action_archive"
+                            },
+                        ),
+                    testTag = ChatTestTags.CONVERSATION_ACTION_ARCHIVE,
+                    onClick = {
+                        onSetArchived(selectedConversation.chatId, !selectedConversation.isArchived)
                         selectedChatId = null
                     },
                 )

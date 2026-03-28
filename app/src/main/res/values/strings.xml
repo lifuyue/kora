@@ -55,4 +55,8 @@
     <string name="chat_tts_pause">暂停朗读</string>
     <string name="chat_tts_stop">停止朗读</string>
     <string name="chat_error_tts_unavailable">语音播报不可用</string>
+    <string name="conversation_list_filter_active">查看活跃会话</string>
+    <string name="conversation_list_filter_archived">查看归档会话</string>
+    <string name="conversation_list_action_archive">归档会话</string>
+    <string name="conversation_list_action_unarchive">取消归档</string>
 </resources>

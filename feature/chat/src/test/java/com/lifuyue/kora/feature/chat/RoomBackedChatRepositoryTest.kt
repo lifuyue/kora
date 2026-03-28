@@ -298,6 +298,32 @@ class RoomBackedChatRepositoryTest {
         }
 
     @Test
+    fun setConversationArchivedPersistsArchivedStateInObservedList() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.api.histories =
+                    listOf(
+                        ChatHistoryItemDto(
+                            chatId = "chat-1",
+                            updateTime = "2026-03-27T00:00:00Z",
+                            appId = "app-1",
+                            customTitle = null,
+                            title = "History",
+                            top = false,
+                        ),
+                    )
+                fixture.repository.refreshConversations("app-1")
+                advanceUntilIdle()
+
+                fixture.repository.setConversationArchived("app-1", "chat-1", true)
+                advanceUntilIdle()
+
+                val item = fixture.repository.observeConversations("app-1").first().single()
+                assertTrue(item.isArchived)
+            }
+        }
+
+    @Test
     fun observeMessagesRestoresInteractiveCardAndPendingDraftFromHistory() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             newFixture().use { fixture ->

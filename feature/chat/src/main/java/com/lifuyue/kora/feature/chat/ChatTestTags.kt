@@ -9,6 +9,7 @@ object ChatTestTags {
     const val CONVERSATION_ACTIONS_SHEET = "conversation_actions_sheet"
     const val CONVERSATION_ACTION_RENAME = "conversation_action_rename"
     const val CONVERSATION_ACTION_TOGGLE_PIN = "conversation_action_toggle_pin"
+    const val CONVERSATION_ACTION_ARCHIVE = "conversation_action_archive"
     const val CONVERSATION_ACTION_DELETE = "conversation_action_delete"
     const val CONVERSATION_ACTION_MOVE_FOLDER = "conversation_action_move_folder"
     const val CONVERSATION_ACTION_EDIT_TAGS = "conversation_action_edit_tags"

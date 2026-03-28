@@ -55,4 +55,8 @@
     <string name="chat_tts_pause">Pause playback</string>
     <string name="chat_tts_stop">Stop playback</string>
     <string name="chat_error_tts_unavailable">Speech playback unavailable</string>
+    <string name="conversation_list_filter_active">Show active conversations</string>
+    <string name="conversation_list_filter_archived">Show archived conversations</string>
+    <string name="conversation_list_action_archive">Archive conversation</string>
+    <string name="conversation_list_action_unarchive">Unarchive conversation</string>
 </resources>

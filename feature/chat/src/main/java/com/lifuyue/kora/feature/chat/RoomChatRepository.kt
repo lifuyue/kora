@@ -1186,6 +1186,7 @@ private fun ConversationEntity.toUiModel(
                 )
             },
         isPinned = isPinned,
+        isArchived = isArchived,
         updateTime = updateTime,
     )
 

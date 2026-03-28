@@ -181,6 +181,30 @@ class KoraDatabaseTest {
         }
 
     @Test
+    fun conversationDaoUpdatesArchivedFlag() =
+        runBlocking {
+            database.conversationDao().upsert(
+                ConversationEntity(
+                    chatId = "chat-1",
+                    appId = "app-a",
+                    title = "Archive me",
+                    customTitle = null,
+                    isPinned = false,
+                    source = ChatSource.online.name,
+                    updateTime = 100L,
+                    lastMessagePreview = null,
+                    hasDraft = false,
+                    isDeleted = false,
+                    isArchived = false,
+                ),
+            )
+
+            database.conversationDao().updateArchived(chatId = "chat-1", isArchived = true)
+
+            assertTrue(database.conversationDao().getConversationByChatId("chat-1")!!.isArchived)
+        }
+
+    @Test
     fun messageDaoPersistsStreamingAndOrdersByCreatedAtThenDataId() =
         runBlocking {
             database.messageDao().upsertAll(
