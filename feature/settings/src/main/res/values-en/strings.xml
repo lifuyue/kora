@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_selected">Selected</string>
+    <string name="settings_back">Back</string>
     <string name="settings_summary_not_configured">Not configured</string>
     <string name="settings_summary_not_selected">Not selected</string>
 

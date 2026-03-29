@@ -55,25 +55,28 @@ fun NavGraphBuilder.settingsGraph(
         )
     }
     composable(SettingsRoutes.CONNECTION) {
-        ConnectionConfigRoute(onConnectionSaved = onConnectionSaved)
+        ConnectionConfigRoute(
+            onConnectionSaved = onConnectionSaved,
+            onBack = { navController.popBackStack() },
+        )
     }
     composable(SettingsRoutes.THEME) {
         ThemeAppearanceRoute(onBack = { navController.popBackStack() })
     }
     composable(SettingsRoutes.CHAT_PREFERENCES) {
-        ChatPreferencesRoute()
+        ChatPreferencesRoute(onBack = { navController.popBackStack() })
     }
     composable(SettingsRoutes.AUDIO) {
         AudioSettingsRoute(onBack = { navController.popBackStack() })
     }
     composable(SettingsRoutes.LANGUAGE) {
-        LanguageSettingsRoute()
+        LanguageSettingsRoute(onBack = { navController.popBackStack() })
     }
     composable(SettingsRoutes.CACHE) {
-        CacheSettingsRoute()
+        CacheSettingsRoute(onBack = { navController.popBackStack() })
     }
     composable(SettingsRoutes.ABOUT) {
-        AboutRoute()
+        AboutRoute(onBack = { navController.popBackStack() })
     }
 }
 
@@ -128,6 +131,7 @@ fun SettingsOverviewRoute(
 fun ConnectionConfigRoute(
     viewModel: ConnectionConfigViewModel = settingsViewModel(),
     onConnectionSaved: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ConnectionConfigScreen(
@@ -135,8 +139,9 @@ fun ConnectionConfigRoute(
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onApiKeyChange = viewModel::onApiKeyChanged,
         onTestConnection = viewModel::testConnection,
-    onSave = { viewModel.saveConnection(onConnectionSaved) },
-    onClear = viewModel::clearConnection,
+        onSave = { viewModel.saveConnection(onConnectionSaved) },
+        onClear = viewModel::clearConnection,
+        onBack = onBack,
     )
 }
 
@@ -153,6 +158,7 @@ fun AudioSettingsRoute(
         onTextToSpeechEngineChange = viewModel::updateTextToSpeechEngine,
         onSpeechRateChange = viewModel::updateSpeechRate,
         onDefaultVoiceNameChange = viewModel::updateDefaultVoiceName,
+        onBack = onBack,
     )
 }
 
@@ -167,6 +173,7 @@ fun ThemeAppearanceRoute(
         onThemeModeChange = viewModel::updateThemeMode,
         onDynamicColorChange = viewModel::updateDynamicColorEnabled,
         onOledChange = viewModel::updateOledEnabled,
+        onBack = onBack,
     )
 }
 
@@ -174,6 +181,7 @@ fun ThemeAppearanceRoute(
 fun ChatPreferencesRoute(
     viewModel: ChatPreferencesViewModel =
         settingsViewModel(),
+    onBack: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ChatPreferencesScreen(
@@ -182,6 +190,7 @@ fun ChatPreferencesRoute(
         onAutoScrollChange = viewModel::updateAutoScroll,
         onShowCitationsChange = viewModel::updateShowCitationsByDefault,
         onFontSizeScaleChange = viewModel::updateFontSizeScale,
+        onBack = onBack,
     )
 }
 
@@ -189,11 +198,13 @@ fun ChatPreferencesRoute(
 fun LanguageSettingsRoute(
     viewModel: LanguageSettingsViewModel =
         settingsViewModel(),
+    onBack: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     LanguageSettingsScreen(
         state = uiState,
         onLanguageTagChange = viewModel::updateLanguageTag,
+        onBack = onBack,
     )
 }
 
@@ -201,11 +212,13 @@ fun LanguageSettingsRoute(
 fun CacheSettingsRoute(
     viewModel: CacheSettingsViewModel =
         settingsViewModel(),
+    onBack: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CacheSettingsScreen(
         state = uiState,
         onClearCache = viewModel::clearCache,
+        onBack = onBack,
     )
 }
 
@@ -213,6 +226,7 @@ fun CacheSettingsRoute(
 fun AboutRoute(
     viewModel: AboutViewModel =
         settingsViewModel(),
+    onBack: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
@@ -220,6 +234,7 @@ fun AboutRoute(
         state = uiState,
         onOpenFeedback = { uriHandler.openUri(uiState.feedbackUrl) },
         onOpenLicenses = { uriHandler.openUri(uiState.licensesUrl) },
+        onBack = onBack,
     )
 }
 

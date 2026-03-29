@@ -5,6 +5,7 @@ import android.text.format.Formatter
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -178,6 +179,26 @@ class SettingsScreensTest {
     }
 
     @Test
+    fun themeScreenBackButtonTriggersCallback() {
+        var backTriggered = false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            ThemeAppearanceScreen(
+                state = ThemeAppearanceUiState(),
+                onThemeModeChange = {},
+                onDynamicColorChange = {},
+                onOledChange = {},
+                onBack = { backTriggered = true },
+            )
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.settings_back)).performClick()
+        composeRule.runOnIdle {
+            assertTrue(backTriggered)
+        }
+    }
+
+    @Test
     fun chatPreferencesScreenShowsPersistedTogglesAndSlider() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
@@ -271,6 +292,21 @@ class SettingsScreensTest {
         composeRule.onNodeWithText(context.getString(R.string.settings_language_title)).assertIsDisplayed()
         composeRule.onNodeWithTag("language-option-en").assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.settings_language_english)).assertIsDisplayed()
+    }
+
+    @Test
+    fun languageScreenBackButtonIsHiddenWhenNoCallbackProvided() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            LanguageSettingsScreen(
+                state = LanguageSettingsUiState(selectedLanguageTag = "en"),
+                onLanguageTagChange = {},
+            )
+        }
+
+        composeRule.onAllNodesWithText(context.getString(R.string.settings_back)).apply {
+            assertCountEquals(0)
+        }
     }
 
     @Test

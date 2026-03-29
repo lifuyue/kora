@@ -3,6 +3,7 @@ package com.lifuyue.kora.feature.chat
 import android.Manifest
 import android.net.Uri
 import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -81,7 +82,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController) {
                 },
             ),
     ) {
-        ChatRoute(navController = navController, onBack = { navController.popBackStack() })
+        ChatRoute(navController = navController)
     }
     composable(
         route = ChatRoutes.APP_DETAIL,
@@ -184,7 +185,6 @@ private fun ConversationListRoute(
 @Composable
 private fun ChatRoute(
     navController: NavController,
-    onBack: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel(),
     appSelectorViewModel: AppSelectorViewModel = hiltViewModel(),
 ) {
@@ -223,11 +223,19 @@ private fun ChatRoute(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    val handleBack = {
+        if (!navController.popBackStack()) {
+            navController.navigate(ChatRoutes.conversations(uiState.value.appId)) {
+                launchSingleTop = true
+            }
+        }
+    }
+    BackHandler(onBack = handleBack)
     ChatScreen(
         uiState = uiState.value,
         appSelectorUiState = appSelectorUiState.value,
         showAppSelector = showAppSelector,
-        onBack = onBack,
+        onBack = handleBack,
         onInputChanged = viewModel::updateInput,
         onStartSpeechInput = {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_selected">已选中</string>
+    <string name="settings_back">返回</string>
     <string name="settings_summary_not_configured">未配置</string>
     <string name="settings_summary_not_selected">未选择</string>
 

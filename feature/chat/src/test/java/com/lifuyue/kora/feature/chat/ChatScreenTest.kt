@@ -126,6 +126,29 @@ class ChatScreenTest {
     }
 
     @Test
+    fun backButtonTriggersCallback() {
+        var backTriggered = false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = { backTriggered = true },
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.chat_back)).performClick()
+        composeRule.runOnIdle {
+            assertTrue(backTriggered)
+        }
+    }
+
+    @Test
     fun assistantMessageShowsPlaybackActionsForActiveMessage() {
         composeRule.setContent {
             ChatScreen(

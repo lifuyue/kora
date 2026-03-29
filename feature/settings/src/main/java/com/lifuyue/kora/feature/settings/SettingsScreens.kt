@@ -1,6 +1,7 @@
 package com.lifuyue.kora.feature.settings
 
 import android.text.format.Formatter
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,19 +51,14 @@ fun ConnectionConfigScreen(
     onTestConnection: () -> Unit,
     onSave: () -> Unit,
     onClear: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .semantics { testTag = "settings-overview-scroll" }
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_connection_title),
+        onBack = onBack,
+        modifier = modifier.semantics { testTag = "settings-overview-scroll" },
     ) {
-        Text(stringResource(R.string.settings_connection_title), style = MaterialTheme.typography.headlineMedium)
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = onBaseUrlChange,
@@ -342,18 +339,14 @@ fun ThemeAppearanceScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onOledChange: (Boolean) -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_theme_title),
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(stringResource(R.string.settings_theme_title), style = MaterialTheme.typography.headlineMedium)
         ThemeMode.entries.forEach { mode ->
             Row(
                 modifier =
@@ -393,18 +386,14 @@ fun ChatPreferencesScreen(
     onAutoScrollChange: (Boolean) -> Unit,
     onShowCitationsChange: (Boolean) -> Unit,
     onFontSizeScaleChange: (Float) -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_chat_preferences_title),
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(stringResource(R.string.settings_chat_preferences_title), style = MaterialTheme.typography.headlineMedium)
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.settings_chat_preferences_stream))
             Switch(
@@ -447,18 +436,14 @@ fun AudioSettingsScreen(
     onTextToSpeechEngineChange: (TextToSpeechEngine) -> Unit,
     onSpeechRateChange: (Float) -> Unit,
     onDefaultVoiceNameChange: (String) -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = appString("settings_audio_title"),
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(appString("settings_audio_title"), style = MaterialTheme.typography.headlineMedium)
         SettingsSection(
             title = appString("settings_audio_section_stt"),
             content = {
@@ -526,18 +511,15 @@ fun AudioSettingsScreen(
 fun LanguageSettingsScreen(
     state: LanguageSettingsUiState,
     onLanguageTagChange: (String?) -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_language_title),
+        onBack = onBack,
+        modifier = modifier,
+        verticalSpacing = 12.dp,
     ) {
-        Text(stringResource(R.string.settings_language_title), style = MaterialTheme.typography.headlineMedium)
         LanguageOption(
             tag = "language-option-system",
             label = stringResource(R.string.settings_language_follow_system),
@@ -608,19 +590,15 @@ private fun AudioEngineOption(
 fun CacheSettingsScreen(
     state: CacheSettingsUiState,
     onClearCache: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_storage_title),
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(stringResource(R.string.settings_storage_title), style = MaterialTheme.typography.headlineMedium)
         StorageBucket.entries.forEach { bucket ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Row(
@@ -662,18 +640,14 @@ fun AboutScreen(
     state: AboutUiState,
     onOpenFeedback: () -> Unit,
     onOpenLicenses: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_about_title),
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(stringResource(R.string.settings_about_title), style = MaterialTheme.typography.headlineMedium)
         Text(stringResource(R.string.settings_about_summary), style = MaterialTheme.typography.titleLarge)
         Text(state.versionName, style = MaterialTheme.typography.bodyLarge)
         OutlinedButton(
@@ -711,3 +685,43 @@ private fun storageBucketLabel(bucket: StorageBucket): String =
             StorageBucket.TEMP_CACHE -> R.string.settings_storage_bucket_temp_cache
         },
     )
+
+@Composable
+private fun SettingsPageColumn(
+    title: String,
+    onBack: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    verticalSpacing: androidx.compose.ui.unit.Dp = 16.dp,
+    content: @Composable () -> Unit,
+) {
+    if (onBack != null) {
+        BackHandler(onBack = onBack)
+    }
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+    ) {
+        SettingsPageHeader(title = title, onBack = onBack)
+        content()
+    }
+}
+
+@Composable
+private fun SettingsPageHeader(
+    title: String,
+    onBack: (() -> Unit)?,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (onBack != null) {
+            TextButton(onClick = onBack) {
+                Text(stringResource(R.string.settings_back))
+            }
+        }
+        Text(title, style = MaterialTheme.typography.headlineMedium)
+    }
+}
