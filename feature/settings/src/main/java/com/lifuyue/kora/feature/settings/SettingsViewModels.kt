@@ -105,6 +105,7 @@ class SettingsOverviewViewModel
                         serverBaseUrl = snapshot.serverBaseUrl,
                         selectedAppId = snapshot.selectedAppId,
                         themeMode = snapshot.appearancePreferences.themeMode,
+                        selectedLanguageTag = snapshot.appearancePreferences.languageTag,
                     )
                 }
                 .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsOverviewUiState())

@@ -16,6 +16,7 @@ data class ConnectionPreferences(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColorEnabled: Boolean = true,
     val oledEnabled: Boolean = false,
+    val languageInitialized: Boolean = false,
     val languageTag: String? = null,
     val speechToTextEngine: SpeechToTextEngine = SpeechToTextEngine.System,
     val autoSendTranscripts: Boolean = false,

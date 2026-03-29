@@ -4,10 +4,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.lifuyue.kora.R
 import com.lifuyue.kora.core.database.store.ShareLinkPayload
 import com.lifuyue.kora.core.database.store.ShareSessionStatus
 import com.lifuyue.kora.feature.chat.ShareChatViewModel
@@ -34,9 +36,9 @@ fun ShareRouteEntry(
     when (uiState.status) {
         ShareSessionStatus.Idle,
         ShareSessionStatus.Initializing,
-        -> Text("Share Loading")
-        ShareSessionStatus.Ready -> Text("Share Ready ${uiState.appId}")
-        ShareSessionStatus.Expired -> Text("Share Link Expired")
-        ShareSessionStatus.Error -> Text(uiState.errorMessage ?: "Share Error")
+        -> Text(stringResource(R.string.share_loading))
+        ShareSessionStatus.Ready -> Text(stringResource(R.string.share_ready, uiState.appId ?: ""))
+        ShareSessionStatus.Expired -> Text(stringResource(R.string.share_link_expired))
+        ShareSessionStatus.Error -> Text(uiState.errorMessage ?: stringResource(R.string.share_error))
     }
 }

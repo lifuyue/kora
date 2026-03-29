@@ -253,7 +253,7 @@ fun SettingsOverviewScreen(
                     )
                     SettingsEntry(
                         title = stringResource(R.string.settings_language_title),
-                        summary = stringResource(R.string.settings_language_follow_system),
+                        summary = languageLabel(state.selectedLanguageTag),
                         onClick = onOpenLanguage,
                         testTag = "settings-language",
                     )
@@ -274,6 +274,15 @@ fun SettingsOverviewScreen(
         }
     }
 }
+
+@Composable
+private fun languageLabel(languageTag: String?): String =
+    when (languageTag) {
+        null -> stringResource(R.string.settings_language_follow_system)
+        "zh-CN" -> stringResource(R.string.settings_language_simplified_chinese)
+        "en" -> stringResource(R.string.settings_language_english)
+        else -> languageTag
+    }
 
 @Composable
 internal fun SettingsAdaptivePlaceholder() {

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatMessageUiModel
@@ -54,6 +55,10 @@ private fun createDemoSnapshot(): ConnectionSnapshot {
 
 @Composable
 private fun DemoChatScreen() {
+    val stopGeneratingMessage = stringResource(R.string.debug_demo_stop_generating)
+    val continueGenerationMessage = stringResource(R.string.debug_demo_continue_generation)
+    val regeneratedReplyTitle = stringResource(R.string.debug_demo_regenerated_reply)
+    val receivedTemplate = stringResource(R.string.debug_demo_received_template)
     val messages =
         remember {
             mutableStateListOf(
@@ -121,11 +126,11 @@ private fun DemoChatScreen() {
                     role = ChatRole.AI,
                     markdown =
                         """
-                        已收到：$prompt
+                        ${receivedTemplate.format(prompt)}
 
                         ```kotlin
                         suspend fun loadAnswer(): String {
-                            return "Kora demo reply"
+                            return "Kora 演示回复"
                         }
                         ```
                         """.trimIndent(),
@@ -135,10 +140,10 @@ private fun DemoChatScreen() {
             errorMessage = null
         },
         onStopGenerating = {
-            errorMessage = "这是调试演示页，当前没有真实流式任务可停止。"
+            errorMessage = stopGeneratingMessage
         },
         onContinueGeneration = {
-            errorMessage = "这是调试演示页，继续生成功能未接入真实后端。"
+            errorMessage = continueGenerationMessage
         },
         onFeedback = { message, feedback ->
             val index = messages.indexOfFirst { it.messageId == message.messageId }
@@ -153,7 +158,7 @@ private fun DemoChatScreen() {
                     messages[index].copy(
                         markdown =
                             """
-                            ## 重新生成后的版本
+                            ## $regeneratedReplyTitle
 
                             ```kotlin
                             class DemoRegeneratedReply

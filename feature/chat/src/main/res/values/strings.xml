@@ -3,10 +3,10 @@
     <string name="chat_title">聊天</string>
     <string name="chat_back">返回</string>
     <string name="chat_capabilities">能力</string>
-    <string name="chat_switch_app_title">切换 App</string>
+    <string name="chat_switch_app_title">切换应用</string>
     <string name="chat_switch_app_current">当前</string>
     <string name="chat_switch_app_action">切换</string>
-    <string name="chat_open_app_detail">查看当前 App 能力</string>
+    <string name="chat_open_app_detail">查看当前应用能力</string>
     <string name="chat_citations_title">引用 %1$d 条</string>
     <string name="chat_open_citation">查看知识来源</string>
     <string name="chat_citation_title_fallback">引用</string>
@@ -22,8 +22,8 @@
     <string name="chat_error_send_failed">发送失败</string>
     <string name="chat_error_continue_failed">继续生成失败</string>
     <string name="chat_error_regenerate_failed">重新生成失败</string>
-    <string name="chat_error_load_apps_failed">加载 App 失败</string>
-    <string name="chat_error_load_app_detail_failed">加载 App 详情失败</string>
+    <string name="chat_error_load_apps_failed">加载应用失败</string>
+    <string name="chat_error_load_app_detail_failed">加载应用详情失败</string>
     <string name="chat_repository_new_conversation_title">新会话</string>
     <string name="chat_repository_stopped_message">已停止生成</string>
     <string name="chat_repository_continue_prompt">继续上一个回答</string>
@@ -44,12 +44,12 @@
     <string name="chat_downvote">点踩</string>
     <string name="chat_cancel_downvote">取消踩</string>
     <string name="chat_suggested_questions">推荐问题</string>
-    <string name="markdown_code_language_fallback">code</string>
+    <string name="markdown_code_language_fallback">代码</string>
     <string name="markdown_copy_code">复制代码</string>
     <string name="markdown_mermaid_fallback_title">Mermaid 图表暂不渲染</string>
 
     <string name="conversation_list_title">会话</string>
-    <string name="conversation_list_workspace_eyebrow">Workspace</string>
+    <string name="conversation_list_workspace_eyebrow">会话工作台</string>
     <string name="conversation_list_workspace_title">快速回到最近上下文</string>
     <string name="conversation_list_workspace_summary">%1$d 个会话，%2$d 个置顶，继续上次处理中断的位置。</string>
     <string name="conversation_list_workspace_meta">会话工作台</string>

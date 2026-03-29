@@ -48,6 +48,7 @@ class ConnectionPreferencesStore internal constructor(
                             ?: ThemeMode.SYSTEM,
                     dynamicColorEnabled = preferences[Keys.DYNAMIC_COLOR_ENABLED] ?: true,
                     oledEnabled = preferences[Keys.OLED_ENABLED] ?: false,
+                    languageInitialized = preferences[Keys.LANGUAGE_INITIALIZED] ?: false,
                     languageTag = preferences[Keys.LANGUAGE_TAG],
                     speechToTextEngine =
                         preferences[Keys.SPEECH_TO_TEXT_ENGINE]
@@ -137,6 +138,12 @@ class ConnectionPreferencesStore internal constructor(
         }
     }
 
+    suspend fun updateLanguageInitialized(value: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.LANGUAGE_INITIALIZED] = value
+        }
+    }
+
     suspend fun updateLanguageTag(value: String?) {
         dataStore.edit { preferences ->
             if (value == null) {
@@ -216,6 +223,7 @@ class ConnectionPreferencesStore internal constructor(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
         val OLED_ENABLED = booleanPreferencesKey("oled_enabled")
+        val LANGUAGE_INITIALIZED = booleanPreferencesKey("language_initialized")
         val LANGUAGE_TAG = stringPreferencesKey("language_tag")
         val SPEECH_TO_TEXT_ENGINE = stringPreferencesKey("speech_to_text_engine")
         val AUTO_SEND_TRANSCRIPTS = booleanPreferencesKey("auto_send_transcripts")

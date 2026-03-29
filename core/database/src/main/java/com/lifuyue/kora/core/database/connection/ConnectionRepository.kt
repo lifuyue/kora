@@ -41,7 +41,15 @@ class ConnectionRepository
         private val apiFactory: FastGptApiFactory,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        private val mutableSnapshot = MutableStateFlow(loadSnapshot(ConnectionPreferences()))
+        private val mutableSnapshot =
+            MutableStateFlow(
+                loadSnapshot(
+                    ConnectionPreferences(
+                        languageInitialized = true,
+                        languageTag = DEFAULT_LANGUAGE_TAG,
+                    ),
+                ),
+            )
 
         val snapshot: StateFlow<ConnectionSnapshot> = mutableSnapshot.asStateFlow()
 
@@ -49,6 +57,7 @@ class ConnectionRepository
             connectionProvider.update(mutableSnapshot.value)
             scope.launch {
                 preferencesStore.preferences.collectLatest { preferences ->
+                    ensureLanguageInitialized(preferences)
                     val snapshot = loadSnapshot(preferences)
                     mutableSnapshot.value = snapshot
                     connectionProvider.update(snapshot)
@@ -85,6 +94,7 @@ class ConnectionRepository
             preferencesStore.updateAutoScroll(autoScroll)
             preferencesStore.updateFontSizeScale(fontSizeScale)
             preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
+            preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
 
             publishSnapshot(
@@ -126,6 +136,7 @@ class ConnectionRepository
             preferencesStore.updateAutoScroll(autoScroll)
             preferencesStore.updateFontSizeScale(fontSizeScale)
             preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
+            preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
         }
 
@@ -142,6 +153,7 @@ class ConnectionRepository
         }
 
         suspend fun updateLanguageTag(languageTag: String?) {
+            preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
         }
 
@@ -287,7 +299,7 @@ class ConnectionRepository
                         autoScroll = preferences.autoScroll,
                         fontSizeScale = preferences.fontSizeScale,
                         showCitationsByDefault = preferences.showCitationsByDefault,
-                        languageTag = preferences.languageTag,
+                        languageTag = resolvedLanguageTag(preferences),
                     ),
                 audioPreferences =
                     AudioPreferences(
@@ -304,7 +316,24 @@ class ConnectionRepository
             connectionProvider.update(snapshot)
         }
 
+        private suspend fun ensureLanguageInitialized(preferences: ConnectionPreferences) {
+            if (preferences.languageInitialized) {
+                return
+            }
+            preferencesStore.updateLanguageTag(DEFAULT_LANGUAGE_TAG)
+            preferencesStore.updateLanguageInitialized(true)
+        }
+
+        private fun resolvedLanguageTag(preferences: ConnectionPreferences): String? =
+            if (preferences.languageInitialized) {
+                preferences.languageTag
+            } else {
+                DEFAULT_LANGUAGE_TAG
+            }
+
         companion object {
+            private const val DEFAULT_LANGUAGE_TAG = "zh-CN"
+
             fun redactApiKey(apiKey: String?): String = ConnectionConfig.redactApiKey(apiKey)
         }
     }

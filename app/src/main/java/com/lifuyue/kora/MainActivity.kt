@@ -43,12 +43,13 @@ private fun KoraApp(
     connectionRepository: ConnectionRepository,
     shareLinkPayload: com.lifuyue.kora.core.database.store.ShareLinkPayload? = null,
 ) {
+    val repositorySnapshot by connectionRepository.snapshot.collectAsState()
     val snapshotFlow = KoraTestOverrides.snapshotOverride ?: connectionRepository.snapshot
     val snapshot by snapshotFlow.collectAsState()
     val scope = rememberCoroutineScope()
     val connectionRouteOverride = KoraTestOverrides.connectionRouteOverride
     val shellRouteOverride = KoraTestOverrides.shellRouteOverride
-    val languageTag = snapshot.appearancePreferences.languageTag
+    val languageTag = repositorySnapshot.appearancePreferences.languageTag
 
     LaunchedEffect(languageTag) {
         AppLocaleController.apply(languageTag)

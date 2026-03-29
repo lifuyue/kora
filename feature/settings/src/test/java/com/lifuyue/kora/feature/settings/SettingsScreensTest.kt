@@ -77,6 +77,7 @@ class SettingsScreensTest {
                         serverBaseUrl = "https://fastgpt.example.com",
                         themeMode = ThemeMode.OLED_DARK,
                         selectedAppId = "app-42",
+                        selectedLanguageTag = "zh-CN",
                     ),
                 onOpenConnection = {},
                 onOpenCurrentApp = {},
@@ -106,6 +107,10 @@ class SettingsScreensTest {
             .onNodeWithTag("settings-overview-scroll")
             .performScrollToNode(hasTestTag("settings-chat-preferences"))
         composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_common)).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("settings-overview-scroll")
+            .performScrollToNode(hasTestTag("settings-language"))
+        composeRule.onNodeWithText(context.getString(R.string.settings_language_simplified_chinese)).assertIsDisplayed()
         assertEquals(
             1,
             composeRule.onAllNodesWithText(context.getString(R.string.settings_chat_preferences_title)).fetchSemanticsNodes().size,

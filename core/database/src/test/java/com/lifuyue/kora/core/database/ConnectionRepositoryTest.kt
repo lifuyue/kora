@@ -18,6 +18,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,6 +27,39 @@ import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class ConnectionRepositoryTest {
+    @Test
+    fun freshRepositoryDefaultsToChineseLocale() =
+        runBlocking {
+            val repository =
+                ConnectionRepository(
+                    preferencesStore = testPreferencesStore(),
+                    apiKeySecureStore = testApiKeyStore(),
+                    connectionProvider = MutableConnectionProvider(),
+                    apiFactory = FastGptApiFactory(NetworkJson.default),
+                )
+
+            assertEquals("zh-CN", repository.snapshot.first().appearancePreferences.languageTag)
+        }
+
+    @Test
+    fun explicitFollowSystemSelectionIsPreservedAfterInitialization() =
+        runBlocking {
+            val store = testPreferencesStore()
+            val repository =
+                ConnectionRepository(
+                    preferencesStore = store,
+                    apiKeySecureStore = testApiKeyStore(),
+                    connectionProvider = MutableConnectionProvider(),
+                    apiFactory = FastGptApiFactory(NetworkJson.default),
+                )
+
+            repository.updateLanguageTag(null)
+
+            assertNull(repository.snapshot.first().appearancePreferences.languageTag)
+            assertTrue(store.preferences.first().languageInitialized)
+            assertNull(store.preferences.first().languageTag)
+        }
+
     @Test
     fun saveConnectionPersistsSnapshotAndAppearance() =
         runBlocking {
@@ -65,8 +99,10 @@ class ConnectionRepositoryTest {
             assertEquals(ThemeMode.OLED_DARK, snapshot.appearancePreferences.themeMode)
             assertFalse(snapshot.appearancePreferences.dynamicColorEnabled)
             assertTrue(snapshot.appearancePreferences.oledEnabled)
+            assertEquals("zh-CN", snapshot.appearancePreferences.languageTag)
             assertEquals("https://api.fastgpt.in/", prefs.serverBaseUrl)
             assertTrue(prefs.apiKeyPresent)
+            assertTrue(prefs.languageInitialized)
         }
 
     @Test

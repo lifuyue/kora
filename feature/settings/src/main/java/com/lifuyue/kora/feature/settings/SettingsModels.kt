@@ -25,6 +25,7 @@ data class SettingsOverviewUiState(
     val serverBaseUrl: String? = null,
     val selectedAppId: String? = null,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val selectedLanguageTag: String? = "zh-CN",
 )
 
 data class ChatPreferencesUiState(
