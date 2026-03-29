@@ -37,6 +37,8 @@ import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
+import com.lifuyue.kora.core.common.ui.KoraMetricRow
+import com.lifuyue.kora.core.common.ui.KoraSectionCard
 
 @Composable
 fun ConnectionConfigScreen(
@@ -173,6 +175,33 @@ fun SettingsOverviewScreen(
     ) {
         item {
             Text(stringResource(R.string.settings_overview_title), style = MaterialTheme.typography.headlineMedium)
+        }
+        item {
+            KoraSectionCard(
+                tag = "settings_status_card",
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_overview_status_title),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = stringResource(R.string.settings_overview_status_summary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                KoraMetricRow(
+                    label = stringResource(R.string.settings_overview_status_connection),
+                    value = state.serverBaseUrl ?: stringResource(R.string.settings_summary_not_configured),
+                )
+                KoraMetricRow(
+                    label = stringResource(R.string.settings_overview_status_theme),
+                    value = themeModeLabel(state.themeMode),
+                )
+                KoraMetricRow(
+                    label = stringResource(R.string.settings_overview_status_app),
+                    value = state.selectedAppId ?: stringResource(R.string.settings_summary_not_selected),
+                )
+            }
         }
         item {
             SettingsSection(

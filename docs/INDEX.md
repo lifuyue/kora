@@ -3,11 +3,13 @@
 ## Reading Order
 1. [../CLAUDE.md](../CLAUDE.md)
 2. [CONVENTIONS.md](CONVENTIONS.md)
-3. [GLOSSARY.md](GLOSSARY.md)
-4. [architecture/overview.md](architecture/overview.md)
-5. [api/overview.md](api/overview.md)
-6. Relevant feature spec
-7. Relevant UI and reference map
+3. [ui/design-system.md](ui/design-system.md)
+4. [ui/quality-scorecard.md](ui/quality-scorecard.md)
+5. [ui/component-catalog.md](ui/component-catalog.md)
+6. [architecture/overview.md](architecture/overview.md)
+7. [api/overview.md](api/overview.md)
+8. Relevant feature spec
+9. Relevant reference map
 
 ## Top-Level Docs
 - [GLOSSARY.md](GLOSSARY.md)
@@ -52,6 +54,7 @@
 
 ## UI
 - [ui/design-system.md](ui/design-system.md)
+- [ui/quality-scorecard.md](ui/quality-scorecard.md)
 - [ui/component-catalog.md](ui/component-catalog.md)
 - [ui/screen-inventory.md](ui/screen-inventory.md)
 - [ui/responsive-layout.md](ui/responsive-layout.md)
@@ -67,7 +70,16 @@
 - [reference/prior-art.md](reference/prior-art.md)
 
 ## Roadmap
+- [execplans.md](execplans.md)
 - [roadmap/milestones.md](roadmap/milestones.md)
 - [roadmap/phase-1-mvp.md](roadmap/phase-1-mvp.md)
 - [roadmap/phase-2-knowledge.md](roadmap/phase-2-knowledge.md)
 - [roadmap/phase-3-advanced.md](roadmap/phase-3-advanced.md)
+## Frontend Priority
+- [ui/design-system.md](ui/design-system.md)
+- [ui/quality-scorecard.md](ui/quality-scorecard.md)
+- [ui/component-catalog.md](ui/component-catalog.md)
+- [ui/screen-inventory.md](ui/screen-inventory.md)
+- [ui/responsive-layout.md](ui/responsive-layout.md)
+- [ui/accessibility.md](ui/accessibility.md)
+- [ui/animations.md](ui/animations.md)

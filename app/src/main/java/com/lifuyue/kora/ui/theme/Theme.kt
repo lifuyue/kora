@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.lifuyue.kora.core.common.ThemeMode
 
@@ -17,8 +18,13 @@ private val LightColorScheme: ColorScheme =
         primary = mdThemeLightPrimary,
         onPrimary = mdThemeLightOnPrimary,
         secondary = mdThemeLightSecondary,
+        tertiary = mdThemeLightTertiary,
         background = mdThemeLightBackground,
         surface = mdThemeLightSurface,
+        surfaceVariant = mdThemeLightSurfaceVariant,
+        outline = mdThemeLightOutline,
+        onSurface = mdThemeLightOnSurface,
+        onSurfaceVariant = mdThemeLightOnSurfaceVariant,
     )
 
 private val DarkColorScheme: ColorScheme =
@@ -26,8 +32,13 @@ private val DarkColorScheme: ColorScheme =
         primary = mdThemeDarkPrimary,
         onPrimary = mdThemeDarkOnPrimary,
         secondary = mdThemeDarkSecondary,
+        tertiary = mdThemeDarkTertiary,
         background = mdThemeDarkBackground,
         surface = mdThemeDarkSurface,
+        surfaceVariant = mdThemeDarkSurfaceVariant,
+        outline = mdThemeDarkOutline,
+        onSurface = mdThemeDarkOnSurface,
+        onSurfaceVariant = mdThemeDarkOnSurfaceVariant,
     )
 
 private val OledDarkColorScheme: ColorScheme =
@@ -35,8 +46,13 @@ private val OledDarkColorScheme: ColorScheme =
         primary = mdThemeDarkPrimary,
         onPrimary = mdThemeDarkOnPrimary,
         secondary = mdThemeDarkSecondary,
-        background = androidx.compose.ui.graphics.Color.Black,
-        surface = androidx.compose.ui.graphics.Color.Black,
+        tertiary = mdThemeDarkTertiary,
+        background = Color.Black,
+        surface = Color.Black,
+        surfaceVariant = mdThemeDarkSurfaceVariant,
+        outline = mdThemeDarkOutline,
+        onSurface = mdThemeDarkOnSurface,
+        onSurfaceVariant = mdThemeDarkOnSurfaceVariant,
     )
 
 @Composable

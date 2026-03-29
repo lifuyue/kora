@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifuyue.kora.core.common.ui.KoraWorkspaceHeroCard
 
 private enum class ConversationOrganizerSheet {
     FolderFilter,
@@ -134,6 +135,18 @@ fun ConversationListScreen(
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
+            KoraWorkspaceHeroCard(
+                title = stringResource(R.string.conversation_list_workspace_title),
+                subtitle =
+                    stringResource(
+                        R.string.conversation_list_workspace_summary,
+                        uiState.items.size,
+                        uiState.pinnedItems.size,
+                    ),
+                eyebrow = stringResource(R.string.conversation_list_workspace_eyebrow),
+                meta = stringResource(R.string.conversation_list_workspace_meta),
+                modifier = Modifier.testTag("conversation_workspace_summary"),
+            )
             OutlinedTextField(
                 value = uiState.query,
                 onValueChange = onQueryChanged,
@@ -178,6 +191,7 @@ fun ConversationListScreen(
                 }
             } else {
                 LazyColumn(
+                    modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CONVERSATION_LIST),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 96.dp),
                 ) {

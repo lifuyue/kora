@@ -88,7 +88,11 @@ class SettingsScreensTest {
             )
         }
 
+        composeRule.onNodeWithTag("settings_status_card").assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_connection)).assertExists()
+        composeRule
+            .onNodeWithTag("settings-overview-scroll")
+            .performScrollToNode(hasText(context.getString(R.string.settings_overview_section_appearance)))
         composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_appearance)).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.settings_connection_title)).assertIsDisplayed()
         composeRule.onNodeWithText("https://fastgpt.example.com").assertIsDisplayed()

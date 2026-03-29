@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -31,7 +33,7 @@ class ConversationListScreenTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.renderConversationList()
 
-        composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").fetchSemanticsNode()
+        composeRule.onNodeWithTag("conversation_workspace_summary").assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.conversation_list_clear_all)).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FOLDER_FILTER).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_TAG_FILTER).assertIsDisplayed()
@@ -43,6 +45,9 @@ class ConversationListScreenTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.renderConversationList()
 
+        composeRule
+            .onNodeWithTag(ChatTestTags.CONVERSATION_LIST)
+            .performScrollToNode(hasText("架构讨论"))
         composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").performTouchInput {
             longClick()
         }
@@ -70,6 +75,9 @@ class ConversationListScreenTest {
             onClearConversations = { cleared = true },
         )
 
+        composeRule
+            .onNodeWithTag(ChatTestTags.CONVERSATION_LIST)
+            .performScrollToNode(hasText("架构讨论"))
         composeRule.onNodeWithTag("${ChatTestTags.CONVERSATION_ITEM_PREFIX}chat-1").performTouchInput {
             longClick()
         }
@@ -92,8 +100,11 @@ class ConversationListScreenTest {
     fun conversationCardShowsFolderAndTagMeta() {
         composeRule.renderConversationList()
 
-        composeRule.onNodeWithText("工作").assertIsDisplayed()
-        composeRule.onNodeWithText("Kotlin").assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(ChatTestTags.CONVERSATION_LIST)
+            .performScrollToNode(hasText("Kotlin"))
+        composeRule.onNodeWithText("工作").fetchSemanticsNode()
+        composeRule.onNodeWithText("Kotlin").fetchSemanticsNode()
     }
 
     @Test
@@ -117,7 +128,7 @@ class ConversationListScreenTest {
             uiState = ConversationListUiState(items = emptyList()),
         )
 
-        composeRule.onNodeWithText(context.getString(R.string.conversation_list_empty_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.conversation_list_empty_title)).fetchSemanticsNode()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_SEARCH).assertIsDisplayed()
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_FAB).assertIsDisplayed()
     }
@@ -140,6 +151,9 @@ class ConversationListScreenTest {
         )
 
         composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_SEARCH).assertTextContains("架构")
+        composeRule
+            .onNodeWithTag(ChatTestTags.CONVERSATION_LIST)
+            .performScrollToNode(hasText("架构讨论"))
         composeRule.onAllNodesWithText("架构讨论").assertCountEquals(1)
     }
 

@@ -5,6 +5,11 @@
     <string name="settings_summary_not_selected">未选择</string>
 
     <string name="settings_overview_title">设置</string>
+    <string name="settings_overview_status_title">工作台状态</string>
+    <string name="settings_overview_status_summary">连接、当前 App 与主题配置在这里快速确认。</string>
+    <string name="settings_overview_status_connection">连接</string>
+    <string name="settings_overview_status_theme">主题</string>
+    <string name="settings_overview_status_app">当前 App</string>
     <string name="settings_overview_section_connection">连接与账号</string>
     <string name="settings_overview_section_appearance">外观与主题</string>
     <string name="settings_overview_section_common">常用与信息</string>

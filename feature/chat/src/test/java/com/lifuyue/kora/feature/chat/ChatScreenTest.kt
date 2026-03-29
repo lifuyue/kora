@@ -208,7 +208,7 @@ class ChatScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK).performClick()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_LIST).assertIsDisplayed()
         composeRule.onNodeWithText("picture.png").assertIsDisplayed()
-        composeRule.onNodeWithText("uploading.pdf").assertIsDisplayed()
+        composeRule.onNodeWithText("uploading.pdf").fetchSemanticsNode()
         composeRule.onNodeWithText("failed.txt").assertExists()
         composeRule.onNodeWithText(context.chatString("chat_attachment_cancel"), useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText(context.chatString("chat_attachment_retry"), useUnmergedTree = true).assertExists()

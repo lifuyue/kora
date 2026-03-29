@@ -26,9 +26,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lifuyue.kora.core.common.ui.KoraWorkspaceHeroCard
+import com.lifuyue.kora.core.common.ui.KoraWorkspaceSectionTitle
 import java.text.DateFormat
 import java.text.NumberFormat
 import java.util.Date
@@ -47,16 +50,25 @@ fun KnowledgeOverviewScreen(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                stringResource(
-                    R.string.knowledge_overview_current_app,
-                    state.selectedAppId ?: stringResource(R.string.knowledge_overview_no_app_selected),
-                ),
-                style = MaterialTheme.typography.bodyMedium,
+            KoraWorkspaceHeroCard(
+                title = stringResource(R.string.knowledge_overview_workspace_title),
+                subtitle =
+                    stringResource(
+                        R.string.knowledge_overview_current_app,
+                        state.selectedAppId ?: stringResource(R.string.knowledge_overview_no_app_selected),
+                    ),
+                eyebrow = stringResource(R.string.knowledge_overview_workspace_eyebrow),
+                meta = stringResource(R.string.knowledge_overview_workspace_meta),
+                modifier = Modifier.testTag("knowledge_overview_summary_card"),
             )
-            Text(
-                pluralStringResource(R.plurals.knowledge_overview_dataset_count, state.datasetCount, state.datasetCount),
-                style = MaterialTheme.typography.headlineSmall,
+            KoraWorkspaceSectionTitle(
+                title =
+                    pluralStringResource(
+                        R.plurals.knowledge_overview_dataset_count,
+                        state.datasetCount,
+                        state.datasetCount,
+                    ),
+                supportingText = stringResource(R.string.knowledge_overview_open_datasets),
             )
             Button(onClick = onOpenDatasets) { Text(stringResource(R.string.knowledge_overview_open_datasets)) }
             state.recentDatasets.forEach { item ->

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="knowledge_overview_title">知识库</string>
+    <string name="knowledge_overview_workspace_eyebrow">Knowledge workspace</string>
+    <string name="knowledge_overview_workspace_title">让导入、引用和检索保持同一上下文</string>
+    <string name="knowledge_overview_workspace_meta">知识工作台</string>
     <string name="knowledge_overview_current_app">当前 App：%1$s</string>
     <string name="knowledge_overview_no_app_selected">未选择</string>
     <plurals name="knowledge_overview_dataset_count">

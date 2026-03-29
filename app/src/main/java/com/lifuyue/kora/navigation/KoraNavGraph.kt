@@ -4,14 +4,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -194,7 +202,7 @@ private fun OnboardingRoute(
     }
 }
 
-private enum class ShellDestination(
+internal enum class ShellDestination(
     val labelRes: Int,
 ) {
     Chat(R.string.nav_chat),
@@ -211,69 +219,110 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
     val chatStartRoute =
         snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.CONNECTION
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                ShellDestination.entries.forEach { destination ->
-                    val label = stringResource(destination.labelRes)
-                    NavigationBarItem(
-                        selected = selectedTab == destination,
-                        onClick = {
-                            selectedTab = destination
-                            val route =
-                                when (destination) {
-                                    ShellDestination.Chat -> chatStartRoute
-                                    ShellDestination.Knowledge -> KnowledgeRoutes.OVERVIEW
-                                    ShellDestination.Settings -> SettingsRoutes.OVERVIEW
-                                }
-                            navController.navigate(route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .testTag("shell_workspace_container"),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                KoraShellNavigationBar(
+                    selectedTab = selectedTab,
+                    onSelect = { destination ->
+                        selectedTab = destination
+                        val route =
+                            when (destination) {
+                                ShellDestination.Chat -> chatStartRoute
+                                ShellDestination.Knowledge -> KnowledgeRoutes.OVERVIEW
+                                ShellDestination.Settings -> SettingsRoutes.OVERVIEW
                             }
-                        },
-                        icon = { Text(label.take(1)) },
-                        label = { Text(label) },
-                    )
-                }
-            }
-        },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = chatStartRoute,
-            modifier = Modifier.padding(innerPadding),
-        ) {
-            knowledgeGraph(navController = navController)
-            settingsGraph(
-                navController = navController,
-                onConnectionSaved = {
-                    val selectedAppId = snapshot.selectedAppId
-                    if (!selectedAppId.isNullOrBlank()) {
-                        navController.navigate(ChatRoutes.conversations(selectedAppId)) {
-                            popUpTo(SettingsRoutes.CONNECTION) { inclusive = true }
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                    }
-                },
-                currentAppId = snapshot.selectedAppId,
-                onOpenCurrentApp = { appId ->
-                    navController.navigate(ChatRoutes.appDetail(appId))
-                },
-            )
-            if (!snapshot.selectedAppId.isNullOrBlank()) {
-                chatGraph(navController = navController)
-            }
-        }
-
-        LaunchedEffect(currentRoute) {
-            selectedTab =
-                when {
-                    currentRoute?.startsWith("knowledge") == true -> ShellDestination.Knowledge
-                    currentRoute?.startsWith("settings") == true -> ShellDestination.Settings
-                    else -> ShellDestination.Chat
+                    },
+                )
+            },
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = chatStartRoute,
+                modifier = Modifier.padding(innerPadding),
+            ) {
+                knowledgeGraph(navController = navController)
+                settingsGraph(
+                    navController = navController,
+                    onConnectionSaved = {
+                        val selectedAppId = snapshot.selectedAppId
+                        if (!selectedAppId.isNullOrBlank()) {
+                            navController.navigate(ChatRoutes.conversations(selectedAppId)) {
+                                popUpTo(SettingsRoutes.CONNECTION) { inclusive = true }
+                            }
+                        }
+                    },
+                    currentAppId = snapshot.selectedAppId,
+                    onOpenCurrentApp = { appId ->
+                        navController.navigate(ChatRoutes.appDetail(appId))
+                    },
+                )
+                if (!snapshot.selectedAppId.isNullOrBlank()) {
+                    chatGraph(navController = navController)
                 }
+            }
+
+            LaunchedEffect(currentRoute) {
+                selectedTab =
+                    when {
+                        currentRoute?.startsWith("knowledge") == true -> ShellDestination.Knowledge
+                        currentRoute?.startsWith("settings") == true -> ShellDestination.Settings
+                        else -> ShellDestination.Chat
+                    }
+            }
         }
     }
 }
+
+@Composable
+internal fun KoraShellNavigationBar(
+    selectedTab: ShellDestination,
+    onSelect: (ShellDestination) -> Unit,
+) {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        ShellDestination.entries.forEach { destination ->
+            val label = stringResource(destination.labelRes)
+            NavigationBarItem(
+                selected = selectedTab == destination,
+                onClick = { onSelect(destination) },
+                icon = {
+                    Icon(
+                        imageVector =
+                            when (destination) {
+                                ShellDestination.Chat -> Icons.Outlined.ChatBubbleOutline
+                                ShellDestination.Knowledge -> Icons.Outlined.AutoStories
+                                ShellDestination.Settings -> Icons.Outlined.Settings
+                            },
+                        contentDescription = label,
+                    )
+                },
+                label = { Text(label) },
+                modifier = Modifier.testTag(shellNavTag(destination)),
+            )
+        }
+    }
+}
+
+private fun shellNavTag(destination: ShellDestination): String =
+    when (destination) {
+        ShellDestination.Chat -> "shell_nav_chat"
+        ShellDestination.Knowledge -> "shell_nav_knowledge"
+        ShellDestination.Settings -> "shell_nav_settings"
+    }

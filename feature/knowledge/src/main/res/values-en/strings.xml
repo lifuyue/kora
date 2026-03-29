@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="knowledge_overview_title">Knowledge</string>
+    <string name="knowledge_overview_workspace_eyebrow">Knowledge workspace</string>
+    <string name="knowledge_overview_workspace_title">Keep import, citations, and retrieval in one flow</string>
+    <string name="knowledge_overview_workspace_meta">Knowledge console</string>
     <string name="knowledge_overview_current_app">Current app: %1$s</string>
     <string name="knowledge_overview_no_app_selected">Not selected</string>
     <plurals name="knowledge_overview_dataset_count">

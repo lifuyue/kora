@@ -49,6 +49,10 @@
     <string name="markdown_mermaid_fallback_title">Mermaid 图表暂不渲染</string>
 
     <string name="conversation_list_title">会话</string>
+    <string name="conversation_list_workspace_eyebrow">Workspace</string>
+    <string name="conversation_list_workspace_title">快速回到最近上下文</string>
+    <string name="conversation_list_workspace_summary">%1$d 个会话，%2$d 个置顶，继续上次处理中断的位置。</string>
+    <string name="conversation_list_workspace_meta">会话工作台</string>
     <string name="conversation_list_clear_all">清空全部</string>
     <string name="conversation_list_new_conversation">新建会话</string>
     <string name="conversation_list_search_label">搜索会话</string>

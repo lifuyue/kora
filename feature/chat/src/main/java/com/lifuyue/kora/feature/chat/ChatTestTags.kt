@@ -1,6 +1,7 @@
 package com.lifuyue.kora.feature.chat
 
 object ChatTestTags {
+    const val CONVERSATION_LIST = "conversation_list"
     const val CONVERSATION_SEARCH = "conversation_search"
     const val CONVERSATION_FAB = "conversation_fab"
     const val CONVERSATION_CLEAR_ALL = "conversation_clear_all"

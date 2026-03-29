@@ -3,6 +3,7 @@ package com.lifuyue.kora.navigation
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -129,6 +130,20 @@ class KoraNavGraphTest {
         }
 
         composeRule.onNodeWithText("Fake Shell app-1").assertIsDisplayed()
+    }
+
+    @Test
+    fun shellUsesWorkspaceNavigationChrome() {
+        composeRule.setContent {
+            KoraShellNavigationBar(
+                selectedTab = ShellDestination.Chat,
+                onSelect = {},
+            )
+        }
+
+        composeRule.onNodeWithTag("shell_nav_chat").assertIsDisplayed()
+        composeRule.onNodeWithTag("shell_nav_knowledge").assertIsDisplayed()
+        composeRule.onNodeWithTag("shell_nav_settings").assertIsDisplayed()
     }
 
     @Test

@@ -49,6 +49,10 @@
     <string name="markdown_mermaid_fallback_title">Mermaid diagrams are not rendered yet</string>
 
     <string name="conversation_list_title">Conversations</string>
+    <string name="conversation_list_workspace_eyebrow">Workspace</string>
+    <string name="conversation_list_workspace_title">Return to the right context fast</string>
+    <string name="conversation_list_workspace_summary">%1$d conversations, %2$d pinned, with filters and recent context ready.</string>
+    <string name="conversation_list_workspace_meta">Conversation workspace</string>
     <string name="conversation_list_clear_all">Clear all</string>
     <string name="conversation_list_new_conversation">New conversation</string>
     <string name="conversation_list_search_label">Search conversations</string>

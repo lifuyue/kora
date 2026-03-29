@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.ui.KoraWorkspaceHeroCard
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
@@ -233,13 +234,25 @@ fun ChatScreen(
                     .padding(16.dp),
         ) {
             if (uiState.messages.isEmpty()) {
-                Text(
-                    text = uiState.welcomeText ?: stringResource(R.string.chat_empty_welcome),
-                    style = MaterialTheme.typography.bodyMedium,
+                KoraWorkspaceHeroCard(
+                    title = stringResource(R.string.chat_title),
+                    subtitle = uiState.welcomeText ?: stringResource(R.string.chat_empty_welcome),
+                    eyebrow = appSelectorUiState.currentAppName.ifBlank { uiState.appId },
+                    meta = stringResource(R.string.chat_capabilities),
+                    modifier = Modifier.testTag("chat_workspace_header"),
                 )
             }
             if (uiState.errorMessage != null) {
-                Text(uiState.errorMessage, color = MaterialTheme.colorScheme.error)
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Text(
+                        text = uiState.errorMessage,
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    )
+                }
             }
             if (uiState.isInitialLoading) {
                 ChatLoadingSkeleton(modifier = Modifier.weight(1f).testTag(ChatTestTags.CHAT_SKELETON))
