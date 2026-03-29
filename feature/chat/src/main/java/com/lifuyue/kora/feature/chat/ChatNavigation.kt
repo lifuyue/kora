@@ -268,7 +268,7 @@ private fun ChatRoute(
         onSwitchApp = { appId ->
             showAppSelector = false
             appSelectorViewModel.switchApp(appId) { selected ->
-                navController.navigate(ChatRoutes.conversations(selected)) {
+                navController.navigate(ChatRoutes.thread(selected)) {
                     popUpTo(ChatRoutes.CONVERSATIONS) { inclusive = false }
                     launchSingleTop = true
                 }

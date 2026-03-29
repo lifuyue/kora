@@ -11,10 +11,12 @@ import com.lifuyue.kora.core.network.NetworkJson
 import com.lifuyue.kora.core.network.SseStreamClient
 import com.lifuyue.kora.core.network.createRetrofit
 import com.lifuyue.kora.core.testing.MainDispatcherRule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -248,6 +250,38 @@ class RoomChatRepositoryTest {
             assertEquals("原问题", messages.first().markdown)
             assertEquals("第二次", messages.last().markdown)
             assertTrue(messages.none { it.messageId == originalAssistantId })
+        }
+
+    @Test
+    fun observeMessagesCanBeCollectedFromMainThreadWithoutRoomViolation() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val strictDatabase =
+                Room.inMemoryDatabaseBuilder(context, KoraDatabase::class.java)
+                    .build()
+            val strictRepository =
+                RoomChatRepository(
+                    api = createRetrofit(server.url("/").toString(), OkHttpClient()).create(FastGptApi::class.java),
+                    sseStreamClient = SseStreamClient(okHttpClient = OkHttpClient(), baseUrlProvider = MutableConnectionProvider()),
+                    conversationDao = strictDatabase.conversationDao(),
+                    conversationFolderDao = strictDatabase.conversationFolderDao(),
+                    conversationTagDao = strictDatabase.conversationTagDao(),
+                    interactiveDraftDao = strictDatabase.interactiveDraftDao(),
+                    messageDao = strictDatabase.messageDao(),
+                    context = context,
+                    json = NetworkJson.default,
+                )
+
+            try {
+                val messages =
+                    withContext(Dispatchers.Main) {
+                        strictRepository.observeMessages(appId = "app-1", chatId = "chat-main-thread").first()
+                    }
+
+                assertTrue(messages.isEmpty())
+            } finally {
+                strictDatabase.close()
+            }
         }
 }
 

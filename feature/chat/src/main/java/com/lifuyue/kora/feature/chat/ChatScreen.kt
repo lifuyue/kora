@@ -1,15 +1,19 @@
 package com.lifuyue.kora.feature.chat
 
 import android.net.Uri
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -23,12 +27,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -202,26 +206,13 @@ fun ChatScreen(
         }
     }
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(stringResource(R.string.chat_title))
-                        TextButton(onClick = onOpenAppSelector) {
-                            Text(appSelectorUiState.currentAppName.ifBlank { uiState.appId })
-                        }
-                    }
-                },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text(stringResource(R.string.chat_back))
-                    }
-                },
-                actions = {
-                    TextButton(onClick = onOpenAppDetail) {
-                        Text(stringResource(R.string.chat_capabilities))
-                    }
-                },
+            ChatCompactTopBar(
+                appName = appSelectorUiState.currentAppName.ifBlank { uiState.appId },
+                onBack = onBack,
+                onOpenAppSelector = onOpenAppSelector,
+                onOpenAppDetail = onOpenAppDetail,
             )
         },
     ) { innerPadding ->
@@ -234,11 +225,9 @@ fun ChatScreen(
                     .padding(16.dp),
         ) {
             if (uiState.messages.isEmpty()) {
-                KoraWorkspaceHeroCard(
-                    title = stringResource(R.string.chat_title),
-                    subtitle = uiState.welcomeText ?: stringResource(R.string.chat_empty_welcome),
-                    eyebrow = appSelectorUiState.currentAppName.ifBlank { uiState.appId },
-                    meta = stringResource(R.string.chat_capabilities),
+                ChatEmptyStateCard(
+                    appName = appSelectorUiState.currentAppName.ifBlank { uiState.appId },
+                    welcomeText = uiState.welcomeText ?: stringResource(R.string.chat_empty_welcome),
                     modifier = Modifier.testTag("chat_workspace_header"),
                 )
             }
@@ -377,6 +366,90 @@ fun ChatScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ChatCompactTopBar(
+    appName: String,
+    onBack: () -> Unit,
+    onOpenAppSelector: () -> Unit,
+    onOpenAppDetail: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onBack) {
+                    Text(stringResource(R.string.chat_back))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.chat_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onOpenAppDetail) {
+                    Text(stringResource(R.string.chat_capabilities))
+                }
+            }
+            TextButton(
+                onClick = onOpenAppSelector,
+                modifier = Modifier.testTag("chat_app_switch"),
+            ) {
+                Text(
+                    text = appName,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatEmptyStateCard(
+    appName: String,
+    welcomeText: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 0.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = appName.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringResource(R.string.chat_title),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                text = welcomeText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

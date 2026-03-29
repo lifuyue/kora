@@ -105,6 +105,27 @@ class ChatScreenTest {
     }
 
     @Test
+    fun emptyChatShowsCompactHeaderAndAppSwitcher() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                appSelectorUiState = AppSelectorUiState(currentAppName = "demo-app"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag("chat_app_switch").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat_workspace_header").assertIsDisplayed()
+        composeRule.onNodeWithText("demo-app").assertIsDisplayed()
+    }
+
+    @Test
     fun assistantMessageShowsPlaybackActionsForActiveMessage() {
         composeRule.setContent {
             ChatScreen(

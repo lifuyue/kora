@@ -18,6 +18,7 @@ import com.lifuyue.kora.core.database.store.ShareLinkPayload
 import com.lifuyue.kora.core.common.ThemeMode
 import org.junit.After
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -157,5 +158,18 @@ class KoraNavGraphTest {
         }
 
         composeRule.onNodeWithText("Fake Share share-1").assertIsDisplayed()
+    }
+
+    @Test
+    fun chatShellStartRouteDefaultsToNewConversationThread() {
+        val snapshot =
+            ConnectionSnapshot(
+                serverBaseUrl = "https://api.fastgpt.in/",
+                apiKey = "fastgpt-secret",
+                selectedAppId = "app-1",
+                onboardingCompleted = true,
+            )
+
+        assertEquals("chat/thread/app-1?chatId=", chatShellStartRoute(snapshot))
     }
 }

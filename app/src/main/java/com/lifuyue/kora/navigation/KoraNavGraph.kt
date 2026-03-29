@@ -54,6 +54,9 @@ private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_CONNECTION = "connection"
 private const val ROUTE_SHELL = "shell"
 
+internal fun chatShellStartRoute(snapshot: ConnectionSnapshot): String =
+    snapshot.selectedAppId?.let { ChatRoutes.thread(it) } ?: SettingsRoutes.CONNECTION
+
 @Composable
 fun KoraNavGraph(
     snapshot: ConnectionSnapshot,
@@ -216,8 +219,7 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     var selectedTab by rememberSaveable { mutableStateOf(ShellDestination.Chat) }
-    val chatStartRoute =
-        snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.CONNECTION
+    val chatStartRoute = chatShellStartRoute(snapshot)
 
     Surface(
         modifier =
@@ -261,7 +263,7 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
                     onConnectionSaved = {
                         val selectedAppId = snapshot.selectedAppId
                         if (!selectedAppId.isNullOrBlank()) {
-                            navController.navigate(ChatRoutes.conversations(selectedAppId)) {
+                            navController.navigate(ChatRoutes.thread(selectedAppId)) {
                                 popUpTo(SettingsRoutes.CONNECTION) { inclusive = true }
                             }
                         }
