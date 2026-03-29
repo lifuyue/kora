@@ -133,7 +133,7 @@ class ThemeAppearanceViewModel
                 val current = connectionFacade.snapshot.value.appearancePreferences
                 connectionFacade.updateAppearance(
                     themeMode = mode,
-                    dynamicColorEnabled = current.dynamicColorEnabled,
+                    dynamicColorEnabled = if (mode == ThemeMode.SYSTEM) current.dynamicColorEnabled else false,
                     oledEnabled = current.oledEnabled,
                 )
             }

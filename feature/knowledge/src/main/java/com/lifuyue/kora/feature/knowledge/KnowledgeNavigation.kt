@@ -35,7 +35,10 @@ object KnowledgeRoutes {
     fun search(datasetId: String): String = "knowledge/datasets/$datasetId/search-test"
 }
 
-fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
+fun NavGraphBuilder.knowledgeGraph(
+    navController: NavController,
+    onOpenDrawer: () -> Unit = {},
+) {
     composable(KnowledgeRoutes.OVERVIEW) {
         val viewModel: KnowledgeOverviewViewModel = hiltViewModel()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -55,6 +58,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
                         onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
                         onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
                         onReturnToChat = onReturnToChat,
+                        onOpenDrawer = onOpenDrawer,
                     )
                 },
                 detailPane = { KnowledgeAdaptivePlaceholder() },
@@ -65,6 +69,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
                 onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
                 onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
                 onReturnToChat = onReturnToChat,
+                onOpenDrawer = onOpenDrawer,
             )
         }
     }
@@ -83,6 +88,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
             onDeleteDataset = viewModel::deleteDataset,
             onOpenDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
             onOpenSearch = { navController.navigate(KnowledgeRoutes.search(it)) },
+            onOpenDrawer = onOpenDrawer,
         )
     }
     composable(
@@ -110,6 +116,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
             onSubmit = viewModel::submit,
             onOpenCollection = { collectionId -> navController.navigate(KnowledgeRoutes.chunks(viewModel.datasetId, collectionId)) },
             onOpenSearch = { navController.navigate(KnowledgeRoutes.search(viewModel.datasetId)) },
+            onOpenDrawer = onOpenDrawer,
         )
     }
     composable(
@@ -137,6 +144,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
             onSave = viewModel::saveEditing,
             onDelete = viewModel::deleteChunk,
             onLoadMore = viewModel::loadMore,
+            onOpenDrawer = onOpenDrawer,
         )
     }
     composable(
@@ -165,6 +173,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
                     )
                 }
             },
+            onOpenDrawer = onOpenDrawer,
         )
     }
 }

@@ -142,7 +142,7 @@ class ProtocolTypesTest {
         val preferences = AppearancePreferences()
 
         assertEquals(ThemeMode.SYSTEM, preferences.themeMode)
-        assertEquals(true, preferences.dynamicColorEnabled)
+        assertEquals(false, preferences.dynamicColorEnabled)
         assertEquals(false, preferences.oledEnabled)
         assertNull(preferences.languageTag)
     }

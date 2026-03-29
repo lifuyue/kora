@@ -22,7 +22,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +29,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lifuyue.kora.core.common.ui.KoraGeminiTopBar
 import com.lifuyue.kora.core.common.ui.KoraWorkspaceHeroCard
 import com.lifuyue.kora.core.common.ui.KoraWorkspaceSectionTitle
 import java.text.DateFormat
@@ -43,9 +43,15 @@ fun KnowledgeOverviewScreen(
     onOpenDatasets: () -> Unit,
     onOpenRecentDataset: (String) -> Unit,
     onReturnToChat: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.knowledge_overview_title)) }) },
+        topBar = {
+            KoraGeminiTopBar(
+                title = stringResource(R.string.knowledge_overview_title),
+                onOpenDrawer = onOpenDrawer,
+            )
+        },
     ) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
@@ -117,17 +123,19 @@ fun DatasetBrowserScreen(
     onDeleteDataset: (String) -> Unit,
     onOpenDataset: (String) -> Unit,
     onOpenSearch: (String) -> Unit,
+    onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(stringResource(R.string.knowledge_dataset_browser_title)) },
-            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) } },
+        KoraGeminiTopBar(
+            title = stringResource(R.string.knowledge_dataset_browser_title),
+            onOpenDrawer = onOpenDrawer,
         )
     }) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChanged,
@@ -236,18 +244,22 @@ fun CollectionManagementScreen(
     onSubmit: () -> Unit,
     onOpenCollection: (String) -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(state.datasetName.ifBlank { stringResource(R.string.knowledge_collections_title) }) },
-            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) } },
-            actions = { TextButton(onClick = onRefresh) { Text(stringResource(R.string.knowledge_refresh)) } },
+        KoraGeminiTopBar(
+            title = state.datasetName.ifBlank { stringResource(R.string.knowledge_collections_title) },
+            onOpenDrawer = onOpenDrawer,
         )
     }) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
+                TextButton(onClick = onRefresh) { Text(stringResource(R.string.knowledge_refresh)) }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CollectionCreateMode.entries.forEach { mode ->
                     Text(
@@ -373,17 +385,19 @@ fun ChunkViewerScreen(
     onSave: () -> Unit,
     onDelete: (String) -> Unit,
     onLoadMore: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(stringResource(R.string.knowledge_chunk_viewer_title)) },
-            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) } },
+        KoraGeminiTopBar(
+            title = stringResource(R.string.knowledge_chunk_viewer_title),
+            onOpenDrawer = onOpenDrawer,
         )
     }) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (state.editingChunkId != null) {
                 OutlinedTextField(
@@ -530,17 +544,19 @@ fun SearchTestScreen(
     onUseReRankChanged: (Boolean) -> Unit,
     onSearch: () -> Unit,
     onOpenResult: (SearchResultUiModel) -> Unit,
+    onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(stringResource(R.string.knowledge_search_test_title)) },
-            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) } },
+        KoraGeminiTopBar(
+            title = stringResource(R.string.knowledge_search_test_title),
+            onOpenDrawer = onOpenDrawer,
         )
     }) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChanged,

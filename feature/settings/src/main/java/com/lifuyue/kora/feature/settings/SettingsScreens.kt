@@ -42,6 +42,7 @@ import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
+import com.lifuyue.kora.core.common.ui.KoraGeminiTopBar
 import com.lifuyue.kora.core.common.ui.KoraMetricRow
 import com.lifuyue.kora.core.common.ui.KoraSectionCard
 
@@ -54,11 +55,13 @@ fun ConnectionConfigScreen(
     onSave: () -> Unit,
     onClear: () -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     SettingsPageColumn(
         title = stringResource(R.string.settings_connection_title),
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
         modifier = modifier.semantics { testTag = "settings-overview-scroll" },
     ) {
         OutlinedTextField(
@@ -167,19 +170,22 @@ fun SettingsOverviewScreen(
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier =
             modifier
                 .fillMaxSize()
-                .statusBarsPadding()
                 .semantics { testTag = "settings-overview-scroll" },
         contentPadding = PaddingValues(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text(stringResource(R.string.settings_overview_title), style = MaterialTheme.typography.headlineMedium)
+            KoraGeminiTopBar(
+                title = stringResource(R.string.settings_overview_title),
+                onOpenDrawer = onOpenDrawer,
+            )
         }
         item {
             KoraSectionCard(
@@ -342,11 +348,13 @@ fun ThemeAppearanceScreen(
     onDynamicColorChange: (Boolean) -> Unit,
     onOledChange: (Boolean) -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     SettingsPageColumn(
         title = stringResource(R.string.settings_theme_title),
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
         modifier = modifier,
     ) {
         ThemeMode.entries.forEach { mode ->
@@ -417,7 +425,7 @@ fun ChatQuickSettingsContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                listOf(ThemeMode.DARK, ThemeMode.OLED_DARK, ThemeMode.SYSTEM).forEach { mode ->
+                listOf(ThemeMode.LIGHT, ThemeMode.DARK, ThemeMode.SYSTEM).forEach { mode ->
                     OutlinedButton(
                         onClick = { onThemeModeChange(mode) },
                         modifier = Modifier.weight(1f),
@@ -504,11 +512,13 @@ fun ChatPreferencesScreen(
     onShowCitationsChange: (Boolean) -> Unit,
     onFontSizeScaleChange: (Float) -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     SettingsPageColumn(
         title = stringResource(R.string.settings_chat_preferences_title),
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
         modifier = modifier,
     ) {
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -554,11 +564,13 @@ fun AudioSettingsScreen(
     onSpeechRateChange: (Float) -> Unit,
     onDefaultVoiceNameChange: (String) -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     SettingsPageColumn(
         title = appString("settings_audio_title"),
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
         modifier = modifier,
     ) {
         SettingsSection(
@@ -629,11 +641,13 @@ fun LanguageSettingsScreen(
     state: LanguageSettingsUiState,
     onLanguageTagChange: (String?) -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     SettingsPageColumn(
         title = stringResource(R.string.settings_language_title),
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
         modifier = modifier,
         verticalSpacing = 12.dp,
     ) {
@@ -751,12 +765,14 @@ fun CacheSettingsScreen(
     state: CacheSettingsUiState,
     onClearCache: () -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     SettingsPageColumn(
         title = stringResource(R.string.settings_storage_title),
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
         modifier = modifier,
     ) {
         StorageBucket.entries.forEach { bucket ->
@@ -801,11 +817,13 @@ fun AboutScreen(
     onOpenFeedback: () -> Unit,
     onOpenLicenses: () -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     SettingsPageColumn(
         title = stringResource(R.string.settings_about_title),
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
         modifier = modifier,
     ) {
         Text(stringResource(R.string.settings_about_summary), style = MaterialTheme.typography.titleLarge)
@@ -859,6 +877,7 @@ private fun storageBucketLabel(bucket: StorageBucket): String =
 private fun SettingsPageColumn(
     title: String,
     onBack: (() -> Unit)?,
+    onOpenDrawer: () -> Unit,
     modifier: Modifier = Modifier,
     verticalSpacing: androidx.compose.ui.unit.Dp = 16.dp,
     content: @Composable () -> Unit,
@@ -870,27 +889,25 @@ private fun SettingsPageColumn(
         modifier =
             modifier
                 .fillMaxSize()
-                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(verticalSpacing),
     ) {
-        SettingsPageHeader(title = title, onBack = onBack)
+        KoraGeminiTopBar(title = title, onOpenDrawer = onOpenDrawer)
+        SettingsPageHeader(onBack = onBack)
         content()
     }
 }
 
 @Composable
 private fun SettingsPageHeader(
-    title: String,
     onBack: (() -> Unit)?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (onBack != null) {
+    if (onBack != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TextButton(onClick = onBack) {
                 Text(stringResource(R.string.settings_back))
             }
         }
-        Text(title, style = MaterialTheme.typography.headlineMedium)
     }
 }

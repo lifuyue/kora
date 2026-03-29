@@ -58,7 +58,7 @@ private val OledDarkColorScheme: ColorScheme =
 @Composable
 fun KoraTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     oledEnabled: Boolean = false,
     content: @Composable () -> Unit,
 ) {
@@ -72,7 +72,7 @@ fun KoraTheme(
 
     val colorScheme =
         when {
-            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            dynamicColor && themeMode == ThemeMode.SYSTEM && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 val context = LocalContext.current
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }

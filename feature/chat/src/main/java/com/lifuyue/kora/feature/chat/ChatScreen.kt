@@ -70,6 +70,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.lifuyue.kora.core.common.ChatRole
@@ -137,6 +138,10 @@ fun ChatScreen(
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val pageBackground = MaterialTheme.colorScheme.background
+    val errorContainer = if (isLightTheme) Color(0xFFFFE2DE) else Color(0xFF351A1A)
+    val errorText = if (isLightTheme) Color(0xFF8C2E27) else Color(0xFFFFC9C5)
     var activeCitationMessage by remember { mutableStateOf<ChatMessageUiModel?>(null) }
     var autoScrollPaused by rememberSaveable { mutableStateOf(false) }
     var hasInitializedScroll by rememberSaveable(uiState.chatId) { mutableStateOf(false) }
@@ -281,7 +286,7 @@ fun ChatScreen(
     }
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = Color.Black,
+        containerColor = pageBackground,
         topBar = {
             ChatGeminiTopBar(
                 onOpenDrawer = onOpenDrawer,
@@ -307,7 +312,7 @@ fun ChatScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .background(Color.Black)
+                    .background(pageBackground)
                     .padding(horizontal = 20.dp),
         ) {
             if (uiState.messages.isEmpty()) {
@@ -317,8 +322,8 @@ fun ChatScreen(
             }
             if (uiState.errorMessage != null) {
                 Surface(
-                    color = Color(0xFF351A1A),
-                    contentColor = Color(0xFFFFC9C5),
+                    color = errorContainer,
+                    contentColor = errorText,
                     shape = RoundedCornerShape(18.dp),
                 ) {
                     Text(
@@ -416,6 +421,7 @@ private fun ChatGeminiTopBar(
     onOpenDrawer: () -> Unit,
     onOpenAppSelector: () -> Unit,
 ) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
     Row(
         modifier =
             Modifier
@@ -434,12 +440,12 @@ private fun ChatGeminiTopBar(
                     .testTag(ChatTestTags.CHAT_MENU_BUTTON),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.chat_history), tint = Color.White)
+            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.chat_history), tint = onSurface)
         }
         Text(
             text = stringResource(R.string.chat_brand_title),
             style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
+            color = onSurface,
         )
         GeminiProfileAvatar(onClick = onOpenAppSelector)
     }
@@ -447,6 +453,7 @@ private fun ChatGeminiTopBar(
 
 @Composable
 private fun GeminiProfileAvatar(onClick: () -> Unit) {
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
     val gradientColors =
         listOf(
             Color(0xFF4285F4),
@@ -460,14 +467,14 @@ private fun GeminiProfileAvatar(onClick: () -> Unit) {
                 .size(42.dp)
                 .clip(CircleShape)
                 .border(2.dp, Brush.sweepGradient(gradientColors), CircleShape)
-                .background(Color(0xFF121212))
+                .background(if (isLightTheme) Color.White else Color(0xFF121212))
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = Icons.Filled.Person,
             contentDescription = stringResource(R.string.chat_switch_app_title),
-            tint = Color(0xFFE1E1E1),
+            tint = if (isLightTheme) Color(0xFF5B616C) else Color(0xFFE1E1E1),
             modifier = Modifier.size(22.dp),
         )
     }
@@ -477,6 +484,9 @@ private fun GeminiProfileAvatar(onClick: () -> Unit) {
 private fun ChatGeminiEmptyState(
     modifier: Modifier = Modifier,
 ) {
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val primaryText = MaterialTheme.colorScheme.onSurface
+    val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val suggestionItems: List<Pair<ImageVector, String>> =
         listOf(
             Icons.Filled.Search to stringResource(R.string.chat_suggestion_image),
@@ -493,12 +503,12 @@ private fun ChatGeminiEmptyState(
             Text(
                 text = stringResource(R.string.chat_greeting),
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color(0xFFE2E2E2),
+                color = secondaryText,
             )
             Text(
                 text = stringResource(R.string.chat_empty_headline),
                 style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
+                color = primaryText,
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -506,6 +516,7 @@ private fun ChatGeminiEmptyState(
                 ChatSuggestionChip(
                     icon = icon,
                     label = label,
+                    isLightTheme = isLightTheme,
                     modifier = Modifier.testTag("${ChatTestTags.CHAT_SUGGESTION_PREFIX}$index"),
                 )
             }
@@ -517,11 +528,12 @@ private fun ChatGeminiEmptyState(
 private fun ChatSuggestionChip(
     icon: ImageVector,
     label: String,
+    isLightTheme: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier.wrapContentWidth(),
-        color = Color(0xFF1A1A1C),
+        color = if (isLightTheme) Color.White else Color(0xFF1A1A1C),
         shape = RoundedCornerShape(26.dp),
     ) {
         Row(
@@ -529,8 +541,17 @@ private fun ChatSuggestionChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(icon, contentDescription = null, tint = Color(0xFFC7C7C7), modifier = Modifier.size(18.dp))
-            Text(label, color = Color(0xFFD5D5D5), style = MaterialTheme.typography.bodyLarge)
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (isLightTheme) Color(0xFF6A717D) else Color(0xFFC7C7C7),
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                label,
+                color = if (isLightTheme) Color(0xFF2A2D33) else Color(0xFFD5D5D5),
+                style = MaterialTheme.typography.bodyLarge,
+            )
         }
     }
 }
@@ -546,8 +567,9 @@ private fun ChatGeminiComposer(
     onPickFile: () -> Unit,
     onOpenQuickSettings: () -> Unit,
 ) {
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
     Surface(
-        color = Color(0xFF252628),
+        color = if (isLightTheme) Color(0xFFFCFCFD) else Color(0xFF252628),
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp, bottomStart = 34.dp, bottomEnd = 34.dp),
         modifier =
             Modifier
@@ -566,7 +588,7 @@ private fun ChatGeminiComposer(
                 singleLine = false,
                 maxLines = 4,
                 textStyle = TextStyle(
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = MaterialTheme.typography.bodyLarge.fontSize,
                     fontWeight = MaterialTheme.typography.bodyLarge.fontWeight,
                 ),
@@ -576,7 +598,7 @@ private fun ChatGeminiComposer(
                     if (uiState.input.isBlank()) {
                         Text(
                             text = stringResource(R.string.chat_input_placeholder),
-                            color = Color(0xFF8D8D8F),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyLarge,
                         )
                     }
@@ -605,7 +627,7 @@ private fun ChatGeminiComposer(
                             .clip(RoundedCornerShape(20.dp))
                             .border(
                                 width = 1.dp,
-                                color = Color.White.copy(alpha = 0.12f),
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                 shape = RoundedCornerShape(20.dp),
                             )
                             .clickable(onClick = onOpenQuickSettings)
@@ -613,7 +635,7 @@ private fun ChatGeminiComposer(
                 ) {
                     Text(
                         text = stringResource(R.string.chat_mode_fast),
-                        color = Color(0xFFE0E0E0),
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                     )
                 }
@@ -661,11 +683,17 @@ private fun GeminiComposerIconButton(
             modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
+                .background(
+                    if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
+                        Color(0xFFF0F2F5)
+                    } else {
+                        Color.White.copy(alpha = 0.06f)
+                    },
+                )
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = Color(0xFFF1F1F1), modifier = Modifier.size(21.dp))
+        Icon(icon, contentDescription = contentDescription, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(21.dp))
     }
 }
 

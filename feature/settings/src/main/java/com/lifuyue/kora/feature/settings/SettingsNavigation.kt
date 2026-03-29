@@ -36,6 +36,7 @@ fun NavGraphBuilder.settingsGraph(
     onConnectionSaved: () -> Unit,
     currentAppId: String? = null,
     onOpenCurrentApp: ((String) -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
 ) {
     composable(SettingsRoutes.OVERVIEW) {
         SettingsOverviewRoute(
@@ -52,31 +53,33 @@ fun NavGraphBuilder.settingsGraph(
             onOpenLanguage = { navController.navigate(SettingsRoutes.LANGUAGE) },
             onOpenCache = { navController.navigate(SettingsRoutes.CACHE) },
             onOpenAbout = { navController.navigate(SettingsRoutes.ABOUT) },
+            onOpenDrawer = onOpenDrawer,
         )
     }
     composable(SettingsRoutes.CONNECTION) {
         ConnectionConfigRoute(
             onConnectionSaved = onConnectionSaved,
             onBack = { navController.popBackStack() },
+            onOpenDrawer = onOpenDrawer,
         )
     }
     composable(SettingsRoutes.THEME) {
-        ThemeAppearanceRoute(onBack = { navController.popBackStack() })
+        ThemeAppearanceRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
     }
     composable(SettingsRoutes.CHAT_PREFERENCES) {
-        ChatPreferencesRoute(onBack = { navController.popBackStack() })
+        ChatPreferencesRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
     }
     composable(SettingsRoutes.AUDIO) {
-        AudioSettingsRoute(onBack = { navController.popBackStack() })
+        AudioSettingsRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
     }
     composable(SettingsRoutes.LANGUAGE) {
-        LanguageSettingsRoute(onBack = { navController.popBackStack() })
+        LanguageSettingsRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
     }
     composable(SettingsRoutes.CACHE) {
-        CacheSettingsRoute(onBack = { navController.popBackStack() })
+        CacheSettingsRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
     }
     composable(SettingsRoutes.ABOUT) {
-        AboutRoute(onBack = { navController.popBackStack() })
+        AboutRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
     }
 }
 
@@ -90,6 +93,7 @@ fun SettingsOverviewRoute(
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
     viewModel: SettingsOverviewViewModel = settingsViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -108,6 +112,7 @@ fun SettingsOverviewRoute(
                     onOpenLanguage = onOpenLanguage,
                     onOpenCache = onOpenCache,
                     onOpenAbout = onOpenAbout,
+                    onOpenDrawer = onOpenDrawer,
                 )
             },
             detailPane = { SettingsAdaptivePlaceholder() },
@@ -123,6 +128,7 @@ fun SettingsOverviewRoute(
             onOpenLanguage = onOpenLanguage,
             onOpenCache = onOpenCache,
             onOpenAbout = onOpenAbout,
+            onOpenDrawer = onOpenDrawer,
         )
     }
 }
@@ -132,6 +138,7 @@ fun ConnectionConfigRoute(
     viewModel: ConnectionConfigViewModel = settingsViewModel(),
     onConnectionSaved: () -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ConnectionConfigScreen(
@@ -142,6 +149,7 @@ fun ConnectionConfigRoute(
         onSave = { viewModel.saveConnection(onConnectionSaved) },
         onClear = viewModel::clearConnection,
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
     )
 }
 
@@ -149,6 +157,7 @@ fun ConnectionConfigRoute(
 fun AudioSettingsRoute(
     viewModel: AudioSettingsViewModel = settingsViewModel(),
     onBack: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     AudioSettingsScreen(
@@ -159,6 +168,7 @@ fun AudioSettingsRoute(
         onSpeechRateChange = viewModel::updateSpeechRate,
         onDefaultVoiceNameChange = viewModel::updateDefaultVoiceName,
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
     )
 }
 
@@ -166,6 +176,7 @@ fun AudioSettingsRoute(
 fun ThemeAppearanceRoute(
     viewModel: ThemeAppearanceViewModel = settingsViewModel(),
     onBack: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ThemeAppearanceScreen(
@@ -174,6 +185,7 @@ fun ThemeAppearanceRoute(
         onDynamicColorChange = viewModel::updateDynamicColorEnabled,
         onOledChange = viewModel::updateOledEnabled,
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
     )
 }
 
@@ -182,6 +194,7 @@ fun ChatPreferencesRoute(
     viewModel: ChatPreferencesViewModel =
         settingsViewModel(),
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ChatPreferencesScreen(
@@ -191,6 +204,7 @@ fun ChatPreferencesRoute(
         onShowCitationsChange = viewModel::updateShowCitationsByDefault,
         onFontSizeScaleChange = viewModel::updateFontSizeScale,
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
     )
 }
 
@@ -199,12 +213,14 @@ fun LanguageSettingsRoute(
     viewModel: LanguageSettingsViewModel =
         settingsViewModel(),
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     LanguageSettingsScreen(
         state = uiState,
         onLanguageTagChange = viewModel::updateLanguageTag,
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
     )
 }
 
@@ -213,12 +229,14 @@ fun CacheSettingsRoute(
     viewModel: CacheSettingsViewModel =
         settingsViewModel(),
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CacheSettingsScreen(
         state = uiState,
         onClearCache = viewModel::clearCache,
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
     )
 }
 
@@ -227,6 +245,7 @@ fun AboutRoute(
     viewModel: AboutViewModel =
         settingsViewModel(),
     onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
@@ -235,6 +254,7 @@ fun AboutRoute(
         onOpenFeedback = { uriHandler.openUri(uiState.feedbackUrl) },
         onOpenLicenses = { uriHandler.openUri(uiState.licensesUrl) },
         onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
     )
 }
 
