@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -54,9 +55,10 @@ fun ConnectionConfigScreen(
         modifier =
             modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .semantics { testTag = "settings-overview-scroll" }
-                .padding(20.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(stringResource(R.string.settings_connection_title), style = MaterialTheme.typography.headlineMedium)
@@ -169,9 +171,13 @@ fun SettingsOverviewScreen(
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize().semantics { testTag = "settings-overview-scroll" },
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .semantics { testTag = "settings-overview-scroll" },
+        contentPadding = PaddingValues(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
             Text(stringResource(R.string.settings_overview_title), style = MaterialTheme.typography.headlineMedium)
@@ -342,8 +348,9 @@ fun ThemeAppearanceScreen(
         modifier =
             modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(stringResource(R.string.settings_theme_title), style = MaterialTheme.typography.headlineMedium)
@@ -392,8 +399,9 @@ fun ChatPreferencesScreen(
         modifier =
             modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(stringResource(R.string.settings_chat_preferences_title), style = MaterialTheme.typography.headlineMedium)
@@ -445,8 +453,9 @@ fun AudioSettingsScreen(
         modifier =
             modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(appString("settings_audio_title"), style = MaterialTheme.typography.headlineMedium)
@@ -523,7 +532,9 @@ fun LanguageSettingsScreen(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(stringResource(R.string.settings_language_title), style = MaterialTheme.typography.headlineMedium)
@@ -604,7 +615,9 @@ fun CacheSettingsScreen(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(stringResource(R.string.settings_storage_title), style = MaterialTheme.typography.headlineMedium)
@@ -655,7 +668,9 @@ fun AboutScreen(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(stringResource(R.string.settings_about_title), style = MaterialTheme.typography.headlineMedium)
