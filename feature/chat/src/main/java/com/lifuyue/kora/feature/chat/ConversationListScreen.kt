@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -78,6 +79,9 @@ fun ConversationListScreen(
     onDeleteTag: (String) -> Unit,
     onMoveConversationToFolder: (String, String?) -> Unit,
     onSetConversationTags: (String, List<String>) -> Unit,
+    modifier: Modifier = Modifier,
+    embeddedMode: Boolean = false,
+    onCloseEmbedded: (() -> Unit)? = null,
 ) {
     var selectedChatId by rememberSaveable { mutableStateOf<String?>(null) }
     var organizerChatId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -105,48 +109,74 @@ fun ConversationListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.conversation_list_title)) },
-                actions = {
-                    TextButton(
-                        onClick = { showClearAllDialog = true },
-                        enabled = uiState.canClear,
-                        modifier = Modifier.testTag(ChatTestTags.CONVERSATION_CLEAR_ALL),
-                    ) {
-                        Text(stringResource(R.string.conversation_list_clear_all))
+            if (!embeddedMode) {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.conversation_list_title)) },
+                    actions = {
+                        TextButton(
+                            onClick = { showClearAllDialog = true },
+                            enabled = uiState.canClear,
+                            modifier = Modifier.testTag(ChatTestTags.CONVERSATION_CLEAR_ALL),
+                        ) {
+                            Text(stringResource(R.string.conversation_list_clear_all))
+                        }
                     }
-                },
-            )
+                )
+            }
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onNewConversation,
-                modifier = Modifier.testTag(ChatTestTags.CONVERSATION_FAB),
-            ) {
-                Text(stringResource(R.string.conversation_list_new_conversation))
+            if (!embeddedMode) {
+                ExtendedFloatingActionButton(
+                    onClick = onNewConversation,
+                    modifier = Modifier.testTag(ChatTestTags.CONVERSATION_FAB),
+                ) {
+                    Text(stringResource(R.string.conversation_list_new_conversation))
+                }
             }
         },
     ) { innerPadding ->
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier =
-                Modifier
+                modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .then(if (embeddedMode) Modifier.testTag(ChatTestTags.CONVERSATION_LIST) else Modifier),
         ) {
-            KoraWorkspaceHeroCard(
-                title = stringResource(R.string.conversation_list_workspace_title),
-                subtitle =
-                    stringResource(
-                        R.string.conversation_list_workspace_summary,
-                        uiState.items.size,
-                        uiState.pinnedItems.size,
-                    ),
-                eyebrow = stringResource(R.string.conversation_list_workspace_eyebrow),
-                meta = stringResource(R.string.conversation_list_workspace_meta),
-                modifier = Modifier.testTag("conversation_workspace_summary"),
-            )
+            if (embeddedMode) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.chat_history),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    onCloseEmbedded?.let { dismiss ->
+                        TextButton(
+                            onClick = dismiss,
+                            modifier = Modifier.testTag(ChatTestTags.CONVERSATION_BROWSER_CLOSE),
+                        ) {
+                            Text(stringResource(R.string.chat_history_close))
+                        }
+                    }
+                }
+            } else {
+                KoraWorkspaceHeroCard(
+                    title = stringResource(R.string.conversation_list_workspace_title),
+                    subtitle =
+                        stringResource(
+                            R.string.conversation_list_workspace_summary,
+                            uiState.items.size,
+                            uiState.pinnedItems.size,
+                        ),
+                    eyebrow = stringResource(R.string.conversation_list_workspace_eyebrow),
+                    meta = stringResource(R.string.conversation_list_workspace_meta),
+                    modifier = Modifier.testTag("conversation_workspace_summary"),
+                )
+            }
             OutlinedTextField(
                 value = uiState.query,
                 onValueChange = onQueryChanged,
@@ -191,9 +221,18 @@ fun ConversationListScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CONVERSATION_LIST),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (embeddedMode) {
+                                    Modifier.heightIn(min = 240.dp, max = 480.dp)
+                                } else {
+                                    Modifier.weight(1f)
+                                },
+                            ).then(if (embeddedMode) Modifier else Modifier.testTag(ChatTestTags.CONVERSATION_LIST)),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 96.dp),
+                    contentPadding = PaddingValues(bottom = if (embeddedMode) 24.dp else 96.dp),
                 ) {
                     if (uiState.pinnedItems.isNotEmpty()) {
                         item(key = "pinned_header") {

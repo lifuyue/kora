@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -110,6 +111,7 @@ class ChatScreenTest {
             ChatScreen(
                 uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
                 appSelectorUiState = AppSelectorUiState(currentAppName = "demo-app"),
+                conversationBrowserUiState = ConversationListUiState(items = sampleConversationItems),
                 onInputChanged = {},
                 onSend = {},
                 onBack = {},
@@ -123,6 +125,56 @@ class ChatScreenTest {
         composeRule.onNodeWithTag("chat_app_switch").assertIsDisplayed()
         composeRule.onNodeWithTag("chat_workspace_header").assertIsDisplayed()
         composeRule.onNodeWithText("demo-app").assertIsDisplayed()
+    }
+
+    @Test
+    fun conversationBrowserCanBeOpenedInsideChatWorkspace() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                conversationBrowserUiState = ConversationListUiState(items = sampleConversationItems),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+                onOpenConversationBrowser = {},
+                onDismissConversationBrowser = {},
+                showConversationBrowser = true,
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_BROWSER_SHEET).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_LIST).assertIsDisplayed()
+        composeRule.onNodeWithText("架构讨论").assertExists()
+    }
+
+    @Test
+    fun closingConversationBrowserKeepsDraftInput() {
+        var showConversationBrowser by mutableStateOf(true)
+        var draft by mutableStateOf("继续整理发布说明")
+
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1", input = draft),
+                conversationBrowserUiState = ConversationListUiState(items = sampleConversationItems),
+                onInputChanged = { draft = it },
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+                onOpenConversationBrowser = { showConversationBrowser = true },
+                onDismissConversationBrowser = { showConversationBrowser = false },
+                showConversationBrowser = showConversationBrowser,
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_BROWSER_CLOSE).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertTextContains("继续整理发布说明")
     }
 
     @Test
@@ -634,3 +686,24 @@ class ChatScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.interactiveSubmit("assistant-2")).assertIsEnabled()
     }
 }
+
+private val sampleConversationItems =
+    listOf(
+        ConversationListItemUiModel(
+            chatId = "chat-1",
+            appId = "app-1",
+            title = "架构讨论",
+            preview = "最新内容",
+            folderId = "folder-1",
+            folderName = "工作",
+            tags = listOf(ConversationTagUiModel(tagId = "tag-1", name = "Kotlin", colorToken = "sky")),
+            isPinned = true,
+        ),
+        ConversationListItemUiModel(
+            chatId = "chat-2",
+            appId = "app-1",
+            title = "周报整理",
+            preview = "待发送",
+            isPinned = false,
+        ),
+    )

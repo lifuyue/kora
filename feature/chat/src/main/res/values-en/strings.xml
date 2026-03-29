@@ -2,6 +2,9 @@
 <resources>
     <string name="chat_title">Chat</string>
     <string name="chat_back">Back</string>
+    <string name="chat_history">History</string>
+    <string name="chat_history_close">Close history</string>
+    <string name="chat_quick_settings">Quick settings</string>
     <string name="chat_capabilities">Capabilities</string>
     <string name="chat_switch_app_title">Switch app</string>
     <string name="chat_switch_app_current">Current</string>

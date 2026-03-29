@@ -63,7 +63,9 @@ import java.text.NumberFormat
 fun ChatScreen(
     uiState: ChatUiState,
     appSelectorUiState: AppSelectorUiState = AppSelectorUiState(),
+    conversationBrowserUiState: ConversationListUiState = ConversationListUiState(),
     showAppSelector: Boolean = false,
+    showConversationBrowser: Boolean = false,
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
     onStartSpeechInput: () -> Unit = {},
@@ -84,6 +86,28 @@ fun ChatScreen(
     onStopPlayback: () -> Unit = {},
     onOpenAppSelector: () -> Unit = {},
     onDismissAppSelector: () -> Unit = {},
+    onOpenConversationBrowser: () -> Unit = {},
+    onDismissConversationBrowser: () -> Unit = {},
+    onOpenConversation: (String) -> Unit = {},
+    onNewConversation: () -> Unit = {},
+    onConversationQueryChanged: (String) -> Unit = {},
+    onSelectConversationFolderFilter: (String?) -> Unit = {},
+    onSelectConversationTagFilter: (String?) -> Unit = {},
+    onToggleShowArchivedConversations: (Boolean) -> Unit = {},
+    onDeleteConversation: (String) -> Unit = {},
+    onRenameConversation: (String, String) -> Unit = { _, _ -> },
+    onTogglePinConversation: (String, Boolean) -> Unit = { _, _ -> },
+    onSetConversationArchived: (String, Boolean) -> Unit = { _, _ -> },
+    onClearConversations: () -> Unit = {},
+    onCreateConversationFolder: (String) -> Unit = {},
+    onRenameConversationFolder: (String, String) -> Unit = { _, _ -> },
+    onDeleteConversationFolder: (String) -> Unit = {},
+    onCreateConversationTag: (String) -> Unit = {},
+    onRenameConversationTag: (String, String) -> Unit = { _, _ -> },
+    onDeleteConversationTag: (String) -> Unit = {},
+    onMoveConversationToFolder: (String, String?) -> Unit = { _, _ -> },
+    onSetConversationTags: (String, List<String>) -> Unit = { _, _ -> },
+    onOpenQuickSettings: () -> Unit = {},
     onSwitchApp: (String) -> Unit = {},
     onOpenAppDetail: () -> Unit = {},
     onSuggestedQuestion: (String) -> Unit = {},
@@ -167,6 +191,37 @@ fun ChatScreen(
             }
         }
     }
+    if (showConversationBrowser) {
+        ModalBottomSheet(
+            onDismissRequest = onDismissConversationBrowser,
+            modifier = Modifier.testTag(ChatTestTags.CONVERSATION_BROWSER_SHEET),
+        ) {
+            ConversationListScreen(
+                uiState = conversationBrowserUiState,
+                onQueryChanged = onConversationQueryChanged,
+                onSelectFolderFilter = onSelectConversationFolderFilter,
+                onSelectTagFilter = onSelectConversationTagFilter,
+                onToggleShowArchived = onToggleShowArchivedConversations,
+                onOpenConversation = onOpenConversation,
+                onNewConversation = onNewConversation,
+                onDeleteConversation = onDeleteConversation,
+                onRenameConversation = onRenameConversation,
+                onTogglePin = onTogglePinConversation,
+                onSetArchived = onSetConversationArchived,
+                onClearConversations = onClearConversations,
+                onCreateFolder = onCreateConversationFolder,
+                onRenameFolder = onRenameConversationFolder,
+                onDeleteFolder = onDeleteConversationFolder,
+                onCreateTag = onCreateConversationTag,
+                onRenameTag = onRenameConversationTag,
+                onDeleteTag = onDeleteConversationTag,
+                onMoveConversationToFolder = onMoveConversationToFolder,
+                onSetConversationTags = onSetConversationTags,
+                embeddedMode = true,
+                onCloseEmbedded = onDismissConversationBrowser,
+            )
+        }
+    }
     activeCitationMessage?.let { message ->
         ModalBottomSheet(
             onDismissRequest = { activeCitationMessage = null },
@@ -211,6 +266,8 @@ fun ChatScreen(
             ChatCompactTopBar(
                 appName = appSelectorUiState.currentAppName.ifBlank { uiState.appId },
                 onBack = onBack,
+                onOpenConversationBrowser = onOpenConversationBrowser,
+                onOpenQuickSettings = onOpenQuickSettings,
                 onOpenAppSelector = onOpenAppSelector,
                 onOpenAppDetail = onOpenAppDetail,
             )
@@ -374,6 +431,8 @@ fun ChatScreen(
 private fun ChatCompactTopBar(
     appName: String,
     onBack: () -> Unit,
+    onOpenConversationBrowser: () -> Unit,
+    onOpenQuickSettings: () -> Unit,
     onOpenAppSelector: () -> Unit,
     onOpenAppDetail: () -> Unit,
 ) {
@@ -402,6 +461,18 @@ private fun ChatCompactTopBar(
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.weight(1f),
                 )
+                TextButton(
+                    onClick = onOpenConversationBrowser,
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_HISTORY_BUTTON),
+                ) {
+                    Text(stringResource(R.string.chat_history))
+                }
+                TextButton(
+                    onClick = onOpenQuickSettings,
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON),
+                ) {
+                    Text(stringResource(R.string.chat_quick_settings))
+                }
                 TextButton(onClick = onOpenAppDetail) {
                     Text(stringResource(R.string.chat_capabilities))
                 }

@@ -187,10 +187,13 @@ private fun ChatRoute(
     navController: NavController,
     viewModel: ChatViewModel = hiltViewModel(),
     appSelectorViewModel: AppSelectorViewModel = hiltViewModel(),
+    conversationListViewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val appSelectorUiState = appSelectorViewModel.uiState.collectAsStateWithLifecycle()
+    val conversationBrowserUiState = conversationListViewModel.uiState.collectAsStateWithLifecycle()
     var showAppSelector by remember { mutableStateOf(false) }
+    var showConversationBrowser by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val recordAudioPermissionLauncher =
@@ -234,7 +237,9 @@ private fun ChatRoute(
     ChatScreen(
         uiState = uiState.value,
         appSelectorUiState = appSelectorUiState.value,
+        conversationBrowserUiState = conversationBrowserUiState.value,
         showAppSelector = showAppSelector,
+        showConversationBrowser = showConversationBrowser,
         onBack = handleBack,
         onInputChanged = viewModel::updateInput,
         onStartSpeechInput = {
@@ -273,6 +278,37 @@ private fun ChatRoute(
         onStopPlayback = viewModel::stopPlayback,
         onOpenAppSelector = { showAppSelector = true },
         onDismissAppSelector = { showAppSelector = false },
+        onOpenConversationBrowser = { showConversationBrowser = true },
+        onDismissConversationBrowser = { showConversationBrowser = false },
+        onOpenConversation = { chatId ->
+            showConversationBrowser = false
+            navController.navigate(ChatRoutes.thread(uiState.value.appId, chatId)) {
+                launchSingleTop = true
+            }
+        },
+        onNewConversation = {
+            showConversationBrowser = false
+            navController.navigate(ChatRoutes.thread(uiState.value.appId)) {
+                launchSingleTop = true
+            }
+        },
+        onConversationQueryChanged = conversationListViewModel::updateQuery,
+        onSelectConversationFolderFilter = conversationListViewModel::selectFolder,
+        onSelectConversationTagFilter = conversationListViewModel::selectTag,
+        onToggleShowArchivedConversations = conversationListViewModel::toggleShowArchived,
+        onDeleteConversation = conversationListViewModel::deleteConversation,
+        onRenameConversation = conversationListViewModel::renameConversation,
+        onTogglePinConversation = conversationListViewModel::togglePin,
+        onSetConversationArchived = conversationListViewModel::setArchived,
+        onClearConversations = conversationListViewModel::clearConversations,
+        onCreateConversationFolder = conversationListViewModel::createFolder,
+        onRenameConversationFolder = conversationListViewModel::renameFolder,
+        onDeleteConversationFolder = conversationListViewModel::deleteFolder,
+        onCreateConversationTag = conversationListViewModel::createTag,
+        onRenameConversationTag = conversationListViewModel::renameTag,
+        onDeleteConversationTag = conversationListViewModel::deleteTag,
+        onMoveConversationToFolder = conversationListViewModel::moveConversation,
+        onSetConversationTags = conversationListViewModel::setConversationTags,
         onSwitchApp = { appId ->
             showAppSelector = false
             appSelectorViewModel.switchApp(appId) { selected ->

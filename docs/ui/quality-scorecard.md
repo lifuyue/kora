@@ -9,6 +9,10 @@
 - Missing recovery path for empty or error state: fail.
 - Touch targets under `44dp`: fail.
 - Color-only status communication: fail.
+- Chat workspace cannot open conversation history in one step: fail.
+- Returning from history or knowledge breaks draft, filters, or context: fail.
+- Knowledge pages do not provide a clear path back to the current conversation: fail.
+- Common appearance/chat preferences require leaving the current task with no quick path: fail.
 
 ## Weighted Scoring
 - `20` Visual consistency
@@ -58,3 +62,9 @@
 - `KnowledgeOverviewScreen` and `DatasetBrowserScreen`: `>= 85`
 - `SettingsOverviewScreen`: `>= 85`
 - First milestone average: `>= 88`
+
+## Second-Pass Focus
+- `ChatScreen` is the primary workspace entry; history is a contextual browser, not the default landing page.
+- `ConversationListScreen` is a reusable browser surface that can live full-screen or inside the chat workspace.
+- `Knowledge*` screens are evaluated on whether they accelerate a chat task, not just CRUD completeness.
+- `Settings*` screens are evaluated on whether high-frequency adjustments are reachable without breaking user flow.

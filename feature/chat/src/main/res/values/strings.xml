@@ -2,6 +2,9 @@
 <resources>
     <string name="chat_title">聊天</string>
     <string name="chat_back">返回</string>
+    <string name="chat_history">历史</string>
+    <string name="chat_history_close">关闭历史</string>
+    <string name="chat_quick_settings">快捷设置</string>
     <string name="chat_capabilities">能力</string>
     <string name="chat_switch_app_title">切换应用</string>
     <string name="chat_switch_app_current">当前</string>
