@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -60,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -303,6 +305,11 @@ fun ChatScreen(
                 onPickImage = onPickImage,
                 onPickFile = onPickFile,
                 onOpenQuickSettings = onOpenQuickSettings,
+                onToggleAttachmentActions = {
+                    if (uiState.attachmentConfig.hasAnySelectionType) {
+                        onPickFile()
+                    }
+                },
             )
         },
     ) { innerPadding ->
@@ -380,9 +387,10 @@ fun ChatScreen(
                     modifier = Modifier.testTag(ChatTestTags.AUTO_SCROLL_RESUME),
                 )
             }
-            if (uiState.attachments.isNotEmpty() || uiState.attachmentConfig.hasAnySelectionType) {
+            if (uiState.attachments.isNotEmpty()) {
                 AttachmentComposer(
                     attachments = uiState.attachments,
+                    showSelectionActions = false,
                     canPickImage = uiState.attachmentConfig.canSelectImg,
                     canPickFile = uiState.attachmentConfig.canSelectFile ||
                         uiState.attachmentConfig.canSelectVideo ||
@@ -566,6 +574,7 @@ private fun ChatGeminiComposer(
     onPickImage: () -> Unit,
     onPickFile: () -> Unit,
     onOpenQuickSettings: () -> Unit,
+    onToggleAttachmentActions: () -> Unit,
 ) {
     val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
     Surface(
@@ -613,34 +622,18 @@ private fun ChatGeminiComposer(
                 GeminiComposerIconButton(
                     icon = Icons.Filled.Add,
                     contentDescription = stringResource(R.string.chat_composer_add_attachment),
-                    onClick = onPickFile,
+                    onClick = onToggleAttachmentActions,
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON),
                 )
                 GeminiComposerIconButton(
-                    icon = Icons.Filled.Search,
-                    contentDescription = stringResource(R.string.chat_composer_add_image),
-                    onClick = onPickImage,
+                    icon = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.chat_quick_settings),
+                    onClick = onOpenQuickSettings,
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON),
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Box(
-                    modifier =
-                        Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .border(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(20.dp),
-                            )
-                            .clickable(onClick = onOpenQuickSettings)
-                            .testTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON),
-                ) {
-                    Text(
-                        text = stringResource(R.string.chat_mode_fast),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                    )
-                }
-                GeminiComposerIconButton(
-                    icon = Icons.Filled.Search,
+                GeminiComposerPainterButton(
+                    painter = painterResource(id = android.R.drawable.ic_btn_speak_now),
                     contentDescription = stringResource(R.string.chat_composer_voice),
                     onClick = {
                         if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
@@ -652,19 +645,6 @@ private fun ChatGeminiComposer(
                         }
                     },
                     modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
-                )
-                GeminiComposerIconButton(
-                    icon = if (uiState.canSend) Icons.Filled.Search else Icons.Filled.Add,
-                    contentDescription = stringResource(
-                        if (uiState.canSend) R.string.chat_send else R.string.chat_quick_settings,
-                    ),
-                    onClick = {
-                        if (uiState.canSend) {
-                            onSend()
-                        } else {
-                            onOpenQuickSettings()
-                        }
-                    },
                 )
             }
         }
@@ -694,6 +674,37 @@ private fun GeminiComposerIconButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = contentDescription, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(21.dp))
+    }
+}
+
+@Composable
+private fun GeminiComposerPainterButton(
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(
+                    if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
+                        Color(0xFFF0F2F5)
+                    } else {
+                        Color.White.copy(alpha = 0.06f)
+                    },
+                )
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painter,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(21.dp),
+        )
     }
 }
 
@@ -815,6 +826,7 @@ private fun ChatLoadingSkeleton(modifier: Modifier = Modifier) {
 @Composable
 private fun AttachmentComposer(
     attachments: List<AttachmentDraftUiModel>,
+    showSelectionActions: Boolean,
     canPickImage: Boolean,
     canPickFile: Boolean,
     onPickImage: () -> Unit,
@@ -824,15 +836,17 @@ private fun AttachmentComposer(
     onCancelAttachmentUpload: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (canPickImage) {
-                OutlinedButton(onClick = onPickImage, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK)) {
-                    Text(chatString("chat_attachment_add_image"))
+        if (showSelectionActions) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (canPickImage) {
+                    OutlinedButton(onClick = onPickImage, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK)) {
+                        Text(chatString("chat_attachment_add_image"))
+                    }
                 }
-            }
-            if (canPickFile) {
-                OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK)) {
-                    Text(chatString("chat_attachment_add_file"))
+                if (canPickFile) {
+                    OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK)) {
+                        Text(chatString("chat_attachment_add_file"))
+                    }
                 }
             }
         }

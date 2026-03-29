@@ -56,9 +56,9 @@ private fun KoraApp(
     }
 
     KoraTheme(
-        themeMode = snapshot.appearancePreferences.themeMode,
-        dynamicColor = snapshot.appearancePreferences.dynamicColorEnabled,
-        oledEnabled = snapshot.appearancePreferences.oledEnabled,
+        themeMode = repositorySnapshot.appearancePreferences.themeMode,
+        dynamicColor = repositorySnapshot.appearancePreferences.dynamicColorEnabled,
+        oledEnabled = repositorySnapshot.appearancePreferences.oledEnabled,
     ) {
         Surface(modifier = Modifier) {
             val onOnboardingCompleted = {

@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -167,6 +168,42 @@ class ChatScreenTest {
     }
 
     @Test
+    fun geminiComposerUsesThreePrimaryControlsAndAttachmentTriggerFileFlow() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        attachmentConfig =
+                            ChatAttachmentConfig(
+                                canSelectImg = true,
+                                canSelectFile = true,
+                            ),
+                ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_MIC_BUTTON).assertExists()
+        composeRule.onNodeWithText(context.chatString("chat_mode_fast")).assertDoesNotExist()
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON).performClick()
+
+        composeRule.onNodeWithContentDescription(context.chatString("chat_composer_voice")).assertExists()
+    }
+
+    @Test
     fun inputDraftStillRendersInsideGeminiComposer() {
         composeRule.setContent {
             ChatScreen(
@@ -229,8 +266,6 @@ class ChatScreenTest {
     @Test
     fun composerShowsAttachmentActionsAndPreviewControls() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        var pickedImage = false
-        var pickedFile = false
         composeRule.setContent {
             ChatScreen(
                 uiState =
@@ -271,8 +306,6 @@ class ChatScreenTest {
                     ),
                 onInputChanged = {},
                 onSend = {},
-                onPickImage = { pickedImage = true },
-                onPickFile = { pickedFile = true },
                 onRemoveAttachment = {},
                 onRetryAttachment = {},
                 onCancelAttachmentUpload = {},
@@ -284,8 +317,7 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK).performClick()
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON).performClick()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_LIST).assertExists()
         composeRule.onNodeWithTag(ChatTestTags.attachmentItem("content://local/picture.png")).assertExists()
         composeRule.onNodeWithTag(ChatTestTags.attachmentItem("content://local/uploading.pdf")).assertExists()

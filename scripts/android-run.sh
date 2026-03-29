@@ -7,6 +7,7 @@ APP_ID="${APP_ID:-com.lifuyue.kora}"
 ACTIVITY="${ACTIVITY:-com.lifuyue.kora/.MainActivity}"
 APK_PATH="${APK_PATH:-app/build/outputs/apk/debug/app-debug.apk}"
 DEBUG_EXTRA_KEY="com.lifuyue.kora.extra.OPEN_DEBUG_SHELL"
+AVD_CONFIG_PATH="${HOME}/.android/avd/${AVD_NAME}.avd/config.ini"
 
 find_android_tool() {
   local tool="$1"
@@ -54,6 +55,25 @@ running_emulator_for_avd() {
   return 1
 }
 
+ensure_avd_hardware_keyboard() {
+  if [[ ! -f "${AVD_CONFIG_PATH}" ]]; then
+    echo "[android-run] 未找到 AVD 配置: ${AVD_CONFIG_PATH}" >&2
+    exit 1
+  fi
+
+  if grep -q '^hw\.keyboard=yes$' "${AVD_CONFIG_PATH}"; then
+    return 1
+  fi
+
+  echo "[android-run] 修正 AVD 硬件键盘配置" >&2
+  if grep -q '^hw\.keyboard=' "${AVD_CONFIG_PATH}"; then
+    perl -0pi -e 's/^hw\.keyboard=.*/hw.keyboard=yes/m' "${AVD_CONFIG_PATH}"
+  else
+    printf '\nhw.keyboard=yes\n' >> "${AVD_CONFIG_PATH}"
+  fi
+  return 0
+}
+
 wait_for_boot() {
   local serial="$1"
   "${ADB_BIN}" -s "${serial}" wait-for-device >/dev/null
@@ -62,13 +82,31 @@ wait_for_boot() {
   done
 }
 
+ensure_device_keyboard_settings() {
+  local serial="$1"
+  "${ADB_BIN}" -s "${serial}" shell settings put secure show_ime_with_hard_keyboard 1 >/dev/null
+}
+
 ensure_emulator() {
   local serial
+  local config_changed=0
+
+  if ensure_avd_hardware_keyboard; then
+    config_changed=1
+  fi
+
   if serial="$(running_emulator_for_avd)"; then
-    echo "[android-run] 复用已启动模拟器: ${serial} (${AVD_NAME})" >&2
-    wait_for_boot "${serial}"
-    printf '%s\n' "${serial}"
-    return 0
+    if (( config_changed == 1 )); then
+      echo "[android-run] 当前模拟器使用旧键盘配置，正在重启 ${serial}" >&2
+      "${ADB_BIN}" -s "${serial}" emu kill >/dev/null 2>&1 || true
+      sleep 3
+    else
+      echo "[android-run] 复用已启动模拟器: ${serial} (${AVD_NAME})" >&2
+      wait_for_boot "${serial}"
+      ensure_device_keyboard_settings "${serial}"
+      printf '%s\n' "${serial}"
+      return 0
+    fi
   fi
 
   echo "[android-run] 启动模拟器: ${AVD_NAME}" >&2
@@ -85,6 +123,7 @@ ensure_emulator() {
   done
 
   wait_for_boot "${serial}"
+  ensure_device_keyboard_settings "${serial}"
   printf '%s\n' "${serial}"
 }
 
