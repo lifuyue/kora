@@ -134,20 +134,6 @@ class KoraNavGraphTest {
     }
 
     @Test
-    fun shellUsesWorkspaceNavigationChrome() {
-        composeRule.setContent {
-            KoraShellNavigationBar(
-                selectedTab = ShellDestination.Chat,
-                onSelect = {},
-            )
-        }
-
-        composeRule.onNodeWithTag("shell_nav_chat").assertIsDisplayed()
-        composeRule.onNodeWithTag("shell_nav_knowledge").assertIsDisplayed()
-        composeRule.onNodeWithTag("shell_nav_settings").assertIsDisplayed()
-    }
-
-    @Test
     fun shareLinkPayloadBypassesBootstrapAndShowsShareRoute() {
         composeRule.setContent {
             KoraNavGraph(

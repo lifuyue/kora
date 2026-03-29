@@ -42,6 +42,7 @@ fun KnowledgeOverviewScreen(
     state: KnowledgeOverviewUiState,
     onOpenDatasets: () -> Unit,
     onOpenRecentDataset: (String) -> Unit,
+    onReturnToChat: (() -> Unit)? = null,
 ) {
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.knowledge_overview_title)) }) },
@@ -70,6 +71,11 @@ fun KnowledgeOverviewScreen(
                     ),
                 supportingText = stringResource(R.string.knowledge_overview_open_datasets),
             )
+            if (onReturnToChat != null) {
+                TextButton(onClick = onReturnToChat) {
+                    Text(stringResource(R.string.knowledge_return_to_chat))
+                }
+            }
             Button(onClick = onOpenDatasets) { Text(stringResource(R.string.knowledge_overview_open_datasets)) }
             state.recentDatasets.forEach { item ->
                 Card(

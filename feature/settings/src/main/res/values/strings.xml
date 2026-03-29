@@ -47,6 +47,15 @@
     <string name="settings_chat_preferences_auto_scroll">自动滚动到底部</string>
     <string name="settings_chat_preferences_citations">默认显示引用</string>
     <string name="settings_chat_preferences_font_scale">字体大小 %1$d%%</string>
+    <string name="settings_quick_title">聊天快速设置</string>
+    <string name="settings_quick_summary">不离开当前对话，直接调整常用偏好。</string>
+    <string name="settings_quick_theme_title">主题</string>
+    <string name="settings_quick_language_title">语言</string>
+    <string name="settings_quick_voice_title">语音偏好</string>
+    <string name="settings_quick_voice_summary">语音识别引擎：%1$s</string>
+    <string name="settings_quick_open_full">打开完整设置</string>
+    <string name="settings_audio_engine_system">系统语音</string>
+    <string name="settings_audio_engine_whisper_app">Whisper 应用</string>
 
     <string name="settings_language_title">语言</string>
     <string name="settings_language_follow_system">跟随系统</string>

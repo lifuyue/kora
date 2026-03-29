@@ -238,6 +238,32 @@ fun AboutRoute(
     )
 }
 
+@Composable
+fun ChatQuickSettingsRoute(
+    onOpenFullSettings: () -> Unit,
+    themeViewModel: ThemeAppearanceViewModel = settingsViewModel(),
+    chatPreferencesViewModel: ChatPreferencesViewModel = settingsViewModel(),
+    languageViewModel: LanguageSettingsViewModel = settingsViewModel(),
+    audioSettingsViewModel: AudioSettingsViewModel = settingsViewModel(),
+) {
+    val themeState by themeViewModel.uiState.collectAsStateWithLifecycle()
+    val chatPreferencesState by chatPreferencesViewModel.uiState.collectAsStateWithLifecycle()
+    val languageState by languageViewModel.uiState.collectAsStateWithLifecycle()
+    val audioState by audioSettingsViewModel.uiState.collectAsStateWithLifecycle()
+    ChatQuickSettingsContent(
+        themeState = themeState,
+        chatPreferencesState = chatPreferencesState,
+        languageState = languageState,
+        audioState = audioState,
+        onThemeModeChange = themeViewModel::updateThemeMode,
+        onLanguageTagChange = languageViewModel::updateLanguageTag,
+        onStreamEnabledChange = chatPreferencesViewModel::updateStreamEnabled,
+        onShowCitationsChange = chatPreferencesViewModel::updateShowCitationsByDefault,
+        onAutoSendTranscriptsChange = audioSettingsViewModel::updateAutoSendTranscripts,
+        onOpenFullSettings = onOpenFullSettings,
+    )
+}
+
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 internal interface SettingsViewModelEntryPoint {

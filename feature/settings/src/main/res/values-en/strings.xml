@@ -48,6 +48,15 @@
     <string name="settings_chat_preferences_auto_scroll">Auto-scroll to bottom</string>
     <string name="settings_chat_preferences_citations">Show citations by default</string>
     <string name="settings_chat_preferences_font_scale">Text size %1$d%%</string>
+    <string name="settings_quick_title">Quick chat settings</string>
+    <string name="settings_quick_summary">Adjust common preferences without leaving the current conversation.</string>
+    <string name="settings_quick_theme_title">Theme</string>
+    <string name="settings_quick_language_title">Language</string>
+    <string name="settings_quick_voice_title">Voice preferences</string>
+    <string name="settings_quick_voice_summary">Speech-to-text engine: %1$s</string>
+    <string name="settings_quick_open_full">Open full settings</string>
+    <string name="settings_audio_engine_system">System speech</string>
+    <string name="settings_audio_engine_whisper_app">Whisper app</string>
 
     <string name="settings_language_title">Language</string>
     <string name="settings_language_follow_system">Follow system</string>

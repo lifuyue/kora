@@ -40,6 +40,12 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
         val viewModel: KnowledgeOverviewViewModel = hiltViewModel()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         val useDualPane = rememberKnowledgeDualPaneEnabled()
+        val onReturnToChat =
+            if (navController.previousBackStackEntry?.destination?.route?.startsWith("chat") == true) {
+                { navController.popBackStack(); Unit }
+            } else {
+                null
+            }
         if (useDualPane) {
             AdaptiveKnowledgeScaffold(
                 isExpanded = true,
@@ -48,6 +54,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
                         state = uiState,
                         onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
                         onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
+                        onReturnToChat = onReturnToChat,
                     )
                 },
                 detailPane = { KnowledgeAdaptivePlaceholder() },
@@ -57,6 +64,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
                 state = uiState,
                 onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
                 onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
+                onReturnToChat = onReturnToChat,
             )
         }
     }

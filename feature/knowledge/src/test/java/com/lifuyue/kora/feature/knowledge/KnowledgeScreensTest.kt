@@ -5,8 +5,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,6 +48,27 @@ class KnowledgeScreensTest {
 
         composeRule.onNodeWithTag("knowledge_overview_summary_card").assertIsDisplayed()
         composeRule.onNodeWithText("Architecture Notes").fetchSemanticsNode()
+    }
+
+    @Test
+    fun knowledgeOverviewShowsReturnToChatActionWhenContextProvided() {
+        var returnedToChat = false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            KnowledgeOverviewScreen(
+                state = KnowledgeOverviewUiState(selectedAppId = "app-1", datasetCount = 3, status = KnowledgeLoadState.Content),
+                onOpenDatasets = {},
+                onOpenRecentDataset = {},
+                onReturnToChat = { returnedToChat = true },
+            )
+        }
+
+        val label = context.getString(R.string.knowledge_return_to_chat)
+        composeRule.onNodeWithText(label).assertExists()
+        composeRule.onNodeWithText(label).performClick()
+        composeRule.runOnIdle {
+            assertTrue(returnedToChat)
+        }
     }
 
     @Test

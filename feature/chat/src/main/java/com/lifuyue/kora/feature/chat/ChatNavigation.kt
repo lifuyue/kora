@@ -11,7 +11,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -24,6 +28,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.core.content.ContextCompat
 import androidx.navigation.navArgument
+import kotlinx.coroutines.launch
 
 object ChatRoutes {
     const val CONVERSATIONS = "chat/{appId}"
@@ -56,7 +61,10 @@ object ChatRoutes {
     fun appAnalytics(appId: String): String = "chat/app/$appId/analytics"
 }
 
-fun NavGraphBuilder.chatGraph(navController: NavController) {
+fun NavGraphBuilder.chatGraph(
+    navController: NavController,
+    onOpenQuickSettings: () -> Unit = {},
+) {
     composable(
         route = ChatRoutes.CONVERSATIONS,
         arguments = listOf(navArgument("appId") { type = NavType.StringType }),
@@ -82,7 +90,10 @@ fun NavGraphBuilder.chatGraph(navController: NavController) {
                 },
             ),
     ) {
-        ChatRoute(navController = navController)
+        ChatRoute(
+            navController = navController,
+            onOpenQuickSettings = onOpenQuickSettings,
+        )
     }
     composable(
         route = ChatRoutes.APP_DETAIL,
@@ -185,6 +196,7 @@ private fun ConversationListRoute(
 @Composable
 private fun ChatRoute(
     navController: NavController,
+    onOpenQuickSettings: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel(),
     appSelectorViewModel: AppSelectorViewModel = hiltViewModel(),
     conversationListViewModel: ConversationListViewModel = hiltViewModel(),
@@ -192,8 +204,9 @@ private fun ChatRoute(
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val appSelectorUiState = appSelectorViewModel.uiState.collectAsStateWithLifecycle()
     val conversationBrowserUiState = conversationListViewModel.uiState.collectAsStateWithLifecycle()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
     var showAppSelector by remember { mutableStateOf(false) }
-    var showConversationBrowser by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val recordAudioPermissionLauncher =
@@ -228,117 +241,111 @@ private fun ChatRoute(
     }
     val handleBack = {
         if (!navController.popBackStack()) {
-            navController.navigate(ChatRoutes.conversations(uiState.value.appId)) {
-                launchSingleTop = true
-            }
+            Unit
         }
     }
     BackHandler(onBack = handleBack)
-    ChatScreen(
-        uiState = uiState.value,
-        appSelectorUiState = appSelectorUiState.value,
-        conversationBrowserUiState = conversationBrowserUiState.value,
-        showAppSelector = showAppSelector,
-        showConversationBrowser = showConversationBrowser,
-        onBack = handleBack,
-        onInputChanged = viewModel::updateInput,
-        onStartSpeechInput = {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                viewModel.startSpeechInput()
-            } else {
-                recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            }
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ChatDrawerContent(
+                uiState = conversationBrowserUiState.value,
+                onQueryChanged = conversationListViewModel::updateQuery,
+                onNewConversation = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate(ChatRoutes.thread(uiState.value.appId)) { launchSingleTop = true }
+                },
+                onOpenConversation = { chatId ->
+                    scope.launch { drawerState.close() }
+                    navController.navigate(ChatRoutes.thread(uiState.value.appId, chatId)) { launchSingleTop = true }
+                },
+                onOpenKnowledge = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate("knowledge") { launchSingleTop = true }
+                },
+                onOpenSettings = {
+                    scope.launch { drawerState.close() }
+                    navController.navigate("settings") { launchSingleTop = true }
+                },
+            )
         },
-        onStopSpeechInput = viewModel::stopSpeechInput,
-        onCancelSpeechInput = viewModel::cancelSpeechInput,
-        onSend = viewModel::send,
-        onPickImage = {
-            val state = uiState.value
-            val mimeTypes = state.attachmentConfig.allowedMimeTypes(AttachmentKind.Image)
-            if (canLaunchAttachmentPicker(state.attachmentConfig, state.attachments.size, AttachmentKind.Image)) {
-                imagePickerLauncher.launch(mimeTypes)
-            }
-        },
-        onPickFile = {
-            val state = uiState.value
-            val mimeTypes = state.attachmentConfig.allowedMimeTypes(AttachmentKind.File)
-            if (canLaunchAttachmentPicker(state.attachmentConfig, state.attachments.size, AttachmentKind.File)) {
-                filePickerLauncher.launch(mimeTypes)
-            }
-        },
-        onRemoveAttachment = viewModel::removeAttachment,
-        onRetryAttachment = viewModel::retryAttachment,
-        onCancelAttachmentUpload = viewModel::cancelAttachmentUpload,
-        onStopGenerating = viewModel::stopGeneration,
-        onContinueGeneration = viewModel::continueGeneration,
-        onFeedback = viewModel::updateFeedback,
-        onRegenerate = viewModel::regenerate,
-        onPlayMessage = viewModel::playMessage,
-        onPausePlayback = viewModel::pausePlayback,
-        onStopPlayback = viewModel::stopPlayback,
-        onOpenAppSelector = { showAppSelector = true },
-        onDismissAppSelector = { showAppSelector = false },
-        onOpenConversationBrowser = { showConversationBrowser = true },
-        onDismissConversationBrowser = { showConversationBrowser = false },
-        onOpenConversation = { chatId ->
-            showConversationBrowser = false
-            navController.navigate(ChatRoutes.thread(uiState.value.appId, chatId)) {
-                launchSingleTop = true
-            }
-        },
-        onNewConversation = {
-            showConversationBrowser = false
-            navController.navigate(ChatRoutes.thread(uiState.value.appId)) {
-                launchSingleTop = true
-            }
-        },
-        onConversationQueryChanged = conversationListViewModel::updateQuery,
-        onSelectConversationFolderFilter = conversationListViewModel::selectFolder,
-        onSelectConversationTagFilter = conversationListViewModel::selectTag,
-        onToggleShowArchivedConversations = conversationListViewModel::toggleShowArchived,
-        onDeleteConversation = conversationListViewModel::deleteConversation,
-        onRenameConversation = conversationListViewModel::renameConversation,
-        onTogglePinConversation = conversationListViewModel::togglePin,
-        onSetConversationArchived = conversationListViewModel::setArchived,
-        onClearConversations = conversationListViewModel::clearConversations,
-        onCreateConversationFolder = conversationListViewModel::createFolder,
-        onRenameConversationFolder = conversationListViewModel::renameFolder,
-        onDeleteConversationFolder = conversationListViewModel::deleteFolder,
-        onCreateConversationTag = conversationListViewModel::createTag,
-        onRenameConversationTag = conversationListViewModel::renameTag,
-        onDeleteConversationTag = conversationListViewModel::deleteTag,
-        onMoveConversationToFolder = conversationListViewModel::moveConversation,
-        onSetConversationTags = conversationListViewModel::setConversationTags,
-        onSwitchApp = { appId ->
-            showAppSelector = false
-            appSelectorViewModel.switchApp(appId) { selected ->
-                navController.navigate(ChatRoutes.thread(selected)) {
-                    popUpTo(ChatRoutes.CONVERSATIONS) { inclusive = false }
-                    launchSingleTop = true
+    ) {
+        ChatScreen(
+            uiState = uiState.value,
+            appSelectorUiState = appSelectorUiState.value,
+            conversationBrowserUiState = conversationBrowserUiState.value,
+            showAppSelector = showAppSelector,
+            onBack = handleBack,
+            onInputChanged = viewModel::updateInput,
+            onStartSpeechInput = {
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    viewModel.startSpeechInput()
+                } else {
+                    recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 }
-            }
-        },
-        onOpenAppDetail = {
-            navController.navigate(ChatRoutes.appDetail(uiState.value.appId, uiState.value.chatId))
-        },
-        onSuggestedQuestion = {
-            viewModel.updateInput(it)
-            viewModel.send()
-        },
-        onUpdateInteractiveDraft = viewModel::updateInteractiveDraft,
-        onSubmitInteractiveResponse = viewModel::submitInteractiveResponse,
-        onOpenCitation = { citation ->
-            if (!citation.datasetId.isNullOrBlank() && !citation.collectionId.isNullOrBlank()) {
-                navController.navigate(
-                    knowledgeChunkRoute(
-                        datasetId = citation.datasetId,
-                        collectionId = citation.collectionId,
-                        dataId = citation.dataId,
-                    ),
-                )
-            }
-        },
-    )
+            },
+            onStopSpeechInput = viewModel::stopSpeechInput,
+            onCancelSpeechInput = viewModel::cancelSpeechInput,
+            onSend = viewModel::send,
+            onPickImage = {
+                val state = uiState.value
+                val mimeTypes = state.attachmentConfig.allowedMimeTypes(AttachmentKind.Image)
+                if (canLaunchAttachmentPicker(state.attachmentConfig, state.attachments.size, AttachmentKind.Image)) {
+                    imagePickerLauncher.launch(mimeTypes)
+                }
+            },
+            onPickFile = {
+                val state = uiState.value
+                val mimeTypes = state.attachmentConfig.allowedMimeTypes(AttachmentKind.File)
+                if (canLaunchAttachmentPicker(state.attachmentConfig, state.attachments.size, AttachmentKind.File)) {
+                    filePickerLauncher.launch(mimeTypes)
+                }
+            },
+            onRemoveAttachment = viewModel::removeAttachment,
+            onRetryAttachment = viewModel::retryAttachment,
+            onCancelAttachmentUpload = viewModel::cancelAttachmentUpload,
+            onStopGenerating = viewModel::stopGeneration,
+            onContinueGeneration = viewModel::continueGeneration,
+            onFeedback = viewModel::updateFeedback,
+            onRegenerate = viewModel::regenerate,
+            onPlayMessage = viewModel::playMessage,
+            onPausePlayback = viewModel::pausePlayback,
+            onStopPlayback = viewModel::stopPlayback,
+            onOpenAppSelector = { showAppSelector = true },
+            onDismissAppSelector = { showAppSelector = false },
+            onOpenDrawer = { scope.launch { drawerState.open() } },
+            onOpenQuickSettings = onOpenQuickSettings,
+            onSwitchApp = { appId ->
+                showAppSelector = false
+                appSelectorViewModel.switchApp(appId) { selected ->
+                    navController.navigate(ChatRoutes.thread(selected)) {
+                        popUpTo(ChatRoutes.CONVERSATIONS) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            },
+            onOpenAppDetail = {
+                navController.navigate(ChatRoutes.appDetail(uiState.value.appId, uiState.value.chatId))
+            },
+            onSuggestedQuestion = {
+                viewModel.updateInput(it)
+                viewModel.send()
+            },
+            onUpdateInteractiveDraft = viewModel::updateInteractiveDraft,
+            onSubmitInteractiveResponse = viewModel::submitInteractiveResponse,
+            onOpenCitation = { citation ->
+                if (!citation.datasetId.isNullOrBlank() && !citation.collectionId.isNullOrBlank()) {
+                    navController.navigate(
+                        knowledgeChunkRoute(
+                            datasetId = citation.datasetId,
+                            collectionId = citation.collectionId,
+                            dataId = citation.dataId,
+                        ),
+                    )
+                }
+            },
+        )
+    }
 }
 
 @Composable

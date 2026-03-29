@@ -1,28 +1,43 @@
 package com.lifuyue.kora.feature.chat
 
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -47,14 +62,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.lifuyue.kora.core.common.ChatRole
-import com.lifuyue.kora.core.common.ui.KoraWorkspaceHeroCard
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
@@ -86,6 +104,7 @@ fun ChatScreen(
     onStopPlayback: () -> Unit = {},
     onOpenAppSelector: () -> Unit = {},
     onDismissAppSelector: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
     onOpenConversationBrowser: () -> Unit = {},
     onDismissConversationBrowser: () -> Unit = {},
     onOpenConversation: (String) -> Unit = {},
@@ -262,14 +281,23 @@ fun ChatScreen(
     }
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        containerColor = Color.Black,
         topBar = {
-            ChatCompactTopBar(
-                appName = appSelectorUiState.currentAppName.ifBlank { uiState.appId },
-                onBack = onBack,
-                onOpenConversationBrowser = onOpenConversationBrowser,
-                onOpenQuickSettings = onOpenQuickSettings,
+            ChatGeminiTopBar(
+                onOpenDrawer = onOpenDrawer,
                 onOpenAppSelector = onOpenAppSelector,
-                onOpenAppDetail = onOpenAppDetail,
+            )
+        },
+        bottomBar = {
+            ChatGeminiComposer(
+                uiState = uiState,
+                onInputChanged = onInputChanged,
+                onSend = onSend,
+                onStartSpeechInput = onStartSpeechInput,
+                onStopSpeechInput = onStopSpeechInput,
+                onPickImage = onPickImage,
+                onPickFile = onPickFile,
+                onOpenQuickSettings = onOpenQuickSettings,
             )
         },
     ) { innerPadding ->
@@ -279,24 +307,23 @@ fun ChatScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp),
+                    .background(Color.Black)
+                    .padding(horizontal = 20.dp),
         ) {
             if (uiState.messages.isEmpty()) {
-                ChatEmptyStateCard(
-                    appName = appSelectorUiState.currentAppName.ifBlank { uiState.appId },
-                    welcomeText = uiState.welcomeText ?: stringResource(R.string.chat_empty_welcome),
-                    modifier = Modifier.testTag("chat_workspace_header"),
+                ChatGeminiEmptyState(
+                    modifier = Modifier.padding(top = 48.dp).testTag("chat_workspace_header"),
                 )
             }
             if (uiState.errorMessage != null) {
                 Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    shape = MaterialTheme.shapes.large,
+                    color = Color(0xFF351A1A),
+                    contentColor = Color(0xFFFFC9C5),
+                    shape = RoundedCornerShape(18.dp),
                 ) {
                     Text(
                         text = uiState.errorMessage,
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
                     )
                 }
             }
@@ -306,7 +333,8 @@ fun ChatScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f).testTag(ChatTestTags.CHAT_LIST),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(uiState.messages, key = { it.messageId }) { message ->
                         MessageCard(
@@ -374,53 +402,9 @@ fun ChatScreen(
                     onCancel = onCancelSpeechInput,
                 )
             }
-            OutlinedTextField(
-                value = uiState.input,
-                onValueChange = onInputChanged,
-                label = { Text(stringResource(R.string.chat_input_label)) },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { if (uiState.canSend) onSend() }),
-                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
-                        uiState.speechInputState.status == SpeechInputStatus.Recognizing
-                    ) {
-                        onStopSpeechInput
-                    } else {
-                        onStartSpeechInput
-                    },
-                    modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
-                ) {
-                    Text(
-                        when (uiState.speechInputState.status) {
-                            SpeechInputStatus.Recording,
-                            SpeechInputStatus.Recognizing,
-                            -> appString("chat_speech_stop")
-                            SpeechInputStatus.Error -> appString("chat_speech_retry")
-                            SpeechInputStatus.Idle -> appString("chat_speech_start")
-                        },
-                    )
-                }
-                if (uiState.canStopGeneration) {
-                    OutlinedButton(onClick = onStopGenerating) {
-                        Text(stringResource(R.string.chat_stop_generation))
-                    }
-                }
-                Button(
-                    onClick = onSend,
-                    enabled = uiState.canSend,
-                ) {
-                    Text(
-                        stringResource(
-                            if (uiState.isSending) {
-                                R.string.chat_sending
-                            } else {
-                                R.string.chat_send
-                            },
-                        ),
-                    )
+            if (uiState.canStopGeneration) {
+                OutlinedButton(onClick = onStopGenerating) {
+                    Text(stringResource(R.string.chat_stop_generation))
                 }
             }
         }
@@ -428,63 +412,101 @@ fun ChatScreen(
 }
 
 @Composable
-private fun ChatCompactTopBar(
-    appName: String,
-    onBack: () -> Unit,
-    onOpenConversationBrowser: () -> Unit,
-    onOpenQuickSettings: () -> Unit,
+private fun ChatGeminiTopBar(
+    onOpenDrawer: () -> Unit,
     onOpenAppSelector: () -> Unit,
-    onOpenAppDetail: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(top = 10.dp, start = 8.dp, end = 8.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        Box(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onOpenDrawer)
+                    .testTag(ChatTestTags.CHAT_MENU_BUTTON),
+            contentAlignment = Alignment.Center,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onBack) {
-                    Text(stringResource(R.string.chat_back))
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.chat_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    onClick = onOpenConversationBrowser,
-                    modifier = Modifier.testTag(ChatTestTags.CHAT_HISTORY_BUTTON),
-                ) {
-                    Text(stringResource(R.string.chat_history))
-                }
-                TextButton(
-                    onClick = onOpenQuickSettings,
-                    modifier = Modifier.testTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON),
-                ) {
-                    Text(stringResource(R.string.chat_quick_settings))
-                }
-                TextButton(onClick = onOpenAppDetail) {
-                    Text(stringResource(R.string.chat_capabilities))
-                }
-            }
-            TextButton(
-                onClick = onOpenAppSelector,
-                modifier = Modifier.testTag("chat_app_switch"),
-            ) {
-                Text(
-                    text = appName,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.chat_history), tint = Color.White)
+        }
+        Text(
+            text = stringResource(R.string.chat_brand_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+        )
+        GeminiProfileAvatar(onClick = onOpenAppSelector)
+    }
+}
+
+@Composable
+private fun GeminiProfileAvatar(onClick: () -> Unit) {
+    val gradientColors =
+        listOf(
+            Color(0xFF4285F4),
+            Color(0xFFEA4335),
+            Color(0xFFFBBC05),
+            Color(0xFF34A853),
+        )
+    Box(
+        modifier =
+            Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .border(2.dp, Brush.sweepGradient(gradientColors), CircleShape)
+                .background(Color(0xFF121212))
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Person,
+            contentDescription = stringResource(R.string.chat_switch_app_title),
+            tint = Color(0xFFE1E1E1),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
+private fun ChatGeminiEmptyState(
+    modifier: Modifier = Modifier,
+) {
+    val suggestionItems: List<Pair<ImageVector, String>> =
+        listOf(
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_image),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_music),
+            Icons.Filled.Add to stringResource(R.string.chat_suggestion_video),
+            Icons.Filled.Person to stringResource(R.string.chat_suggestion_study),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_energy),
+        )
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = stringResource(R.string.chat_greeting),
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color(0xFFE2E2E2),
+            )
+            Text(
+                text = stringResource(R.string.chat_empty_headline),
+                style = MaterialTheme.typography.displaySmall,
+                color = Color.White,
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            suggestionItems.forEachIndexed { index, (icon, label) ->
+                ChatSuggestionChip(
+                    icon = icon,
+                    label = label,
+                    modifier = Modifier.testTag("${ChatTestTags.CHAT_SUGGESTION_PREFIX}$index"),
                 )
             }
         }
@@ -492,36 +514,158 @@ private fun ChatCompactTopBar(
 }
 
 @Composable
-private fun ChatEmptyStateCard(
-    appName: String,
-    welcomeText: String,
+private fun ChatSuggestionChip(
+    icon: ImageVector,
+    label: String,
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 0.dp,
+        modifier = modifier.wrapContentWidth(),
+        color = Color(0xFF1A1A1C),
+        shape = RoundedCornerShape(26.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = Color(0xFFC7C7C7), modifier = Modifier.size(18.dp))
+            Text(label, color = Color(0xFFD5D5D5), style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+@Composable
+private fun ChatGeminiComposer(
+    uiState: ChatUiState,
+    onInputChanged: (String) -> Unit,
+    onSend: () -> Unit,
+    onStartSpeechInput: () -> Unit,
+    onStopSpeechInput: () -> Unit,
+    onPickImage: () -> Unit,
+    onPickFile: () -> Unit,
+    onOpenQuickSettings: () -> Unit,
+) {
+    Surface(
+        color = Color(0xFF252628),
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp, bottomStart = 34.dp, bottomEnd = 34.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
-                text = appName.uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
+            BasicTextField(
+                value = uiState.input,
+                onValueChange = onInputChanged,
+                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
+                singleLine = false,
+                maxLines = 4,
+                textStyle = TextStyle(
+                    color = Color.White,
+                    fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+                    fontWeight = MaterialTheme.typography.bodyLarge.fontWeight,
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { if (uiState.canSend) onSend() }),
+                decorationBox = { innerField ->
+                    if (uiState.input.isBlank()) {
+                        Text(
+                            text = stringResource(R.string.chat_input_placeholder),
+                            color = Color(0xFF8D8D8F),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    innerField()
+                },
             )
-            Text(
-                text = stringResource(R.string.chat_title),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Text(
-                text = welcomeText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                GeminiComposerIconButton(
+                    icon = Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.chat_composer_add_attachment),
+                    onClick = onPickFile,
+                )
+                GeminiComposerIconButton(
+                    icon = Icons.Filled.Search,
+                    contentDescription = stringResource(R.string.chat_composer_add_image),
+                    onClick = onPickImage,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Box(
+                    modifier =
+                        Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(20.dp),
+                            )
+                            .clickable(onClick = onOpenQuickSettings)
+                            .testTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON),
+                ) {
+                    Text(
+                        text = stringResource(R.string.chat_mode_fast),
+                        color = Color(0xFFE0E0E0),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                }
+                GeminiComposerIconButton(
+                    icon = Icons.Filled.Search,
+                    contentDescription = stringResource(R.string.chat_composer_voice),
+                    onClick = {
+                        if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
+                            uiState.speechInputState.status == SpeechInputStatus.Recognizing
+                        ) {
+                            onStopSpeechInput()
+                        } else {
+                            onStartSpeechInput()
+                        }
+                    },
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
+                )
+                GeminiComposerIconButton(
+                    icon = if (uiState.canSend) Icons.Filled.Search else Icons.Filled.Add,
+                    contentDescription = stringResource(
+                        if (uiState.canSend) R.string.chat_send else R.string.chat_quick_settings,
+                    ),
+                    onClick = {
+                        if (uiState.canSend) {
+                            onSend()
+                        } else {
+                            onOpenQuickSettings()
+                        }
+                    },
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun GeminiComposerIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.06f))
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = contentDescription, tint = Color(0xFFF1F1F1), modifier = Modifier.size(21.dp))
     }
 }
 

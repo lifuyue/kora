@@ -2,6 +2,9 @@ package com.lifuyue.kora.feature.settings
 
 import android.content.Context
 import android.text.format.Formatter
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -274,6 +277,39 @@ class SettingsScreensTest {
         }
 
         composeRule.onNodeWithText("Text size 120%").assertIsDisplayed()
+    }
+
+    @Test
+    fun chatQuickSettingsShowsCommonControlsAndFullSettingsAction() {
+        composeRule.setContent {
+            ChatQuickSettingsContent(
+                themeState = ThemeAppearanceUiState(themeMode = ThemeMode.DARK),
+                chatPreferencesState =
+                    ChatPreferencesUiState(
+                        streamEnabled = true,
+                        autoScroll = true,
+                        showCitationsByDefault = false,
+                    ),
+                languageState = LanguageSettingsUiState(selectedLanguageTag = "zh-CN"),
+                audioState =
+                    AudioSettingsUiState(
+                        speechToTextEngine = SpeechToTextEngine.WhisperApp,
+                        autoSendTranscripts = true,
+                    ),
+                onThemeModeChange = {},
+                onLanguageTagChange = {},
+                onStreamEnabledChange = {},
+                onShowCitationsChange = {},
+                onAutoSendTranscriptsChange = {},
+                onOpenFullSettings = {},
+            )
+        }
+
+        composeRule.onNodeWithTag("chat-quick-settings").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat-quick-settings-stream").assertIsOn()
+        composeRule.onNodeWithTag("chat-quick-settings-citations").assertIsOff()
+        composeRule.onNodeWithTag("chat-quick-settings-audio-auto-send").assertIsOn()
+        composeRule.onNodeWithTag("chat-quick-settings-open-full").fetchSemanticsNode()
     }
 
     @Test

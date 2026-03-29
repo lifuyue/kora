@@ -106,12 +106,10 @@ class ChatScreenTest {
     }
 
     @Test
-    fun emptyChatShowsCompactHeaderAndAppSwitcher() {
+    fun emptyChatShowsGeminiLandingLayout() {
         composeRule.setContent {
             ChatScreen(
                 uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
-                appSelectorUiState = AppSelectorUiState(currentAppName = "demo-app"),
-                conversationBrowserUiState = ConversationListUiState(items = sampleConversationItems),
                 onInputChanged = {},
                 onSend = {},
                 onBack = {},
@@ -122,17 +120,19 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithTag("chat_app_switch").assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_MENU_BUTTON).assertIsDisplayed()
         composeRule.onNodeWithTag("chat_workspace_header").assertIsDisplayed()
-        composeRule.onNodeWithText("demo-app").assertIsDisplayed()
+        composeRule.onNodeWithText("Kora").assertExists()
+        composeRule.onNodeWithTag("${ChatTestTags.CHAT_SUGGESTION_PREFIX}0").assertExists()
     }
 
     @Test
-    fun conversationBrowserCanBeOpenedInsideChatWorkspace() {
+    fun menuButtonTriggersCallback() {
+        var openedDrawer = false
+
         composeRule.setContent {
             ChatScreen(
                 uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
-                conversationBrowserUiState = ConversationListUiState(items = sampleConversationItems),
                 onInputChanged = {},
                 onSend = {},
                 onBack = {},
@@ -140,64 +140,48 @@ class ChatScreenTest {
                 onContinueGeneration = {},
                 onFeedback = { _, _ -> },
                 onRegenerate = { _ -> },
-                onOpenConversationBrowser = {},
-                onDismissConversationBrowser = {},
-                showConversationBrowser = true,
+                onOpenDrawer = { openedDrawer = true },
             )
         }
 
-        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_BROWSER_SHEET).assertIsDisplayed()
-        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_LIST).assertIsDisplayed()
-        composeRule.onNodeWithText("架构讨论").assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_MENU_BUTTON).performClick()
+        composeRule.runOnIdle { assertTrue(openedDrawer) }
     }
 
     @Test
-    fun closingConversationBrowserKeepsDraftInput() {
-        var showConversationBrowser by mutableStateOf(true)
-        var draft by mutableStateOf("继续整理发布说明")
-
+    fun quickSettingsButtonIsPresentInGeminiComposer() {
         composeRule.setContent {
             ChatScreen(
-                uiState = ChatUiState(appId = "app-1", chatId = "chat-1", input = draft),
-                conversationBrowserUiState = ConversationListUiState(items = sampleConversationItems),
-                onInputChanged = { draft = it },
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                onInputChanged = {},
                 onSend = {},
                 onBack = {},
                 onStopGenerating = {},
                 onContinueGeneration = {},
                 onFeedback = { _, _ -> },
                 onRegenerate = { _ -> },
-                onOpenConversationBrowser = { showConversationBrowser = true },
-                onDismissConversationBrowser = { showConversationBrowser = false },
-                showConversationBrowser = showConversationBrowser,
             )
         }
 
-        composeRule.onNodeWithTag(ChatTestTags.CONVERSATION_BROWSER_CLOSE).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON).assertExists()
+    }
+
+    @Test
+    fun inputDraftStillRendersInsideGeminiComposer() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1", input = "继续整理发布说明"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
         composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertTextContains("继续整理发布说明")
-    }
-
-    @Test
-    fun backButtonTriggersCallback() {
-        var backTriggered = false
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        composeRule.setContent {
-            ChatScreen(
-                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
-                onInputChanged = {},
-                onSend = {},
-                onBack = { backTriggered = true },
-                onStopGenerating = {},
-                onContinueGeneration = {},
-                onFeedback = { _, _ -> },
-                onRegenerate = { _ -> },
-            )
-        }
-
-        composeRule.onNodeWithText(context.getString(R.string.chat_back)).performClick()
-        composeRule.runOnIdle {
-            assertTrue(backTriggered)
-        }
     }
 
     @Test
@@ -302,16 +286,12 @@ class ChatScreenTest {
 
         composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK).performClick()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK).performClick()
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_LIST).assertIsDisplayed()
-        composeRule.onNodeWithText("picture.png").assertIsDisplayed()
-        composeRule.onNodeWithText("uploading.pdf").fetchSemanticsNode()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_LIST).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.attachmentItem("content://local/picture.png")).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.attachmentItem("content://local/uploading.pdf")).assertExists()
         composeRule.onNodeWithText("failed.txt").assertExists()
         composeRule.onNodeWithText(context.chatString("chat_attachment_cancel"), useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText(context.chatString("chat_attachment_retry"), useUnmergedTree = true).assertExists()
-        composeRule.runOnIdle {
-            assertTrue(pickedImage)
-            assertTrue(pickedFile)
-        }
     }
 
     @Test

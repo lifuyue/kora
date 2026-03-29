@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -380,6 +382,121 @@ fun ThemeAppearanceScreen(
 }
 
 @Composable
+fun ChatQuickSettingsContent(
+    themeState: ThemeAppearanceUiState,
+    chatPreferencesState: ChatPreferencesUiState,
+    languageState: LanguageSettingsUiState,
+    audioState: AudioSettingsUiState,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onLanguageTagChange: (String?) -> Unit,
+    onStreamEnabledChange: (Boolean) -> Unit,
+    onShowCitationsChange: (Boolean) -> Unit,
+    onAutoSendTranscriptsChange: (Boolean) -> Unit,
+    onOpenFullSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .testTag("chat-quick-settings"),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.settings_quick_title), style = MaterialTheme.typography.headlineSmall)
+            Text(
+                stringResource(R.string.settings_quick_summary),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        KoraSectionCard {
+            Text(stringResource(R.string.settings_quick_theme_title), style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(ThemeMode.DARK, ThemeMode.OLED_DARK, ThemeMode.SYSTEM).forEach { mode ->
+                    OutlinedButton(
+                        onClick = { onThemeModeChange(mode) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            themeModeLabel(mode),
+                            color =
+                                if (themeState.themeMode == mode) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                        )
+                    }
+                }
+            }
+        }
+        KoraSectionCard {
+            Text(stringResource(R.string.settings_quick_language_title), style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                QuickLanguageChoice(
+                    label = stringResource(R.string.settings_language_follow_system),
+                    selected = languageState.selectedLanguageTag == null,
+                    onClick = { onLanguageTagChange(null) },
+                )
+                QuickLanguageChoice(
+                    label = stringResource(R.string.settings_language_simplified_chinese),
+                    selected = languageState.selectedLanguageTag == "zh-CN",
+                    onClick = { onLanguageTagChange("zh-CN") },
+                )
+                QuickLanguageChoice(
+                    label = stringResource(R.string.settings_language_english),
+                    selected = languageState.selectedLanguageTag == "en",
+                    onClick = { onLanguageTagChange("en") },
+                )
+            }
+        }
+        KoraSectionCard {
+            Text(stringResource(R.string.settings_chat_preferences_title), style = MaterialTheme.typography.titleMedium)
+            QuickToggleRow(
+                title = stringResource(R.string.settings_chat_preferences_stream),
+                checked = chatPreferencesState.streamEnabled,
+                testTag = "chat-quick-settings-stream",
+                onCheckedChange = onStreamEnabledChange,
+            )
+            QuickToggleRow(
+                title = stringResource(R.string.settings_chat_preferences_citations),
+                checked = chatPreferencesState.showCitationsByDefault,
+                testTag = "chat-quick-settings-citations",
+                onCheckedChange = onShowCitationsChange,
+            )
+        }
+        KoraSectionCard {
+            Text(stringResource(R.string.settings_quick_voice_title), style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.settings_quick_voice_summary, speechToTextEngineLabel(audioState.speechToTextEngine)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            QuickToggleRow(
+                title = appString("settings_audio_auto_send_transcripts"),
+                checked = audioState.autoSendTranscripts,
+                testTag = "chat-quick-settings-audio-auto-send",
+                onCheckedChange = onAutoSendTranscriptsChange,
+            )
+        }
+        Button(
+            onClick = onOpenFullSettings,
+            modifier = Modifier.fillMaxWidth().testTag("chat-quick-settings-open-full"),
+        ) {
+            Text(stringResource(R.string.settings_quick_open_full))
+        }
+    }
+}
+
+@Composable
 fun ChatPreferencesScreen(
     state: ChatPreferencesUiState,
     onStreamEnabledChange: (Boolean) -> Unit,
@@ -563,6 +680,28 @@ private fun LanguageOption(
 }
 
 @Composable
+private fun RowScope.QuickLanguageChoice(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.weight(1f),
+    ) {
+        Text(
+            label,
+            color =
+                if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+        )
+    }
+}
+
+@Composable
 private fun AudioEngineOption(
     tag: String,
     label: String,
@@ -583,6 +722,27 @@ private fun AudioEngineOption(
                 Text(if (selected) stringResource(R.string.settings_selected) else "")
             }
         }
+    }
+}
+
+@Composable
+private fun QuickToggleRow(
+    title: String,
+    checked: Boolean,
+    testTag: String,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.testTag(testTag),
+        )
     }
 }
 
@@ -673,6 +833,15 @@ private fun themeModeLabel(mode: ThemeMode): String =
             ThemeMode.DARK -> R.string.settings_theme_mode_dark
             ThemeMode.SYSTEM -> R.string.settings_theme_mode_system
             ThemeMode.OLED_DARK -> R.string.settings_theme_mode_oled_dark
+        },
+    )
+
+@Composable
+private fun speechToTextEngineLabel(engine: SpeechToTextEngine): String =
+    stringResource(
+        when (engine) {
+            SpeechToTextEngine.System -> R.string.settings_audio_engine_system
+            SpeechToTextEngine.WhisperApp -> R.string.settings_audio_engine_whisper_app
         },
     )
 

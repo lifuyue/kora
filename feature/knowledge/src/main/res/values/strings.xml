@@ -10,6 +10,7 @@
         <item quantity="other">数据集 %1$d 个</item>
     </plurals>
     <string name="knowledge_overview_open_datasets">进入数据集</string>
+    <string name="knowledge_return_to_chat">返回当前对话</string>
     <string name="knowledge_back">返回</string>
     <string name="knowledge_refresh">刷新</string>
     <string name="knowledge_refreshing">刷新中</string>

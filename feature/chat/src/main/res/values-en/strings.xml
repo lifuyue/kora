@@ -2,6 +2,7 @@
 <resources>
     <string name="chat_title">Chat</string>
     <string name="chat_back">Back</string>
+    <string name="chat_brand_title">Kora</string>
     <string name="chat_history">History</string>
     <string name="chat_history_close">Close history</string>
     <string name="chat_quick_settings">Quick settings</string>
@@ -14,8 +15,28 @@
     <string name="chat_open_citation">View knowledge source</string>
     <string name="chat_citation_title_fallback">Citation</string>
     <string name="chat_score_summary">%1$s · %2$s</string>
+    <string name="chat_greeting">Hi, Fuyue</string>
     <string name="chat_empty_welcome">Start a new conversation. Messages will render here with Markdown and code blocks.</string>
+    <string name="chat_empty_headline">What would you like me to do?</string>
     <string name="chat_input_label">Message</string>
+    <string name="chat_input_placeholder">Ask Kora</string>
+    <string name="chat_composer_add_attachment">Add attachment</string>
+    <string name="chat_composer_add_image">Add image</string>
+    <string name="chat_composer_voice">Voice input</string>
+    <string name="chat_drawer_search_placeholder">Search conversations</string>
+    <string name="chat_drawer_new_conversation">Start new chat</string>
+    <string name="chat_drawer_history_title">Conversations</string>
+    <string name="chat_drawer_knowledge">Knowledge</string>
+    <string name="chat_drawer_settings">Settings</string>
+    <string name="chat_drawer_my_content">My content</string>
+    <string name="chat_drawer_gem_title">Gem</string>
+    <string name="chat_drawer_empty_history">Recent conversations will appear here.</string>
+    <string name="chat_mode_fast">Fast</string>
+    <string name="chat_suggestion_image">Create images</string>
+    <string name="chat_suggestion_music">Make music</string>
+    <string name="chat_suggestion_video">Create video</string>
+    <string name="chat_suggestion_study">Help me learn</string>
+    <string name="chat_suggestion_energy">Add energy to my day</string>
     <string name="chat_stop_generation">Stop</string>
     <string name="chat_resume_auto_scroll">Jump to latest</string>
     <string name="chat_sending">Sending...</string>
