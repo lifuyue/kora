@@ -211,6 +211,102 @@ class RoomChatRepositoryTest {
         }
 
     @Test
+    fun openAiStreamIgnoresJsonNullContentAndDoesNotExposeReasoning() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":null,"reasoning_content":"思考中"}}]}
+
+                data: {"choices":[{"delta":{"content":"null","reasoning_content":"null"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好","reasoning_content":null}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = DIRECT_OPENAI_APP_ID, chatId = null, text = "kora")
+            advanceUntilIdle()
+
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("你好", messages.last().markdown)
+            assertEquals("", messages.last().reasoning)
+        }
+
+    @Test
+    fun openAiStreamCoalescesCumulativeRepeatedChunks() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":"你好"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好，"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好，世界"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好，世界"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好，世界！"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = DIRECT_OPENAI_APP_ID, chatId = null, text = "kora")
+            advanceUntilIdle()
+
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("你好，世界！", messages.last().markdown)
+        }
+
+    @Test
+    fun blankChatIdInOpenAiModeIsNormalizedToGeneratedConversationId() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":"空 chatId 也应显示"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = DIRECT_OPENAI_APP_ID, chatId = "", text = "kora")
+            advanceUntilIdle()
+
+            assertTrue(chatId.isNotBlank())
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("kora", messages.first().markdown)
+            assertEquals("空 chatId 也应显示", messages.last().markdown)
+        }
+
+    @Test
     fun nonDirectAppKeepsFastGptChatFlowEvenWhenConnectionTypeIsOpenAiCompatible() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             connectionProvider.update(

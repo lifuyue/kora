@@ -39,7 +39,7 @@ object ChatRoutes {
         chatId: String? = null,
     ): String =
         if (chatId == null) {
-            "chat/thread/$appId?chatId="
+            "chat/thread/$appId"
         } else {
             "chat/thread/$appId?chatId=$chatId"
         }
@@ -49,7 +49,7 @@ object ChatRoutes {
         chatId: String? = null,
     ): String =
         if (chatId == null) {
-            "chat/app/$appId?chatId="
+            "chat/app/$appId"
         } else {
             "chat/app/$appId?chatId=$chatId"
         }

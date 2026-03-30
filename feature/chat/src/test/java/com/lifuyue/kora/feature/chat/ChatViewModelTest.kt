@@ -57,6 +57,24 @@ class ChatViewModelTest {
         }
 
     @Test
+    fun blankChatIdFromNavigationIsNormalizedBeforeSend() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val repository = RecordingChatRepository()
+            val viewModel = createViewModel(repository = repository, chatId = "")
+            val collectJob = launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            viewModel.updateInput("你好")
+            viewModel.send()
+            advanceUntilIdle()
+
+            assertEquals("chat-1", viewModel.uiState.value.chatId)
+            assertEquals("你好", repository.sentText)
+            assertEquals(2, viewModel.uiState.value.messages.size)
+            collectJob.cancel()
+        }
+
+    @Test
     fun sendFailureShowsInlineError() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository = RecordingChatRepository(shouldFailSend = true)

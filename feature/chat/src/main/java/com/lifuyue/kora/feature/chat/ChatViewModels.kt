@@ -229,7 +229,7 @@ class ChatViewModel
         private val strings: ChatStrings,
     ) : ViewModel() {
         private val appId: String = checkNotNull(savedStateHandle["appId"])
-        private val chatId = MutableStateFlow(savedStateHandle.get<String?>("chatId"))
+        private val chatId = MutableStateFlow(savedStateHandle.get<String?>("chatId").normalizeChatId())
         private val input = MutableStateFlow("")
         private val metaState = MutableStateFlow(ChatMetaState())
         private val attachments = MutableStateFlow<List<AttachmentDraftUiModel>>(emptyList())
@@ -935,7 +935,7 @@ class AppDetailViewModel
         private val strings: ChatStrings,
     ) : ViewModel() {
         private val appId: String = checkNotNull(savedStateHandle["appId"])
-        private val chatId: String? = savedStateHandle["chatId"]
+        private val chatId: String? = savedStateHandle.get<String?>("chatId").normalizeChatId()
         private val mutableState = MutableStateFlow(AppDetailUiState(appId = appId))
         val uiState: StateFlow<AppDetailUiState> = mutableState.asStateFlow()
 
@@ -1056,3 +1056,5 @@ private fun JsonObject.toDisplayItems(): List<String> =
     }
 
 private fun JsonObject.readString(key: String): String = this[key]?.toString()?.trim('"').orEmpty()
+
+private fun String?.normalizeChatId(): String? = this?.takeIf { it.isNotBlank() }

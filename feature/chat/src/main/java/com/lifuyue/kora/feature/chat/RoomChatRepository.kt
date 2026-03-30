@@ -66,6 +66,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
@@ -110,8 +111,9 @@ class RoomChatRepository
             appId: String,
             chatId: String?,
         ): ChatBootstrap {
+            val normalizedChatId = normalizeChatId(chatId)
             if (isOpenAiMode(appId)) {
-                val resolvedChatId = chatId?.takeIf { it.isNotBlank() } ?: nextId("chat")
+                val resolvedChatId = normalizedChatId ?: nextId("chat")
                 return ChatBootstrap(
                     chatId = resolvedChatId,
                     title = context.getString(R.string.chat_repository_new_conversation_title),
@@ -119,8 +121,8 @@ class RoomChatRepository
                     attachmentConfig = ChatAttachmentConfig(),
                 ).also { chatBootstrapByChatId[resolvedChatId] = it }
             }
-            val data = api.initChat(appId = appId, chatId = chatId).data
-            val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: chatId?.takeIf { it.isNotBlank() } ?: nextId("chat")
+            val data = api.initChat(appId = appId, chatId = normalizedChatId).data
+            val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: normalizedChatId ?: nextId("chat")
             return ChatBootstrap(
                 chatId = resolvedChatId,
                 title = data?.title.orEmpty(),
@@ -445,18 +447,19 @@ class RoomChatRepository
             attachments: List<AttachmentDraftUiModel>,
         ): String {
             return onIo {
+                val normalizedChatId = normalizeChatId(chatId)
                 val prompt = text.trim()
                 val uploadedAttachments = attachments.filter { it.uploadStatus == AttachmentUploadStatus.Uploaded && it.uploadedRef != null }
                 require(prompt.isNotEmpty() || uploadedAttachments.isNotEmpty()) { "消息不能为空" }
 
                 val initData =
-                    if (chatId == null && !isOpenAiMode(appId)) {
+                    if (normalizedChatId == null && !isOpenAiMode(appId)) {
                         api.initChat(appId = appId, chatId = null).data
                     } else {
                         null
                     }
                 val resolvedChatId =
-                    chatId
+                    normalizedChatId
                         ?: initData?.chatId?.takeIf { it.isNotBlank() }
                         ?: nextId("chat")
                 if (initData != null) {
@@ -877,8 +880,8 @@ class RoomChatRepository
                                     delay(step.delayMillis)
                                 }
                                 coroutineContext.ensureActive()
-                                markdown += step.markdownDelta
-                                reasoning += step.reasoningDelta
+                                markdown = mergeStreamChunk(markdown, step.markdownDelta)
+                                reasoning = mergeStreamChunk(reasoning, step.reasoningDelta)
                                 persistAssistantState(
                                     dataId = assistantMessageId,
                                     markdown = markdown,
@@ -908,6 +911,15 @@ class RoomChatRepository
                                         event.toAssistantUpdate(
                                             malformedMessage = context.getString(R.string.chat_repository_malformed_sse),
                                         )
+                                    val normalizedUpdate =
+                                        if (isOpenAiMode(appId)) {
+                                            update.copy(
+                                                markdownDelta = normalizeOpenAiVisibleDelta(update.markdownDelta),
+                                                reasoningDelta = "",
+                                            )
+                                        } else {
+                                            update
+                                        }
                                     if (update.error != null) {
                                         failed = true
                                         persistAssistantState(
@@ -921,24 +933,28 @@ class RoomChatRepository
                                             errorMessage = update.error.message,
                                         )
                                         updateConversationPreview(chatId, markdown.ifBlank { update.error.message })
-                                    } else if (
-                                        update.markdownDelta.isNotEmpty() ||
-                                        update.reasoningDelta.isNotEmpty() ||
-                                        update.eventPayloads.isNotEmpty()
-                                    ) {
-                                        markdown += update.markdownDelta
-                                        reasoning += update.reasoningDelta
-                                        eventPayloads = eventPayloads + update.eventPayloads
-                                        persistAssistantState(
-                                            dataId = assistantMessageId,
-                                            markdown = markdown,
-                                            reasoning = reasoning,
-                                            eventPayloads = eventPayloads,
-                                            isStreaming = true,
-                                            sendStatus = "streaming",
-                                            errorCode = null,
-                                            errorMessage = null,
-                                        )
+                                    } else {
+                                        val mergedMarkdown = mergeStreamChunk(markdown, normalizedUpdate.markdownDelta)
+                                        val mergedReasoning = mergeStreamChunk(reasoning, normalizedUpdate.reasoningDelta)
+                                        if (
+                                            mergedMarkdown != markdown ||
+                                            mergedReasoning != reasoning ||
+                                            normalizedUpdate.eventPayloads.isNotEmpty()
+                                        ) {
+                                            markdown = mergedMarkdown
+                                            reasoning = mergedReasoning
+                                            eventPayloads = eventPayloads + normalizedUpdate.eventPayloads
+                                            persistAssistantState(
+                                                dataId = assistantMessageId,
+                                                markdown = markdown,
+                                                reasoning = reasoning,
+                                                eventPayloads = eventPayloads,
+                                                isStreaming = true,
+                                                sendStatus = "streaming",
+                                                errorCode = null,
+                                                errorMessage = null,
+                                            )
+                                        }
                                     }
                                 }
                         }
@@ -1260,6 +1276,8 @@ class RoomChatRepository
         }
 
         private fun isOpenAiMode(appId: String): Boolean = appId == DIRECT_OPENAI_APP_ID
+
+        private fun normalizeChatId(chatId: String?): String? = chatId?.takeIf { it.isNotBlank() }
 
         private fun buildOpenAiConversationMessages(
             chatId: String,
@@ -1611,7 +1629,45 @@ private fun extractVisibleMarkdown(value: JsonElement?): String =
         else -> extractMarkdown(value)
     }
 
-private fun JsonElement?.stringContentOrNull(): String? = (this as? JsonPrimitive)?.content
+private fun JsonElement?.stringContentOrNull(): String? =
+    when (this) {
+        null -> null
+        JsonNull -> null
+        is JsonPrimitive -> content
+        else -> null
+    }
+
+private fun normalizeOpenAiVisibleDelta(delta: String): String =
+    delta.takeUnless { it.equals("null", ignoreCase = true) }.orEmpty()
+
+private fun mergeStreamChunk(
+    current: String,
+    incoming: String,
+): String {
+    if (incoming.isEmpty()) {
+        return current
+    }
+    if (current.isEmpty()) {
+        return incoming
+    }
+    if (incoming == current) {
+        return current
+    }
+    if (incoming.startsWith(current)) {
+        return incoming
+    }
+    if (current.startsWith(incoming)) {
+        return current
+    }
+
+    val maxOverlap = minOf(current.length, incoming.length)
+    for (size in maxOverlap downTo 1) {
+        if (current.endsWith(incoming.substring(0, size))) {
+            return current + incoming.substring(size)
+        }
+    }
+    return current + incoming
+}
 
 private fun JsonElement?.extractInteractiveEventPayloads(): List<String> =
     when (this) {
