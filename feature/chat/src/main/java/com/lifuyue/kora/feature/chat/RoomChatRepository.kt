@@ -9,7 +9,6 @@ import com.lifuyue.kora.feature.chat.toChatAttachmentConfig
 import com.lifuyue.kora.core.common.ChatRole
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.common.ConnectionSnapshotProvider
-import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.NetworkError
 import com.lifuyue.kora.core.database.dao.ConversationDao
@@ -1260,8 +1259,7 @@ class RoomChatRepository
             }
         }
 
-        private fun isOpenAiMode(appId: String): Boolean =
-            appId == DIRECT_OPENAI_APP_ID || connectionSnapshotProvider.getSnapshot().connectionType == ConnectionType.OPENAI_COMPATIBLE
+        private fun isOpenAiMode(appId: String): Boolean = appId == DIRECT_OPENAI_APP_ID
 
         private fun buildOpenAiConversationMessages(
             chatId: String,

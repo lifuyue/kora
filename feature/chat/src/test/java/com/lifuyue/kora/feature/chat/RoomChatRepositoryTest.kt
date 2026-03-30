@@ -25,6 +25,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -32,6 +33,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -206,6 +208,48 @@ class RoomChatRepositoryTest {
             assertEquals(2, messages.size)
             assertEquals("OpenAI 模式", messages.last().markdown)
             assertTrue(messages.last().citations.isNotEmpty())
+        }
+
+    @Test
+    fun nonDirectAppKeepsFastGptChatFlowEvenWhenConnectionTypeIsOpenAiCompatible() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-openai-compat","appId":"app-1","title":"兼容应用"}}
+                """.trimIndent(),
+            )
+            server.enqueueSse(
+                """
+                event: answer
+                data: {"choices":[{"delta":{"content":"兼容模式应用回复"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = "app-1", chatId = null, text = "测试兼容模式应用")
+            advanceUntilIdle()
+
+            val initRequest = server.takeRequest(2, TimeUnit.SECONDS)
+            val completionRequest = server.takeRequest(2, TimeUnit.SECONDS)
+            assertNotNull(initRequest)
+            assertNotNull(completionRequest)
+            val recordedInitRequest = requireNotNull(initRequest)
+            val recordedCompletionRequest = requireNotNull(completionRequest)
+            assertEquals("/api/core/chat/init?appId=app-1", recordedInitRequest.path)
+            assertEquals("/api/v1/chat/completions", recordedCompletionRequest.path)
+
+            val messages = repository.observeMessages("app-1", chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("兼容模式应用回复", messages.last().markdown)
         }
 
     @Test
