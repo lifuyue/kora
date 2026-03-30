@@ -1,17 +1,17 @@
 # Docs Index
 
-## Reading Order
-1. [../CLAUDE.md](../CLAUDE.md)
-2. [CONVENTIONS.md](CONVENTIONS.md)
-3. [ui/design-system.md](ui/design-system.md)
-4. [ui/quality-scorecard.md](ui/quality-scorecard.md)
-5. [ui/component-catalog.md](ui/component-catalog.md)
-6. [architecture/overview.md](architecture/overview.md)
-7. [api/overview.md](api/overview.md)
+## Recommended Reading Order
+1. [../AGENTS.md](../AGENTS.md)
+2. [../CLAUDE.md](../CLAUDE.md)
+3. [CONVENTIONS.md](CONVENTIONS.md)
+4. [architecture/overview.md](architecture/overview.md)
+5. [architecture/module-structure.md](architecture/module-structure.md)
+6. [architecture/navigation.md](architecture/navigation.md)
+7. [architecture/testing-strategy.md](architecture/testing-strategy.md)
 8. Relevant feature spec
-9. Relevant reference map
+9. Relevant API doc
 
-## Top-Level Docs
+## Core Docs
 - [GLOSSARY.md](GLOSSARY.md)
 - [CONVENTIONS.md](CONVENTIONS.md)
 - [SPEC-TEMPLATE.md](SPEC-TEMPLATE.md)
@@ -24,6 +24,7 @@
 - [architecture/data-flow.md](architecture/data-flow.md)
 - [architecture/networking.md](architecture/networking.md)
 - [architecture/local-storage.md](architecture/local-storage.md)
+- [architecture/testing-strategy.md](architecture/testing-strategy.md)
 
 ## API
 - [api/overview.md](api/overview.md)
@@ -43,7 +44,7 @@
 - [api/share-auth.md](api/share-auth.md)
 - [api/error-handling.md](api/error-handling.md)
 
-## Features
+## Feature Specs
 - Chat: [features/chat/streaming-chat.md](features/chat/streaming-chat.md), [features/chat/markdown-rendering.md](features/chat/markdown-rendering.md), [features/chat/message-actions.md](features/chat/message-actions.md), [features/chat/message-feedback.md](features/chat/message-feedback.md), [features/chat/interactive-nodes.md](features/chat/interactive-nodes.md), [features/chat/suggested-questions.md](features/chat/suggested-questions.md), [features/chat/citations.md](features/chat/citations.md), [features/chat/multimodal-input.md](features/chat/multimodal-input.md)
 - Conversations: [features/conversations/conversation-list.md](features/conversations/conversation-list.md), [features/conversations/conversation-crud.md](features/conversations/conversation-crud.md), [features/conversations/conversation-pin.md](features/conversations/conversation-pin.md), [features/conversations/conversation-folders.md](features/conversations/conversation-folders.md), [features/conversations/conversation-tags.md](features/conversations/conversation-tags.md), [features/conversations/conversation-archive.md](features/conversations/conversation-archive.md), [features/conversations/conversation-share.md](features/conversations/conversation-share.md), [features/conversations/conversation-export.md](features/conversations/conversation-export.md)
 - Knowledge: [features/knowledge/knowledge-overview.md](features/knowledge/knowledge-overview.md), [features/knowledge/dataset-browser.md](features/knowledge/dataset-browser.md), [features/knowledge/collection-management.md](features/knowledge/collection-management.md), [features/knowledge/document-upload.md](features/knowledge/document-upload.md), [features/knowledge/web-link-import.md](features/knowledge/web-link-import.md), [features/knowledge/text-input.md](features/knowledge/text-input.md), [features/knowledge/chunk-viewer.md](features/knowledge/chunk-viewer.md), [features/knowledge/search-test.md](features/knowledge/search-test.md)
@@ -69,17 +70,6 @@
 - [reference/open-webui-implementation-patterns.md](reference/open-webui-implementation-patterns.md)
 - [reference/prior-art.md](reference/prior-art.md)
 
-## Roadmap
-- [execplans.md](execplans.md)
+## Active Roadmap
 - [roadmap/milestones.md](roadmap/milestones.md)
-- [roadmap/phase-1-mvp.md](roadmap/phase-1-mvp.md)
-- [roadmap/phase-2-knowledge.md](roadmap/phase-2-knowledge.md)
-- [roadmap/phase-3-advanced.md](roadmap/phase-3-advanced.md)
-## Frontend Priority
-- [ui/design-system.md](ui/design-system.md)
-- [ui/quality-scorecard.md](ui/quality-scorecard.md)
-- [ui/component-catalog.md](ui/component-catalog.md)
-- [ui/screen-inventory.md](ui/screen-inventory.md)
-- [ui/responsive-layout.md](ui/responsive-layout.md)
-- [ui/accessibility.md](ui/accessibility.md)
-- [ui/animations.md](ui/animations.md)
+- [roadmap/testing-optimization.md](roadmap/testing-optimization.md)
