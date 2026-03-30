@@ -58,6 +58,7 @@
     <string name="chat_message_role_you">You</string>
     <string name="chat_message_role_kora">Kora</string>
     <string name="chat_message_streaming">Generating</string>
+    <string name="chat_message_streaming_placeholder">Thinking…</string>
     <string name="chat_message_failed">Generation failed</string>
     <string name="chat_message_stopped">Generation stopped</string>
     <string name="chat_copy">Copy</string>

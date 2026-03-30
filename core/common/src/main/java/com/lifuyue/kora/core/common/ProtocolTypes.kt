@@ -28,6 +28,14 @@ enum class ThemeMode {
     OLED_DARK,
 }
 
+@Serializable
+enum class ConnectionType {
+    OPENAI_COMPATIBLE,
+    FAST_GPT,
+}
+
+const val DIRECT_OPENAI_APP_ID = "direct-openai"
+
 data class AppearancePreferences(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColorEnabled: Boolean = false,
@@ -60,8 +68,10 @@ data class AudioPreferences(
 )
 
 data class ConnectionSnapshot(
+    val connectionType: ConnectionType = ConnectionType.OPENAI_COMPATIBLE,
     val serverBaseUrl: String? = null,
     val apiKey: String? = null,
+    val model: String? = null,
     val selectedAppId: String? = null,
     val onboardingCompleted: Boolean = false,
     val appearancePreferences: AppearancePreferences = AppearancePreferences(),
@@ -71,7 +81,11 @@ data class ConnectionSnapshot(
         get() = !apiKey.isNullOrBlank()
 
     val hasValidConnection: Boolean
-        get() = !serverBaseUrl.isNullOrBlank() && hasApiKey
+        get() =
+            when (connectionType) {
+                ConnectionType.OPENAI_COMPATIBLE -> !serverBaseUrl.isNullOrBlank() && hasApiKey && !model.isNullOrBlank()
+                ConnectionType.FAST_GPT -> !serverBaseUrl.isNullOrBlank() && hasApiKey && !selectedAppId.isNullOrBlank()
+            }
 }
 
 fun interface ConnectionSnapshotProvider {
@@ -114,6 +128,7 @@ enum class ConnectionValidationError {
     INVALID_SERVER_URL,
     EMPTY_API_KEY,
     INVALID_API_KEY,
+    EMPTY_MODEL,
     NO_AVAILABLE_APPS,
 }
 

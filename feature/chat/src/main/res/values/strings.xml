@@ -58,6 +58,7 @@
     <string name="chat_message_role_you">你</string>
     <string name="chat_message_role_kora">Kora</string>
     <string name="chat_message_streaming">生成中</string>
+    <string name="chat_message_streaming_placeholder">正在思考…</string>
     <string name="chat_message_failed">生成失败</string>
     <string name="chat_message_stopped">已停止生成</string>
     <string name="chat_copy">复制</string>

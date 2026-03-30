@@ -16,8 +16,11 @@
     <string name="settings_overview_section_common">General and info</string>
 
     <string name="settings_connection_title">Connection</string>
+    <string name="settings_connection_type_openai">OpenAI compatible</string>
+    <string name="settings_connection_type_fastgpt">FastGPT</string>
     <string name="settings_connection_server_url_label">Server URL</string>
     <string name="settings_connection_api_key_label">API Key</string>
+    <string name="settings_connection_model_label">Model</string>
     <string name="settings_connection_test">Test connection</string>
     <string name="settings_connection_testing">Testing...</string>
     <string name="settings_connection_save">Save</string>
@@ -28,6 +31,7 @@
         <item quantity="one">Connected successfully. Found %1$d app in %2$d ms</item>
         <item quantity="other">Connected successfully. Found %1$d apps in %2$d ms</item>
     </plurals>
+    <string name="settings_connection_success_openai">Connected successfully. Model endpoint is available in %1$d ms</string>
     <string name="settings_connection_validation_error">Validation failed: %1$s</string>
     <string name="settings_connection_auth_error">Authentication failed: %1$s</string>
     <string name="settings_connection_network_error">Network error: %1$s</string>

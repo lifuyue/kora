@@ -98,6 +98,214 @@ fun KnowledgeOverviewScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocalKnowledgeOverviewScreen(
+    state: KnowledgeOverviewUiState,
+    onOpenLibrary: () -> Unit,
+    onOpenRecentDocument: (String) -> Unit,
+    onReturnToChat: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
+) {
+    Scaffold(
+        topBar = {
+            KoraGeminiTopBar(
+                title = stringResource(R.string.knowledge_local_overview_title),
+                onOpenDrawer = onOpenDrawer,
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            KoraWorkspaceHeroCard(
+                title = stringResource(R.string.knowledge_local_workspace_title),
+                subtitle = stringResource(R.string.knowledge_local_workspace_subtitle),
+                eyebrow = stringResource(R.string.knowledge_local_workspace_eyebrow),
+                meta = stringResource(R.string.knowledge_local_workspace_meta, state.datasetCount),
+                modifier = Modifier.testTag("knowledge_local_summary_card"),
+            )
+            if (onReturnToChat != null) {
+                TextButton(onClick = onReturnToChat) {
+                    Text(stringResource(R.string.knowledge_return_to_chat))
+                }
+            }
+            Button(onClick = onOpenLibrary) { Text(stringResource(R.string.knowledge_local_open_library)) }
+            if (state.recentDatasets.isEmpty()) {
+                Text(
+                    stringResource(R.string.knowledge_local_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                KoraWorkspaceSectionTitle(
+                    title = stringResource(R.string.knowledge_local_recent_title),
+                    supportingText = stringResource(R.string.knowledge_local_recent_supporting),
+                )
+                state.recentDatasets.forEach { item ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable { onOpenRecentDocument(item.datasetId) },
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(item.name, style = MaterialTheme.typography.titleMedium)
+                            Text(item.intro, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                stringResource(R.string.knowledge_local_recent_meta, datasetSummaryLabel(item.type, item.status)),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocalKnowledgeLibraryScreen(
+    state: LocalKnowledgeLibraryUiState,
+    onBack: () -> Unit,
+    onQueryChanged: (String) -> Unit,
+    onTitleChanged: (String) -> Unit,
+    onSourceChanged: (String) -> Unit,
+    onTextChanged: (String) -> Unit,
+    onImport: () -> Unit,
+    onOpenDocument: (String) -> Unit,
+    onDeleteDocument: (String) -> Unit,
+    onToggleEnabled: (String, Boolean) -> Unit,
+    onOpenDrawer: () -> Unit = {},
+) {
+    Scaffold(
+        topBar = {
+            KoraGeminiTopBar(
+                title = stringResource(R.string.knowledge_local_library_title),
+                onOpenDrawer = onOpenDrawer,
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
+            OutlinedTextField(
+                value = state.query,
+                onValueChange = onQueryChanged,
+                label = { Text(stringResource(R.string.knowledge_local_query_label)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(R.string.knowledge_local_import_title), style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(
+                        value = state.draftTitle,
+                        onValueChange = onTitleChanged,
+                        label = { Text(stringResource(R.string.knowledge_local_import_name_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = state.draftSource,
+                        onValueChange = onSourceChanged,
+                        label = { Text(stringResource(R.string.knowledge_local_import_source_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = state.draftText,
+                        onValueChange = onTextChanged,
+                        label = { Text(stringResource(R.string.knowledge_local_import_text_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 5,
+                    )
+                    Button(onClick = onImport) {
+                        Text(stringResource(R.string.knowledge_local_import_action))
+                    }
+                }
+            }
+            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            when (state.status) {
+                KnowledgeLoadState.Empty ->
+                    Text(stringResource(R.string.knowledge_local_empty), style = MaterialTheme.typography.bodyMedium)
+                else ->
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(state.items, key = { it.documentId }) { item ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(item.title, style = MaterialTheme.typography.titleMedium)
+                                            Text(item.sourceLabel, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Switch(
+                                            checked = item.isEnabled,
+                                            onCheckedChange = { enabled -> onToggleEnabled(item.documentId, enabled) },
+                                        )
+                                    }
+                                    Text(item.previewText, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        stringResource(R.string.knowledge_local_chunk_count, item.chunkCount),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(onClick = { onOpenDocument(item.documentId) }) {
+                                            Text(stringResource(R.string.knowledge_local_view_chunks))
+                                        }
+                                        TextButton(onClick = { onDeleteDocument(item.documentId) }) {
+                                            Text(stringResource(R.string.knowledge_delete))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocalKnowledgeDocumentScreen(
+    state: LocalKnowledgeDocumentUiState,
+    onBack: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
+) {
+    Scaffold(
+        topBar = {
+            KoraGeminiTopBar(
+                title = state.title.ifBlank { stringResource(R.string.knowledge_local_document_title) },
+                onOpenDrawer = onOpenDrawer,
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
+            Text(state.sourceLabel, style = MaterialTheme.typography.bodySmall)
+            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (state.chunks.isEmpty()) {
+                Text(stringResource(R.string.knowledge_local_document_empty), style = MaterialTheme.typography.bodyMedium)
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(state.chunks, key = { it.dataId }) { item ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(item.question, style = MaterialTheme.typography.titleSmall)
+                                Text(item.answer, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 internal fun KnowledgeAdaptivePlaceholder() {
     Column(

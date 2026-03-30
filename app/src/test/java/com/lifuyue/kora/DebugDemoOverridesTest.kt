@@ -38,4 +38,33 @@ class DebugDemoOverridesTest {
         assertEquals(true, snapshot.onboardingCompleted)
         assertNull(KoraTestOverrides.shellRouteOverride)
     }
+
+    @Test
+    fun parsesOpenAiDebugConnectionOverrideFromIntentExtras() {
+        val override =
+            readDebugConnectionOverride(
+                Intent()
+                    .putExtra("com.lifuyue.kora.extra.DEBUG_CONNECTION_TYPE", "OPENAI_COMPATIBLE")
+                    .putExtra("com.lifuyue.kora.extra.DEBUG_CONNECTION_BASE_URL", "https://api.siliconflow.cn/v1")
+                    .putExtra("com.lifuyue.kora.extra.DEBUG_CONNECTION_API_KEY", "sk-test")
+                    .putExtra("com.lifuyue.kora.extra.DEBUG_CONNECTION_MODEL", "Qwen/Qwen3.5-4B"),
+            )
+
+        assertNotNull(override)
+        assertEquals("https://api.siliconflow.cn/v1", override?.serverBaseUrl)
+        assertEquals("sk-test", override?.apiKey)
+        assertEquals("Qwen/Qwen3.5-4B", override?.model)
+    }
+
+    @Test
+    fun returnsNullWhenDebugConnectionExtrasAreIncomplete() {
+        val override =
+            readDebugConnectionOverride(
+                Intent()
+                    .putExtra("com.lifuyue.kora.extra.DEBUG_CONNECTION_TYPE", "OPENAI_COMPATIBLE")
+                    .putExtra("com.lifuyue.kora.extra.DEBUG_CONNECTION_BASE_URL", "https://api.siliconflow.cn/v1"),
+            )
+
+        assertNull(override)
+    }
 }

@@ -143,8 +143,10 @@ fun ConnectionConfigRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ConnectionConfigScreen(
         state = uiState,
+        onConnectionTypeChange = viewModel::onConnectionTypeChanged,
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onApiKeyChange = viewModel::onApiKeyChanged,
+        onModelChange = viewModel::onModelChanged,
         onTestConnection = viewModel::testConnection,
         onSave = { viewModel.saveConnection(onConnectionSaved) },
         onClear = viewModel::clearConnection,

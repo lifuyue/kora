@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.i18n.AppLocaleController
 import com.lifuyue.kora.navigation.KoraNavGraph
@@ -18,6 +19,7 @@ import com.lifuyue.kora.navigation.parseShareLinkIntent
 import com.lifuyue.kora.testing.KoraTestOverrides
 import com.lifuyue.kora.ui.theme.KoraTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,11 +31,26 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installDebugDemoOverrides(intent)
+        installDebugConnectionOverride(intent)
         AppLocaleController.apply(connectionRepository.snapshot.value.appearancePreferences.languageTag)
         enableEdgeToEdge()
         val shareLinkPayload = parseShareLinkIntent(intent)
         setContent {
             KoraApp(connectionRepository = connectionRepository, shareLinkPayload = shareLinkPayload)
+        }
+    }
+
+    private fun installDebugConnectionOverride(intent: android.content.Intent?) {
+        val override = readDebugConnectionOverride(intent) ?: return
+        KoraTestOverrides.reset()
+        runBlocking {
+            connectionRepository.saveConnection(
+                connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                serverBaseUrl = override.serverBaseUrl,
+                apiKey = override.apiKey,
+                model = override.model,
+                onboardingCompleted = true,
+            )
         }
     }
 }

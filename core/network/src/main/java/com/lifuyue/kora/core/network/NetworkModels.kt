@@ -36,6 +36,13 @@ data class ChatCompletionRequest(
 )
 
 @Serializable
+data class OpenAiChatCompletionRequest(
+    val model: String,
+    val messages: List<ChatCompletionMessageParam>,
+    val stream: Boolean = true,
+)
+
+@Serializable
 data class ChatHistoriesRequest(
     val offset: Int? = null,
     val pageSize: Int? = null,

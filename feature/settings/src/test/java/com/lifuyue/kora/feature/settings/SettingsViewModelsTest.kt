@@ -2,7 +2,9 @@ package com.lifuyue.kora.feature.settings
 
 import com.lifuyue.kora.core.common.AppearancePreferences
 import com.lifuyue.kora.core.common.AudioPreferences
+import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.ConnectionSnapshot
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
@@ -29,8 +31,9 @@ class SettingsViewModelsTest {
             val facade = FakeSettingsConnectionFacade()
             val viewModel = ConnectionConfigViewModel(facade)
 
-            viewModel.onBaseUrlChanged("https://fastgpt.example.com")
-            viewModel.onApiKeyChanged("fastgpt-secret")
+            viewModel.onBaseUrlChanged("https://api.openai.com/v1")
+            viewModel.onApiKeyChanged("openai-secret")
+            viewModel.onModelChanged("gpt-4o-mini")
             viewModel.testConnection()
             advanceUntilIdle()
 
@@ -39,25 +42,23 @@ class SettingsViewModelsTest {
         }
 
     @Test
-    fun connectionConfigViewModel_savePersistsFirstAppAndMarksOnboardingCompleted() =
+    fun connectionConfigViewModel_savePersistsOpenAiConfigAndMarksOnboardingCompleted() =
         runTest {
             val facade =
                 FakeSettingsConnectionFacade(
                     testConnectionResult =
                         ConnectionTestResult.Success(
-                            normalizedBaseUrl = "https://fastgpt.example.com/",
-                            apps =
-                                listOf(
-                                    ConnectionTestApp(id = "app-primary", name = "Primary"),
-                                    ConnectionTestApp(id = "app-secondary", name = "Secondary"),
-                                ),
+                            normalizedBaseUrl = "https://api.openai.com/v1/",
+                            apps = emptyList(),
                             latencyMs = 88,
                         ),
                 )
             val viewModel = ConnectionConfigViewModel(facade)
 
-            viewModel.onBaseUrlChanged("https://fastgpt.example.com")
-            viewModel.onApiKeyChanged("fastgpt-secret")
+            viewModel.onConnectionTypeChanged(ConnectionType.OPENAI_COMPATIBLE)
+            viewModel.onBaseUrlChanged("https://api.openai.com/v1")
+            viewModel.onApiKeyChanged("openai-secret")
+            viewModel.onModelChanged("Qwen/Qwen3.5-4B")
             viewModel.testConnection()
             advanceUntilIdle()
 
@@ -66,9 +67,11 @@ class SettingsViewModelsTest {
             advanceUntilIdle()
 
             assertTrue(saved)
-            assertEquals("https://fastgpt.example.com", facade.savedBaseUrl)
-            assertEquals("fastgpt-secret", facade.savedApiKey)
-            assertEquals("app-primary", facade.savedSelectedAppId)
+            assertEquals(ConnectionType.OPENAI_COMPATIBLE, facade.savedConnectionType)
+            assertEquals("https://api.openai.com/v1", facade.savedBaseUrl)
+            assertEquals("openai-secret", facade.savedApiKey)
+            assertEquals(DIRECT_OPENAI_APP_ID, facade.savedSelectedAppId)
+            assertEquals("Qwen/Qwen3.5-4B", facade.savedModel)
             assertTrue(facade.savedOnboardingCompleted)
         }
 
@@ -79,6 +82,7 @@ class SettingsViewModelsTest {
                 FakeSettingsConnectionFacade(
                     initialSnapshot =
                         ConnectionSnapshot(
+                            connectionType = ConnectionType.FAST_GPT,
                             serverBaseUrl = "https://fastgpt.example.com/",
                             apiKey = "fastgpt-secret",
                             selectedAppId = "app-42",
@@ -126,7 +130,7 @@ class SettingsViewModelsTest {
             viewModel.clearConnection()
             advanceUntilIdle()
 
-            assertEquals("https://api.fastgpt.in/api", viewModel.uiState.value.serverUrl)
+            assertEquals("https://api.openai.com/v1", viewModel.uiState.value.serverUrl)
             assertEquals("", viewModel.uiState.value.apiKey)
         }
 
@@ -254,11 +258,11 @@ class SettingsViewModelsTest {
 }
 
 private class FakeSettingsConnectionFacade(
-    initialSnapshot: ConnectionSnapshot = ConnectionSnapshot(),
+    initialSnapshot: ConnectionSnapshot = ConnectionSnapshot(connectionType = ConnectionType.OPENAI_COMPATIBLE),
     private val testConnectionResult: ConnectionTestResult =
         ConnectionTestResult.Success(
-            normalizedBaseUrl = "https://fastgpt.example.com/",
-            apps = listOf(ConnectionTestApp(id = "app-1", name = "Kora")),
+            normalizedBaseUrl = "https://api.openai.com/v1/",
+            apps = emptyList(),
             latencyMs = 42,
         ),
 ) : SettingsConnectionFacade {
@@ -270,37 +274,49 @@ private class FakeSettingsConnectionFacade(
         private set
     var savedApiKey: String? = null
         private set
+    var savedModel: String? = null
+        private set
+    var savedConnectionType: ConnectionType? = null
+        private set
     var savedSelectedAppId: String? = null
         private set
     var savedOnboardingCompleted: Boolean = false
         private set
 
     override suspend fun testConnection(
+        connectionType: ConnectionType,
         serverBaseUrl: String,
         apiKey: String,
+        model: String?,
     ): ConnectionTestResult = testConnectionResult
 
     override suspend fun saveConnection(
+        connectionType: ConnectionType,
         serverBaseUrl: String,
         apiKey: String,
-        selectedAppId: String,
+        model: String?,
+        selectedAppId: String?,
         onboardingCompleted: Boolean,
     ) {
+        savedConnectionType = connectionType
         savedBaseUrl = serverBaseUrl
         savedApiKey = apiKey
-        savedSelectedAppId = selectedAppId
+        savedModel = model
+        savedSelectedAppId = selectedAppId ?: if (connectionType == ConnectionType.OPENAI_COMPATIBLE) DIRECT_OPENAI_APP_ID else null
         savedOnboardingCompleted = onboardingCompleted
         mutableSnapshot.value =
             mutableSnapshot.value.copy(
+                connectionType = connectionType,
                 serverBaseUrl = serverBaseUrl,
                 apiKey = apiKey,
-                selectedAppId = selectedAppId,
+                model = model,
+                selectedAppId = savedSelectedAppId,
                 onboardingCompleted = onboardingCompleted,
             )
     }
 
     override suspend fun clearConnection() {
-        mutableSnapshot.value = ConnectionSnapshot()
+        mutableSnapshot.value = ConnectionSnapshot(connectionType = ConnectionType.OPENAI_COMPATIBLE)
     }
 
     override suspend fun updateSelectedAppId(selectedAppId: String) {

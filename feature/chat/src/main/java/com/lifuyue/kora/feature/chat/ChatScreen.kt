@@ -29,16 +29,19 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -73,11 +76,35 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.lifuyue.kora.core.common.ChatRole
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
+
+internal enum class ChatComposerPrimaryAction {
+    Voice,
+    Send,
+    Stop,
+}
+
+internal fun chatComposerPrimaryAction(uiState: ChatUiState): ChatComposerPrimaryAction =
+    when {
+        uiState.canStopGeneration -> ChatComposerPrimaryAction.Stop
+        uiState.input.isNotBlank() || uiState.attachments.any { it.uploadStatus == AttachmentUploadStatus.Uploaded } -> ChatComposerPrimaryAction.Send
+        else -> ChatComposerPrimaryAction.Voice
+    }
+
+internal fun shouldSubmitFromHardwareEnter(
+    key: Key,
+    type: KeyEventType,
+    canSend: Boolean,
+): Boolean = canSend && type == KeyEventType.KeyUp && (key == Key.Enter || key == Key.NumPadEnter)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -300,6 +327,7 @@ fun ChatScreen(
                 uiState = uiState,
                 onInputChanged = onInputChanged,
                 onSend = onSend,
+                onStopGenerating = onStopGenerating,
                 onStartSpeechInput = onStartSpeechInput,
                 onStopSpeechInput = onStopSpeechInput,
                 onPickImage = onPickImage,
@@ -569,6 +597,7 @@ private fun ChatGeminiComposer(
     uiState: ChatUiState,
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
+    onStopGenerating: () -> Unit,
     onStartSpeechInput: () -> Unit,
     onStopSpeechInput: () -> Unit,
     onPickImage: () -> Unit,
@@ -593,7 +622,18 @@ private fun ChatGeminiComposer(
             BasicTextField(
                 value = uiState.input,
                 onValueChange = onInputChanged,
-                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag(ChatTestTags.CHAT_INPUT)
+                        .onPreviewKeyEvent { event ->
+                            if (shouldSubmitFromHardwareEnter(event.key, event.type, uiState.canSend)) {
+                                onSend()
+                                true
+                            } else {
+                                false
+                            }
+                        },
                 singleLine = false,
                 maxLines = 4,
                 textStyle = TextStyle(
@@ -632,20 +672,41 @@ private fun ChatGeminiComposer(
                     modifier = Modifier.testTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON),
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                GeminiComposerPainterButton(
-                    painter = painterResource(id = android.R.drawable.ic_btn_speak_now),
-                    contentDescription = stringResource(R.string.chat_composer_voice),
-                    onClick = {
-                        if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
-                            uiState.speechInputState.status == SpeechInputStatus.Recognizing
-                        ) {
-                            onStopSpeechInput()
-                        } else {
-                            onStartSpeechInput()
-                        }
-                    },
-                    modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
-                )
+                when (chatComposerPrimaryAction(uiState)) {
+                    ChatComposerPrimaryAction.Stop -> {
+                        GeminiComposerIconButton(
+                            icon = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.chat_stop_generation),
+                            onClick = onStopGenerating,
+                            modifier = Modifier,
+                        )
+                    }
+                    ChatComposerPrimaryAction.Send -> {
+                        GeminiComposerIconButton(
+                            icon = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = stringResource(R.string.chat_send),
+                            onClick = onSend,
+                            enabled = uiState.canSend,
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_PRIMARY_ACTION_BUTTON),
+                        )
+                    }
+                    ChatComposerPrimaryAction.Voice -> {
+                        GeminiComposerPainterButton(
+                            painter = painterResource(id = android.R.drawable.ic_btn_speak_now),
+                            contentDescription = stringResource(R.string.chat_composer_voice),
+                            onClick = {
+                                if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
+                                    uiState.speechInputState.status == SpeechInputStatus.Recognizing
+                                ) {
+                                    onStopSpeechInput()
+                                } else {
+                                    onStartSpeechInput()
+                                }
+                            },
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
+                        )
+                    }
+                }
             }
         }
     }
@@ -656,24 +717,31 @@ private fun GeminiComposerIconButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val containerColor =
+        if (isLightTheme) {
+            Color(0xFFF0F2F5)
+        } else {
+            Color.White.copy(alpha = 0.06f)
+        }
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
         modifier =
             modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(
-                    if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
-                        Color(0xFFF0F2F5)
-                    } else {
-                        Color.White.copy(alpha = 0.06f)
-                    },
-                )
-                .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+                .background(containerColor.copy(alpha = if (enabled) 1f else 0.45f)),
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(21.dp))
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.4f),
+            modifier = Modifier.size(21.dp),
+        )
     }
 }
 
@@ -684,7 +752,8 @@ private fun GeminiComposerPainterButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    IconButton(
+        onClick = onClick,
         modifier =
             modifier
                 .size(44.dp)
@@ -695,9 +764,7 @@ private fun GeminiComposerPainterButton(
                     } else {
                         Color.White.copy(alpha = 0.06f)
                     },
-                )
-                .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+                ),
     ) {
         Icon(
             painter = painter,
@@ -1012,6 +1079,9 @@ private fun MessageCard(
     onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit,
     onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit,
 ) {
+    val shouldShowThinkingPlaceholder =
+        message.role == ChatRole.AI &&
+            message.deliveryState == MessageDeliveryState.Streaming
     Card(
         modifier =
             Modifier
@@ -1033,11 +1103,20 @@ private fun MessageCard(
                     ),
                 style = MaterialTheme.typography.titleSmall,
             )
-            MarkdownMessage(
-                markdown = message.markdown,
-                onCopyCode = onCopyCode,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (shouldShowThinkingPlaceholder) {
+                Text(
+                    text = stringResource(R.string.chat_message_streaming_placeholder),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                MarkdownMessage(
+                    markdown = message.markdown,
+                    onCopyCode = onCopyCode,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             if (message.reasoning.isNotBlank()) {
                 Text(
                     text = message.reasoning,

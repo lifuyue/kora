@@ -23,6 +23,22 @@ class ConnectionConfigTest {
     }
 
     @Test
+    fun normalizeOpenAiCompatibleBaseUrlStripsTrailingV1() {
+        assertEquals(
+            "https://api.siliconflow.cn/",
+            ConnectionConfig.normalizeOpenAiCompatibleBaseUrl("https://api.siliconflow.cn/v1"),
+        )
+    }
+
+    @Test
+    fun normalizeOpenAiCompatibleBaseUrlPreservesNestedProxyPrefix() {
+        assertEquals(
+            "https://example.com/openai/",
+            ConnectionConfig.normalizeOpenAiCompatibleBaseUrl("https://example.com/openai/v1"),
+        )
+    }
+
+    @Test
     fun apiKeyValidationRequiresFastGptPrefix() {
         assertTrue(ConnectionConfig.isValidApiKey("fastgpt-secret"))
         assertFalse(ConnectionConfig.isValidApiKey("sk-secret"))

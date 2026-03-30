@@ -1,5 +1,6 @@
 package com.lifuyue.kora.core.network
 
+import com.lifuyue.kora.core.common.ConnectionSnapshotProvider
 import com.lifuyue.kora.core.common.NetworkError
 import com.lifuyue.kora.core.common.ResponseEnvelope
 import com.lifuyue.kora.core.common.toNetworkError
@@ -19,15 +20,25 @@ class SseStreamClient(
     private val okHttpClient: OkHttpClient,
     private val json: Json = NetworkJson.default,
     private val baseUrlProvider: BaseUrlProvider,
+    private val connectionSnapshotProvider: ConnectionSnapshotProvider? = null,
     private val collector: ChatStreamCollector = ChatStreamCollector(),
 ) {
     fun streamChatCompletions(request: ChatCompletionRequest): Flow<SseEventData> =
+        streamRequest(path = chatCompletionPath(), payload = json.encodeToString(request))
+
+    fun streamOpenAiChatCompletions(request: OpenAiChatCompletionRequest): Flow<SseEventData> =
+        streamRequest(path = "v1/chat/completions", payload = json.encodeToString(request))
+
+    private fun streamRequest(
+        path: String,
+        payload: String,
+    ): Flow<SseEventData> =
         flow {
             val url =
                 baseUrlProvider.getBaseUrl()
                     .toHttpUrl()
                     .newBuilder()
-                    .addPathSegments("api/v1/chat/completions")
+                    .addPathSegments(path)
                     .build()
 
             val httpRequest =
@@ -35,7 +46,7 @@ class SseStreamClient(
                     .url(url)
                     .header("Accept", "text/event-stream")
                     .header("Content-Type", "application/json")
-                    .post(json.encodeToString(request).toRequestBody("application/json".toMediaType()))
+                    .post(payload.toRequestBody("application/json".toMediaType()))
                     .build()
 
             okHttpClient.newCall(httpRequest).execute().use { response ->
@@ -47,6 +58,12 @@ class SseStreamClient(
                 val source = requireNotNull(response.body) { "Missing response body" }.source()
                 collector.collect(source) { emit(it) }
             }
+        }
+
+    private fun chatCompletionPath(): String =
+        when (connectionSnapshotProvider?.getSnapshot()?.connectionType) {
+            com.lifuyue.kora.core.common.ConnectionType.OPENAI_COMPATIBLE -> "v1/chat/completions"
+            else -> "api/v1/chat/completions"
         }
 
     private fun parseNetworkError(

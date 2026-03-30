@@ -1,6 +1,7 @@
 package com.lifuyue.kora.feature.settings
 
 import com.lifuyue.kora.core.common.ConnectionSnapshot
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
@@ -18,14 +19,18 @@ interface SettingsConnectionFacade {
     val snapshot: StateFlow<ConnectionSnapshot>
 
     suspend fun testConnection(
+        connectionType: ConnectionType,
         serverBaseUrl: String,
         apiKey: String,
+        model: String? = null,
     ): ConnectionTestResult
 
     suspend fun saveConnection(
+        connectionType: ConnectionType,
         serverBaseUrl: String,
         apiKey: String,
-        selectedAppId: String,
+        model: String?,
+        selectedAppId: String? = null,
         onboardingCompleted: Boolean,
     )
 
@@ -66,19 +71,25 @@ class ConnectionRepositorySettingsFacade
         override val snapshot: StateFlow<ConnectionSnapshot> = connectionRepository.snapshot
 
         override suspend fun testConnection(
+            connectionType: ConnectionType,
             serverBaseUrl: String,
             apiKey: String,
-        ): ConnectionTestResult = connectionRepository.testConnection(serverBaseUrl, apiKey)
+            model: String?,
+        ): ConnectionTestResult = connectionRepository.testConnection(connectionType, serverBaseUrl, apiKey, model)
 
         override suspend fun saveConnection(
+            connectionType: ConnectionType,
             serverBaseUrl: String,
             apiKey: String,
-            selectedAppId: String,
+            model: String?,
+            selectedAppId: String?,
             onboardingCompleted: Boolean,
         ) {
             connectionRepository.saveConnection(
+                connectionType = connectionType,
                 serverBaseUrl = serverBaseUrl,
                 apiKey = apiKey,
+                model = model,
                 selectedAppId = selectedAppId,
                 onboardingCompleted = onboardingCompleted,
             )

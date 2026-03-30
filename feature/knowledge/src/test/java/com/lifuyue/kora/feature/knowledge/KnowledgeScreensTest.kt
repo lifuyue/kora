@@ -72,6 +72,46 @@ class KnowledgeScreensTest {
     }
 
     @Test
+    @Config(qualifiers = "en")
+    fun localKnowledgeLibraryShowsImportComposerAndDocumentActions() {
+        composeRule.setContent {
+            LocalKnowledgeLibraryScreen(
+                state =
+                    LocalKnowledgeLibraryUiState(
+                        items =
+                            listOf(
+                                LocalKnowledgeDocumentUiModel(
+                                    documentId = "doc-1",
+                                    title = "Release Notes",
+                                    sourceLabel = "Manual import",
+                                    previewText = "This note explains the latest OpenAI setup.",
+                                    chunkCount = 2,
+                                    isEnabled = true,
+                                    updatedAt = 1_743_120_000_000,
+                                ),
+                            ),
+                        status = KnowledgeLoadState.Content,
+                    ),
+                onBack = {},
+                onQueryChanged = {},
+                onTitleChanged = {},
+                onSourceChanged = {},
+                onTextChanged = {},
+                onImport = {},
+                onOpenDocument = {},
+                onDeleteDocument = {},
+                onToggleEnabled = { _, _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText("Local references").assertExists()
+        composeRule.onNodeWithText("Import text reference").assertExists()
+        composeRule.onNodeWithText("Release Notes").assertExists()
+        composeRule.onNodeWithText("View snippets").assertExists()
+        composeRule.onNodeWithText("Delete").assertExists()
+    }
+
+    @Test
     fun chunkViewerHighlightsCitationTarget() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {

@@ -9,16 +9,21 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -30,6 +35,7 @@ import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
+@OptIn(ExperimentalTestApi::class)
 class ChatScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -222,6 +228,33 @@ class ChatScreenTest {
     }
 
     @Test
+    fun draftInputShowsSendActionAndTriggersSendCallback() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1", input = "你好"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_PRIMARY_ACTION_BUTTON).assertExists().assertIsEnabled()
+    }
+
+    @Test
+    fun hardwareEnterShortcutHelperOnlyTriggersForSendableEnterKeyUp() {
+        assertTrue(shouldSubmitFromHardwareEnter(Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyUp, canSend = true))
+        assertTrue(shouldSubmitFromHardwareEnter(Key.NumPadEnter, androidx.compose.ui.input.key.KeyEventType.KeyUp, canSend = true))
+        assertFalse(shouldSubmitFromHardwareEnter(Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyDown, canSend = true))
+        assertFalse(shouldSubmitFromHardwareEnter(Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyUp, canSend = false))
+        assertFalse(shouldSubmitFromHardwareEnter(Key.Spacebar, androidx.compose.ui.input.key.KeyEventType.KeyUp, canSend = true))
+    }
+
+    @Test
     fun assistantMessageShowsPlaybackActionsForActiveMessage() {
         composeRule.setContent {
             ChatScreen(
@@ -385,6 +418,42 @@ class ChatScreenTest {
 
         composeRule.onNodeWithText(context.chatString("chat_stop_generation")).assertIsDisplayed()
         composeRule.onNodeWithText(context.chatString("chat_message_streaming")).assertExists()
+        composeRule.onNodeWithText(context.chatString("chat_message_streaming_placeholder")).assertExists()
+    }
+
+    @Test
+    fun streamingAssistantWithoutVisibleAnswerShowsThinkingPlaceholder() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "assistant-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "",
+                                    isStreaming = true,
+                                    deliveryState = MessageDeliveryState.Streaming,
+                                ),
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText(context.chatString("chat_message_streaming_placeholder")).assertIsDisplayed()
     }
 
     @Test

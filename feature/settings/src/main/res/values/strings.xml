@@ -16,8 +16,11 @@
     <string name="settings_overview_section_common">常用与信息</string>
 
     <string name="settings_connection_title">连接配置</string>
+    <string name="settings_connection_type_openai">OpenAI 兼容</string>
+    <string name="settings_connection_type_fastgpt">FastGPT</string>
     <string name="settings_connection_server_url_label">服务器地址</string>
     <string name="settings_connection_api_key_label">API 密钥</string>
+    <string name="settings_connection_model_label">模型</string>
     <string name="settings_connection_test">测试连接</string>
     <string name="settings_connection_testing">测试中...</string>
     <string name="settings_connection_save">保存</string>
@@ -27,6 +30,7 @@
     <plurals name="settings_connection_success">
         <item quantity="other">连接成功，发现 %1$d 个应用，耗时 %2$dms</item>
     </plurals>
+    <string name="settings_connection_success_openai">连接成功，模型接口可用，耗时 %1$dms</string>
     <string name="settings_connection_validation_error">校验失败：%1$s</string>
     <string name="settings_connection_auth_error">认证失败：%1$s</string>
     <string name="settings_connection_network_error">网络错误：%1$s</string>

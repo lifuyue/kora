@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.ConnectionType
+import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.database.KoraDatabase
+import com.lifuyue.kora.core.database.LocalKnowledgeStore
 import com.lifuyue.kora.core.network.FastGptApi
 import com.lifuyue.kora.core.network.MutableConnectionProvider
 import com.lifuyue.kora.core.network.NetworkJson
@@ -40,6 +43,8 @@ class RoomChatRepositoryTest {
     private lateinit var server: MockWebServer
     private lateinit var database: KoraDatabase
     private lateinit var repository: RoomChatRepository
+    private lateinit var connectionProvider: MutableConnectionProvider
+    private lateinit var localKnowledgeStore: LocalKnowledgeStore
 
     @Before
     fun setUp() {
@@ -48,13 +53,19 @@ class RoomChatRepositoryTest {
             Room.inMemoryDatabaseBuilder(context, KoraDatabase::class.java)
                 .allowMainThreadQueries()
                 .build()
+        localKnowledgeStore =
+            LocalKnowledgeStore(
+                documentDao = database.localKnowledgeDocumentDao(),
+                chunkDao = database.localKnowledgeChunkDao(),
+            )
         server = MockWebServer()
         server.start()
 
-        val connectionProvider =
+        connectionProvider =
             MutableConnectionProvider().apply {
                 update(
                     getSnapshot().copy(
+                        connectionType = ConnectionType.FAST_GPT,
                         serverBaseUrl = server.url("/").toString(),
                         apiKey = "fastgpt-secret",
                     ),
@@ -75,6 +86,8 @@ class RoomChatRepositoryTest {
                 context = context,
                 json = NetworkJson.default,
                 ioDispatcher = mainDispatcherRule.dispatcher,
+                connectionSnapshotProvider = connectionProvider,
+                localKnowledgeStore = localKnowledgeStore,
             )
     }
 
@@ -152,6 +165,47 @@ class RoomChatRepositoryTest {
             assertEquals(MessageDeliveryState.Failed, assistant.deliveryState)
             assertTrue(assistant.markdown.contains("partial"))
             assertEquals("slow down", assistant.errorMessage)
+        }
+
+    @Test
+    fun openAiModeStreamsWithoutFastGptBootstrapAndUsesModelRequest() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            localKnowledgeStore.importText(
+                title = "API Notes",
+                text = "The OpenAI mode can use local references to answer questions about setup.",
+                sourceLabel = "manual",
+                now = 1L,
+            )
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":"OpenAI 模式"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = DIRECT_OPENAI_APP_ID, chatId = null, text = "测试 OpenAI")
+            advanceUntilIdle()
+
+            val request = server.takeRequest()
+            assertEquals("POST", request.method)
+            assertEquals("/v1/chat/completions", request.path)
+            val requestBody = request.body.readUtf8()
+            assertTrue(requestBody.contains("\"model\":\"gpt-4o-mini\""))
+            assertTrue(requestBody.contains("\"role\":\"system\""))
+
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("OpenAI 模式", messages.last().markdown)
+            assertTrue(messages.last().citations.isNotEmpty())
         }
 
     @Test
@@ -268,9 +322,10 @@ class RoomChatRepositoryTest {
                     conversationTagDao = strictDatabase.conversationTagDao(),
                     interactiveDraftDao = strictDatabase.interactiveDraftDao(),
                     messageDao = strictDatabase.messageDao(),
-                    context = context,
-                    json = NetworkJson.default,
-                )
+                context = context,
+                json = NetworkJson.default,
+                connectionSnapshotProvider = MutableConnectionProvider(),
+            )
 
             try {
                 val messages =

@@ -3,6 +3,7 @@ package com.lifuyue.kora.core.database
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
@@ -12,6 +13,7 @@ import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
 import com.lifuyue.kora.core.network.FastGptApiFactory
 import com.lifuyue.kora.core.network.MutableConnectionProvider
 import com.lifuyue.kora.core.network.NetworkJson
+import com.lifuyue.kora.core.network.OpenAiCompatibleApiFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
@@ -36,6 +38,7 @@ class ConnectionRepositoryTest {
                     apiKeySecureStore = testApiKeyStore(),
                     connectionProvider = MutableConnectionProvider(),
                     apiFactory = FastGptApiFactory(NetworkJson.default),
+                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
                 )
 
             assertEquals("zh-CN", repository.snapshot.first().appearancePreferences.languageTag)
@@ -51,6 +54,7 @@ class ConnectionRepositoryTest {
                     apiKeySecureStore = testApiKeyStore(),
                     connectionProvider = MutableConnectionProvider(),
                     apiFactory = FastGptApiFactory(NetworkJson.default),
+                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
                 )
 
             repository.updateLanguageTag(null)
@@ -77,11 +81,14 @@ class ConnectionRepositoryTest {
                     apiKeySecureStore = secureStore,
                     connectionProvider = MutableConnectionProvider(),
                     apiFactory = FastGptApiFactory(NetworkJson.default),
+                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
                 )
 
             repository.saveConnection(
+                connectionType = ConnectionType.FAST_GPT,
                 serverBaseUrl = "https://api.fastgpt.in/api",
                 apiKey = "fastgpt-secret",
+                model = null,
                 selectedAppId = "app-1",
                 onboardingCompleted = true,
                 themeMode = ThemeMode.OLED_DARK,
@@ -103,6 +110,32 @@ class ConnectionRepositoryTest {
             assertEquals("https://api.fastgpt.in/", prefs.serverBaseUrl)
             assertTrue(prefs.apiKeyPresent)
             assertTrue(prefs.languageInitialized)
+        }
+
+    @Test
+    fun saveConnectionStripsTrailingV1ForOpenAiCompatibleBaseUrl() =
+        runBlocking {
+            val repository =
+                ConnectionRepository(
+                    preferencesStore = testPreferencesStore(),
+                    apiKeySecureStore = testApiKeyStore(),
+                    connectionProvider = MutableConnectionProvider(),
+                    apiFactory = FastGptApiFactory(NetworkJson.default),
+                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
+                )
+
+            repository.saveConnection(
+                connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                serverBaseUrl = "https://api.siliconflow.cn/v1",
+                apiKey = "sk-test",
+                model = "Qwen/Qwen3.5-4B",
+                onboardingCompleted = true,
+            )
+
+            val snapshot = repository.snapshot.first()
+            assertEquals("https://api.siliconflow.cn/", snapshot.serverBaseUrl)
+            assertEquals("Qwen/Qwen3.5-4B", snapshot.model)
+            assertEquals(ConnectionType.OPENAI_COMPATIBLE, snapshot.connectionType)
         }
 
     @Test
@@ -134,9 +167,15 @@ class ConnectionRepositoryTest {
                     apiKeySecureStore = testApiKeyStore(),
                     connectionProvider = MutableConnectionProvider(),
                     apiFactory = FastGptApiFactory(NetworkJson.default),
+                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
                 )
 
-            val result = repository.testConnection(server.url("/api").toString(), "fastgpt-secret")
+            val result =
+                repository.testConnection(
+                    connectionType = ConnectionType.FAST_GPT,
+                    serverBaseUrl = server.url("/api").toString(),
+                    apiKey = "fastgpt-secret",
+                )
 
             val request = server.takeRequest()
             assertEquals("POST", request.method)
@@ -144,6 +183,50 @@ class ConnectionRepositoryTest {
             assertTrue(result is ConnectionTestResult.Success)
             result as ConnectionTestResult.Success
             assertEquals(listOf("Alpha", "Beta"), result.apps.map { it.name })
+
+            server.shutdown()
+        }
+
+    @Test
+    fun testConnectionUsesSingleV1PrefixForOpenAiCompatibleEndpoints() =
+        runBlocking {
+            val server = MockWebServer()
+            server.enqueue(
+                MockResponse()
+                    .setHeader("Content-Type", "application/json")
+                    .setBody(
+                        """
+                        {
+                          "data": [
+                            { "id": "Qwen/Qwen3.5-4B", "owned_by": "siliconflow" }
+                          ]
+                        }
+                        """.trimIndent(),
+                    ),
+            )
+            server.start()
+
+            val repository =
+                ConnectionRepository(
+                    preferencesStore = testPreferencesStore(),
+                    apiKeySecureStore = testApiKeyStore(),
+                    connectionProvider = MutableConnectionProvider(),
+                    apiFactory = FastGptApiFactory(NetworkJson.default),
+                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
+                )
+
+            val result =
+                repository.testConnection(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/v1").toString(),
+                    apiKey = "sk-test",
+                    model = "Qwen/Qwen3.5-4B",
+                )
+
+            val request = server.takeRequest()
+            assertEquals("GET", request.method)
+            assertEquals("/v1/models", request.path)
+            assertTrue(result is ConnectionTestResult.Success)
 
             server.shutdown()
         }
@@ -164,6 +247,7 @@ class ConnectionRepositoryTest {
                     apiKeySecureStore = secureStore,
                     connectionProvider = MutableConnectionProvider(),
                     apiFactory = FastGptApiFactory(NetworkJson.default),
+                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
                 )
 
             repository.updateOnboardingCompleted(true)
@@ -188,6 +272,7 @@ class ConnectionRepositoryTest {
                     apiKeySecureStore = secureStore,
                     connectionProvider = MutableConnectionProvider(),
                     apiFactory = FastGptApiFactory(NetworkJson.default),
+                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
                 )
 
             repository.updateAudioPreferences(

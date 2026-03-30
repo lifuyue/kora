@@ -1,5 +1,6 @@
 package com.lifuyue.kora.core.network
 
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionValidationError
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -19,9 +20,10 @@ class ConnectionValidatorTest {
     }
 
     @Test
-    fun validateApiKeyEnforcesFastGptPrefix() {
-        assertEquals(ConnectionValidationError.EMPTY_API_KEY, ConnectionValidator.validateApiKey(""))
-        assertEquals(ConnectionValidationError.INVALID_API_KEY, ConnectionValidator.validateApiKey("sk-test"))
-        assertEquals(null, ConnectionValidator.validateApiKey("fastgpt-secret"))
+    fun validateApiKeyRespectsConnectionType() {
+        assertEquals(ConnectionValidationError.EMPTY_API_KEY, ConnectionValidator.validateApiKey(ConnectionType.FAST_GPT, ""))
+        assertEquals(ConnectionValidationError.INVALID_API_KEY, ConnectionValidator.validateApiKey(ConnectionType.FAST_GPT, "sk-test"))
+        assertEquals(null, ConnectionValidator.validateApiKey(ConnectionType.FAST_GPT, "fastgpt-secret"))
+        assertEquals(null, ConnectionValidator.validateApiKey(ConnectionType.OPENAI_COMPATIBLE, "sk-test"))
     }
 }

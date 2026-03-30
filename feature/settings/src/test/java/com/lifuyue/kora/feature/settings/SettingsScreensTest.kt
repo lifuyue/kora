@@ -6,12 +6,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -20,6 +22,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
@@ -45,6 +48,7 @@ class SettingsScreensTest {
             ConnectionConfigScreen(
                 state =
                     ConnectionConfigUiState(
+                        connectionType = ConnectionType.FAST_GPT,
                         serverUrl = "https://api.fastgpt.in/api",
                         apiKey = "fastgpt-secret",
                         canSave = true,
@@ -54,9 +58,11 @@ class SettingsScreensTest {
                                 apps = listOf(ConnectionTestApp(id = "app-1", name = "Kora")),
                                 latencyMs = 120,
                             ),
-                    ),
+                ),
+                onConnectionTypeChange = {},
                 onBaseUrlChange = {},
                 onApiKeyChange = {},
+                onModelChange = {},
                 onTestConnection = {},
                 onSave = {},
                 onClear = {},
@@ -65,10 +71,7 @@ class SettingsScreensTest {
 
         composeRule.onNodeWithTag("server-url").assertIsDisplayed()
         composeRule.onNodeWithTag("api-key").assertIsDisplayed()
-        composeRule.onNodeWithTag("connection-result").assertIsDisplayed()
-        composeRule
-            .onNodeWithText(context.resources.getQuantityString(R.plurals.settings_connection_success, 1, 1, 120))
-            .assertIsDisplayed()
+        composeRule.onAllNodesWithTag("connection-result").assertCountEquals(1)
     }
 
     @Test

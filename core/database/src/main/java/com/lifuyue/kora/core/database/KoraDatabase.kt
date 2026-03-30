@@ -10,6 +10,8 @@ import com.lifuyue.kora.core.database.dao.ConversationFolderDao
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
 import com.lifuyue.kora.core.database.dao.ImportTaskDao
 import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
+import com.lifuyue.kora.core.database.dao.LocalKnowledgeChunkDao
+import com.lifuyue.kora.core.database.dao.LocalKnowledgeDocumentDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.entity.CachedCollectionEntity
 import com.lifuyue.kora.core.database.entity.CachedDatasetEntity
@@ -20,6 +22,8 @@ import com.lifuyue.kora.core.database.entity.ConversationTagCrossRef
 import com.lifuyue.kora.core.database.entity.ConversationTagEntity
 import com.lifuyue.kora.core.database.entity.ImportTaskEntity
 import com.lifuyue.kora.core.database.entity.InteractiveDraftEntity
+import com.lifuyue.kora.core.database.entity.LocalKnowledgeChunkEntity
+import com.lifuyue.kora.core.database.entity.LocalKnowledgeDocumentEntity
 import com.lifuyue.kora.core.database.entity.MessageEntity
 
 @Database(
@@ -34,8 +38,10 @@ import com.lifuyue.kora.core.database.entity.MessageEntity
         CachedCollectionEntity::class,
         ImportTaskEntity::class,
         InteractiveDraftEntity::class,
+        LocalKnowledgeDocumentEntity::class,
+        LocalKnowledgeChunkEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 @TypeConverters(KoraTypeConverters::class)
@@ -55,4 +61,8 @@ abstract class KoraDatabase : RoomDatabase() {
     abstract fun importTaskDao(): ImportTaskDao
 
     abstract fun interactiveDraftDao(): InteractiveDraftDao
+
+    abstract fun localKnowledgeDocumentDao(): LocalKnowledgeDocumentDao
+
+    abstract fun localKnowledgeChunkDao(): LocalKnowledgeChunkDao
 }

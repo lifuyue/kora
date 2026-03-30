@@ -24,6 +24,7 @@ object ChatTestTags {
     const val CHAT_MENU_BUTTON = "chat_menu_button"
     const val CHAT_QUICK_SETTINGS_BUTTON = "chat_quick_settings_button"
     const val CHAT_ATTACHMENT_TRIGGER_BUTTON = "chat_attachment_trigger_button"
+    const val CHAT_PRIMARY_ACTION_BUTTON = "chat_primary_action_button"
     const val CHAT_DRAWER = "chat_drawer"
     const val CHAT_DRAWER_NEW_CHAT = "chat_drawer_new_chat"
     const val CHAT_DRAWER_KNOWLEDGE = "chat_drawer_knowledge"

@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.KoraApplication
 import com.lifuyue.kora.R
 import com.lifuyue.kora.core.common.AppearancePreferences
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.database.store.ShareLinkPayload
 import com.lifuyue.kora.core.common.ThemeMode
@@ -115,6 +116,7 @@ class KoraNavGraphTest {
             KoraNavGraph(
                 snapshot =
                     ConnectionSnapshot(
+                        connectionType = ConnectionType.FAST_GPT,
                         serverBaseUrl = "https://api.fastgpt.in/",
                         apiKey = "fastgpt-secret",
                         selectedAppId = "app-1",
@@ -134,6 +136,28 @@ class KoraNavGraphTest {
     }
 
     @Test
+    fun shellIsShownWhenOpenAiConnectionReadyWithoutSelectedFastGptApp() {
+        composeRule.setContent {
+            KoraNavGraph(
+                snapshot =
+                    ConnectionSnapshot(
+                        connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                        serverBaseUrl = "https://api.openai.com/v1",
+                        apiKey = "openai-secret",
+                        model = "gpt-4o-mini",
+                        selectedAppId = "direct-openai",
+                        onboardingCompleted = true,
+                    ),
+                shellRoute = { shellSnapshot ->
+                    Text("OpenAI Shell ${shellSnapshot.model}")
+                },
+            )
+        }
+
+        composeRule.onNodeWithText("OpenAI Shell gpt-4o-mini").assertIsDisplayed()
+    }
+
+    @Test
     fun shareLinkPayloadBypassesBootstrapAndShowsShareRoute() {
         composeRule.setContent {
             KoraNavGraph(
@@ -150,6 +174,7 @@ class KoraNavGraphTest {
     fun chatShellStartRouteDefaultsToNewConversationThread() {
         val snapshot =
             ConnectionSnapshot(
+                connectionType = ConnectionType.FAST_GPT,
                 serverBaseUrl = "https://api.fastgpt.in/",
                 apiKey = "fastgpt-secret",
                 selectedAppId = "app-1",

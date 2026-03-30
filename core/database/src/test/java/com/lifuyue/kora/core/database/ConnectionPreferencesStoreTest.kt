@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.core.app.ApplicationProvider
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
@@ -32,8 +33,10 @@ class ConnectionPreferencesStoreTest {
                     file = File(context.filesDir, "connection-preferences.preferences_pb"),
                 )
 
+            store.updateConnectionType(ConnectionType.OPENAI_COMPATIBLE)
             store.updateServerBaseUrl("https://api.fastgpt.in/api")
             store.updateApiKeyPresence(true)
+            store.updateModel("gpt-4o-mini")
             store.updateSelectedAppId("app-1")
             store.updateOnboardingCompleted(true)
             store.updateStreamEnabled(false)
@@ -51,8 +54,10 @@ class ConnectionPreferencesStoreTest {
 
             val preferences = store.preferences.first()
 
+            assertEquals(ConnectionType.OPENAI_COMPATIBLE, preferences.connectionType)
             assertEquals("https://api.fastgpt.in/api", preferences.serverBaseUrl)
             assertTrue(preferences.apiKeyPresent)
+            assertEquals("gpt-4o-mini", preferences.model)
             assertEquals("app-1", preferences.selectedAppId)
             assertTrue(preferences.onboardingCompleted)
             assertFalse(preferences.streamEnabled)

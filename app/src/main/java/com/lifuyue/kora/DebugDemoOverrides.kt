@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatMessageUiModel
 import com.lifuyue.kora.feature.chat.ChatScreen
@@ -19,8 +20,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val EXTRA_OPEN_DEMO_CHAT = "com.lifuyue.kora.extra.OPEN_DEMO_CHAT"
 private const val EXTRA_OPEN_DEBUG_SHELL = "com.lifuyue.kora.extra.OPEN_DEBUG_SHELL"
+private const val EXTRA_DEBUG_CONNECTION_TYPE = "com.lifuyue.kora.extra.DEBUG_CONNECTION_TYPE"
+private const val EXTRA_DEBUG_CONNECTION_BASE_URL = "com.lifuyue.kora.extra.DEBUG_CONNECTION_BASE_URL"
+private const val EXTRA_DEBUG_CONNECTION_API_KEY = "com.lifuyue.kora.extra.DEBUG_CONNECTION_API_KEY"
+private const val EXTRA_DEBUG_CONNECTION_MODEL = "com.lifuyue.kora.extra.DEBUG_CONNECTION_MODEL"
 private const val DEMO_APP_ID = "demo-app"
 private const val DEMO_CHAT_ID = "demo-chat"
+
+internal data class DebugConnectionOverride(
+    val connectionType: ConnectionType,
+    val serverBaseUrl: String,
+    val apiKey: String,
+    val model: String,
+)
 
 internal fun installDebugDemoOverrides(intent: Intent?) {
     when {
@@ -42,6 +54,29 @@ internal fun installDebugDemoOverrides(intent: Intent?) {
             return
         }
     }
+}
+
+internal fun readDebugConnectionOverride(intent: Intent?): DebugConnectionOverride? {
+    val type =
+        intent
+            ?.getStringExtra(EXTRA_DEBUG_CONNECTION_TYPE)
+            ?.let { value -> ConnectionType.entries.firstOrNull { it.name == value } }
+            ?: return null
+    if (type != ConnectionType.OPENAI_COMPATIBLE) {
+        return null
+    }
+    val baseUrl = intent.getStringExtra(EXTRA_DEBUG_CONNECTION_BASE_URL)?.trim().orEmpty()
+    val apiKey = intent.getStringExtra(EXTRA_DEBUG_CONNECTION_API_KEY)?.trim().orEmpty()
+    val model = intent.getStringExtra(EXTRA_DEBUG_CONNECTION_MODEL)?.trim().orEmpty()
+    if (baseUrl.isBlank() || apiKey.isBlank() || model.isBlank()) {
+        return null
+    }
+    return DebugConnectionOverride(
+        connectionType = type,
+        serverBaseUrl = baseUrl,
+        apiKey = apiKey,
+        model = model,
+    )
 }
 
 private fun createDemoSnapshot(): ConnectionSnapshot {

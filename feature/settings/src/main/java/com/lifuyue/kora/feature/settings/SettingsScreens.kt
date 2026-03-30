@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
@@ -49,8 +50,10 @@ import com.lifuyue.kora.core.common.ui.KoraSectionCard
 @Composable
 fun ConnectionConfigScreen(
     state: ConnectionConfigUiState,
+    onConnectionTypeChange: (ConnectionType) -> Unit,
     onBaseUrlChange: (String) -> Unit,
     onApiKeyChange: (String) -> Unit,
+    onModelChange: (String) -> Unit,
     onTestConnection: () -> Unit,
     onSave: () -> Unit,
     onClear: () -> Unit,
@@ -64,6 +67,30 @@ fun ConnectionConfigScreen(
         onOpenDrawer = onOpenDrawer,
         modifier = modifier.semantics { testTag = "settings-overview-scroll" },
     ) {
+        ConnectionType.entries.forEach { type ->
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = state.connectionType == type,
+                            onClick = { onConnectionTypeChange(type) },
+                        ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = state.connectionType == type, onClick = { onConnectionTypeChange(type) })
+                Text(
+                    text =
+                        stringResource(
+                            if (type == ConnectionType.OPENAI_COMPATIBLE) {
+                                R.string.settings_connection_type_openai
+                            } else {
+                                R.string.settings_connection_type_fastgpt
+                            },
+                        ),
+                )
+            }
+        }
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = onBaseUrlChange,
@@ -79,6 +106,15 @@ fun ConnectionConfigScreen(
             modifier = Modifier.fillMaxWidth().semantics { testTag = "api-key" },
             singleLine = true,
         )
+        if (state.connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+            OutlinedTextField(
+                value = state.model,
+                onValueChange = onModelChange,
+                label = { Text(stringResource(R.string.settings_connection_model_label)) },
+                modifier = Modifier.fillMaxWidth().semantics { testTag = "model" },
+                singleLine = true,
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = onTestConnection,
@@ -134,12 +170,16 @@ private fun ConnectionTestResultCard(result: ConnectionTestResult) {
     val description =
         when (result) {
             is ConnectionTestResult.Success ->
-                pluralStringResource(
-                    R.plurals.settings_connection_success,
-                    result.apps.size,
-                    result.apps.size,
-                    result.latencyMs,
-                )
+                if (result.apps.isEmpty()) {
+                    stringResource(R.string.settings_connection_success_openai, result.latencyMs)
+                } else {
+                    pluralStringResource(
+                        R.plurals.settings_connection_success,
+                        result.apps.size,
+                        result.apps.size,
+                        result.latencyMs,
+                    )
+                }
             is ConnectionTestResult.ValidationError ->
                 stringResource(R.string.settings_connection_validation_error, result.reason)
             is ConnectionTestResult.AuthError ->
@@ -173,6 +213,14 @@ fun SettingsOverviewScreen(
     onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val connectionTypeLabel =
+        stringResource(
+            if (state.connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+                R.string.settings_connection_type_openai
+            } else {
+                R.string.settings_connection_type_fastgpt
+            },
+        )
     LazyColumn(
         modifier =
             modifier
@@ -202,7 +250,14 @@ fun SettingsOverviewScreen(
                 )
                 KoraMetricRow(
                     label = stringResource(R.string.settings_overview_status_connection),
-                    value = state.serverBaseUrl ?: stringResource(R.string.settings_summary_not_configured),
+                    value =
+                        buildString {
+                            append(connectionTypeLabel)
+                            state.serverBaseUrl?.let {
+                                append(" · ")
+                                append(it)
+                            }
+                        }.ifBlank { stringResource(R.string.settings_summary_not_configured) },
                 )
                 KoraMetricRow(
                     label = stringResource(R.string.settings_overview_status_theme),
@@ -210,7 +265,12 @@ fun SettingsOverviewScreen(
                 )
                 KoraMetricRow(
                     label = stringResource(R.string.settings_overview_status_app),
-                    value = state.selectedAppId ?: stringResource(R.string.settings_summary_not_selected),
+                    value =
+                        if (state.connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+                            state.model ?: stringResource(R.string.settings_summary_not_selected)
+                        } else {
+                            state.selectedAppId ?: stringResource(R.string.settings_summary_not_selected)
+                        },
                 )
             }
         }

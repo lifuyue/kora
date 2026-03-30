@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
@@ -34,8 +35,13 @@ class ConnectionPreferencesStore internal constructor(
             }
             .map { preferences ->
                 ConnectionPreferences(
+                    connectionType =
+                        preferences[Keys.CONNECTION_TYPE]
+                            ?.let { storedType -> ConnectionType.entries.firstOrNull { it.name == storedType } }
+                            ?: inferLegacyConnectionType(preferences),
                     serverBaseUrl = preferences[Keys.SERVER_BASE_URL],
                     apiKeyPresent = preferences[Keys.SERVER_API_KEY_PRESENT] ?: false,
+                    model = preferences[Keys.MODEL],
                     selectedAppId = preferences[Keys.SELECTED_APP_ID],
                     onboardingCompleted = preferences[Keys.ONBOARDING_COMPLETED] ?: false,
                     streamEnabled = preferences[Keys.STREAM_ENABLED] ?: true,
@@ -74,9 +80,25 @@ class ConnectionPreferencesStore internal constructor(
         }
     }
 
+    suspend fun updateConnectionType(value: ConnectionType) {
+        dataStore.edit { preferences ->
+            preferences[Keys.CONNECTION_TYPE] = value.name
+        }
+    }
+
     suspend fun updateApiKeyPresence(value: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.SERVER_API_KEY_PRESENT] = value
+        }
+    }
+
+    suspend fun updateModel(value: String?) {
+        dataStore.edit { preferences ->
+            if (value == null) {
+                preferences.remove(Keys.MODEL)
+            } else {
+                preferences[Keys.MODEL] = value
+            }
         }
     }
 
@@ -212,8 +234,10 @@ class ConnectionPreferencesStore internal constructor(
     }
 
     object Keys {
+        val CONNECTION_TYPE = stringPreferencesKey("connection_type")
         val SERVER_BASE_URL = stringPreferencesKey("server_base_url")
         val SERVER_API_KEY_PRESENT = booleanPreferencesKey("server_api_key_present")
+        val MODEL = stringPreferencesKey("model")
         val SELECTED_APP_ID = stringPreferencesKey("selected_app_id")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val STREAM_ENABLED = booleanPreferencesKey("stream_enabled")
@@ -231,4 +255,11 @@ class ConnectionPreferencesStore internal constructor(
         val SPEECH_RATE = floatPreferencesKey("speech_rate")
         val DEFAULT_VOICE_NAME = stringPreferencesKey("default_voice_name")
     }
+
+    private fun inferLegacyConnectionType(preferences: Preferences): ConnectionType =
+        if (preferences[Keys.SELECTED_APP_ID].isNullOrBlank()) {
+            ConnectionType.OPENAI_COMPATIBLE
+        } else {
+            ConnectionType.FAST_GPT
+        }
 }
