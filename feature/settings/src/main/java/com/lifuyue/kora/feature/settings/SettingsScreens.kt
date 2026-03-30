@@ -1,14 +1,17 @@
 package com.lifuyue.kora.feature.settings
 
 import android.text.format.Formatter
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -23,41 +26,71 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
+import com.lifuyue.kora.core.common.ui.KoraGeminiTopBar
+import com.lifuyue.kora.core.common.ui.KoraMetricRow
+import com.lifuyue.kora.core.common.ui.KoraSectionCard
 
 @Composable
 fun ConnectionConfigScreen(
     state: ConnectionConfigUiState,
+    onConnectionTypeChange: (ConnectionType) -> Unit,
     onBaseUrlChange: (String) -> Unit,
     onApiKeyChange: (String) -> Unit,
+    onModelChange: (String) -> Unit,
     onTestConnection: () -> Unit,
     onSave: () -> Unit,
     onClear: () -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .semantics { testTag = "settings-overview-scroll" }
-                .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_connection_title),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier.semantics { testTag = "settings-overview-scroll" },
     ) {
-        Text(stringResource(R.string.settings_connection_title), style = MaterialTheme.typography.headlineMedium)
+        ConnectionType.entries.forEach { type ->
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = state.connectionType == type,
+                            onClick = { onConnectionTypeChange(type) },
+                        ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = state.connectionType == type, onClick = { onConnectionTypeChange(type) })
+                Text(
+                    text =
+                        stringResource(
+                            if (type == ConnectionType.OPENAI_COMPATIBLE) {
+                                R.string.settings_connection_type_openai
+                            } else {
+                                R.string.settings_connection_type_fastgpt
+                            },
+                        ),
+                )
+            }
+        }
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = onBaseUrlChange,
@@ -73,6 +106,15 @@ fun ConnectionConfigScreen(
             modifier = Modifier.fillMaxWidth().semantics { testTag = "api-key" },
             singleLine = true,
         )
+        if (state.connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+            OutlinedTextField(
+                value = state.model,
+                onValueChange = onModelChange,
+                label = { Text(stringResource(R.string.settings_connection_model_label)) },
+                modifier = Modifier.fillMaxWidth().semantics { testTag = "model" },
+                singleLine = true,
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = onTestConnection,
@@ -128,12 +170,16 @@ private fun ConnectionTestResultCard(result: ConnectionTestResult) {
     val description =
         when (result) {
             is ConnectionTestResult.Success ->
-                pluralStringResource(
-                    R.plurals.settings_connection_success,
-                    result.apps.size,
-                    result.apps.size,
-                    result.latencyMs,
-                )
+                if (result.apps.isEmpty()) {
+                    stringResource(R.string.settings_connection_success_openai, result.latencyMs)
+                } else {
+                    pluralStringResource(
+                        R.plurals.settings_connection_success,
+                        result.apps.size,
+                        result.apps.size,
+                        result.latencyMs,
+                    )
+                }
             is ConnectionTestResult.ValidationError ->
                 stringResource(R.string.settings_connection_validation_error, result.reason)
             is ConnectionTestResult.AuthError ->
@@ -164,15 +210,69 @@ fun SettingsOverviewScreen(
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val connectionTypeLabel =
+        stringResource(
+            if (state.connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+                R.string.settings_connection_type_openai
+            } else {
+                R.string.settings_connection_type_fastgpt
+            },
+        )
     LazyColumn(
-        modifier = modifier.fillMaxSize().semantics { testTag = "settings-overview-scroll" },
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .semantics { testTag = "settings-overview-scroll" },
+        contentPadding = PaddingValues(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text(stringResource(R.string.settings_overview_title), style = MaterialTheme.typography.headlineMedium)
+            KoraGeminiTopBar(
+                title = stringResource(R.string.settings_overview_title),
+                onOpenDrawer = onOpenDrawer,
+            )
+        }
+        item {
+            KoraSectionCard(
+                tag = "settings_status_card",
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_overview_status_title),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = stringResource(R.string.settings_overview_status_summary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                KoraMetricRow(
+                    label = stringResource(R.string.settings_overview_status_connection),
+                    value =
+                        buildString {
+                            append(connectionTypeLabel)
+                            state.serverBaseUrl?.let {
+                                append(" · ")
+                                append(it)
+                            }
+                        }.ifBlank { stringResource(R.string.settings_summary_not_configured) },
+                )
+                KoraMetricRow(
+                    label = stringResource(R.string.settings_overview_status_theme),
+                    value = themeModeLabel(state.themeMode),
+                )
+                KoraMetricRow(
+                    label = stringResource(R.string.settings_overview_status_app),
+                    value =
+                        if (state.connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+                            state.model ?: stringResource(R.string.settings_summary_not_selected)
+                        } else {
+                            state.selectedAppId ?: stringResource(R.string.settings_summary_not_selected)
+                        },
+                )
+            }
         }
         item {
             SettingsSection(
@@ -224,7 +324,7 @@ fun SettingsOverviewScreen(
                     )
                     SettingsEntry(
                         title = stringResource(R.string.settings_language_title),
-                        summary = stringResource(R.string.settings_language_follow_system),
+                        summary = languageLabel(state.selectedLanguageTag),
                         onClick = onOpenLanguage,
                         testTag = "settings-language",
                     )
@@ -245,6 +345,15 @@ fun SettingsOverviewScreen(
         }
     }
 }
+
+@Composable
+private fun languageLabel(languageTag: String?): String =
+    when (languageTag) {
+        null -> stringResource(R.string.settings_language_follow_system)
+        "zh-CN" -> stringResource(R.string.settings_language_simplified_chinese)
+        "en" -> stringResource(R.string.settings_language_english)
+        else -> languageTag
+    }
 
 @Composable
 internal fun SettingsAdaptivePlaceholder() {
@@ -298,17 +407,16 @@ fun ThemeAppearanceScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onOledChange: (Boolean) -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_theme_title),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier,
     ) {
-        Text(stringResource(R.string.settings_theme_title), style = MaterialTheme.typography.headlineMedium)
         ThemeMode.entries.forEach { mode ->
             Row(
                 modifier =
@@ -342,23 +450,137 @@ fun ThemeAppearanceScreen(
 }
 
 @Composable
+fun ChatQuickSettingsContent(
+    themeState: ThemeAppearanceUiState,
+    chatPreferencesState: ChatPreferencesUiState,
+    languageState: LanguageSettingsUiState,
+    audioState: AudioSettingsUiState,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onLanguageTagChange: (String?) -> Unit,
+    onStreamEnabledChange: (Boolean) -> Unit,
+    onShowCitationsChange: (Boolean) -> Unit,
+    onAutoSendTranscriptsChange: (Boolean) -> Unit,
+    onOpenFullSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .testTag("chat-quick-settings"),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.settings_quick_title), style = MaterialTheme.typography.headlineSmall)
+            Text(
+                stringResource(R.string.settings_quick_summary),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        KoraSectionCard {
+            Text(stringResource(R.string.settings_quick_theme_title), style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(ThemeMode.LIGHT, ThemeMode.DARK, ThemeMode.SYSTEM).forEach { mode ->
+                    OutlinedButton(
+                        onClick = { onThemeModeChange(mode) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            themeModeLabel(mode),
+                            color =
+                                if (themeState.themeMode == mode) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                        )
+                    }
+                }
+            }
+        }
+        KoraSectionCard {
+            Text(stringResource(R.string.settings_quick_language_title), style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                QuickLanguageChoice(
+                    label = stringResource(R.string.settings_language_follow_system),
+                    selected = languageState.selectedLanguageTag == null,
+                    onClick = { onLanguageTagChange(null) },
+                )
+                QuickLanguageChoice(
+                    label = stringResource(R.string.settings_language_simplified_chinese),
+                    selected = languageState.selectedLanguageTag == "zh-CN",
+                    onClick = { onLanguageTagChange("zh-CN") },
+                )
+                QuickLanguageChoice(
+                    label = stringResource(R.string.settings_language_english),
+                    selected = languageState.selectedLanguageTag == "en",
+                    onClick = { onLanguageTagChange("en") },
+                )
+            }
+        }
+        KoraSectionCard {
+            Text(stringResource(R.string.settings_chat_preferences_title), style = MaterialTheme.typography.titleMedium)
+            QuickToggleRow(
+                title = stringResource(R.string.settings_chat_preferences_stream),
+                checked = chatPreferencesState.streamEnabled,
+                testTag = "chat-quick-settings-stream",
+                onCheckedChange = onStreamEnabledChange,
+            )
+            QuickToggleRow(
+                title = stringResource(R.string.settings_chat_preferences_citations),
+                checked = chatPreferencesState.showCitationsByDefault,
+                testTag = "chat-quick-settings-citations",
+                onCheckedChange = onShowCitationsChange,
+            )
+        }
+        KoraSectionCard {
+            Text(stringResource(R.string.settings_quick_voice_title), style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.settings_quick_voice_summary, speechToTextEngineLabel(audioState.speechToTextEngine)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            QuickToggleRow(
+                title = appString("settings_audio_auto_send_transcripts"),
+                checked = audioState.autoSendTranscripts,
+                testTag = "chat-quick-settings-audio-auto-send",
+                onCheckedChange = onAutoSendTranscriptsChange,
+            )
+        }
+        Button(
+            onClick = onOpenFullSettings,
+            modifier = Modifier.fillMaxWidth().testTag("chat-quick-settings-open-full"),
+        ) {
+            Text(stringResource(R.string.settings_quick_open_full))
+        }
+    }
+}
+
+@Composable
 fun ChatPreferencesScreen(
     state: ChatPreferencesUiState,
     onStreamEnabledChange: (Boolean) -> Unit,
     onAutoScrollChange: (Boolean) -> Unit,
     onShowCitationsChange: (Boolean) -> Unit,
     onFontSizeScaleChange: (Float) -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_chat_preferences_title),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier,
     ) {
-        Text(stringResource(R.string.settings_chat_preferences_title), style = MaterialTheme.typography.headlineMedium)
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.settings_chat_preferences_stream))
             Switch(
@@ -401,17 +623,16 @@ fun AudioSettingsScreen(
     onTextToSpeechEngineChange: (TextToSpeechEngine) -> Unit,
     onSpeechRateChange: (Float) -> Unit,
     onDefaultVoiceNameChange: (String) -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = appString("settings_audio_title"),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier,
     ) {
-        Text(appString("settings_audio_title"), style = MaterialTheme.typography.headlineMedium)
         SettingsSection(
             title = appString("settings_audio_section_stt"),
             content = {
@@ -479,16 +700,17 @@ fun AudioSettingsScreen(
 fun LanguageSettingsScreen(
     state: LanguageSettingsUiState,
     onLanguageTagChange: (String?) -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_language_title),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier,
+        verticalSpacing = 12.dp,
     ) {
-        Text(stringResource(R.string.settings_language_title), style = MaterialTheme.typography.headlineMedium)
         LanguageOption(
             tag = "language-option-system",
             label = stringResource(R.string.settings_language_follow_system),
@@ -532,6 +754,28 @@ private fun LanguageOption(
 }
 
 @Composable
+private fun RowScope.QuickLanguageChoice(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.weight(1f),
+    ) {
+        Text(
+            label,
+            color =
+                if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+        )
+    }
+}
+
+@Composable
 private fun AudioEngineOption(
     tag: String,
     label: String,
@@ -556,20 +800,41 @@ private fun AudioEngineOption(
 }
 
 @Composable
+private fun QuickToggleRow(
+    title: String,
+    checked: Boolean,
+    testTag: String,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.testTag(testTag),
+        )
+    }
+}
+
+@Composable
 fun CacheSettingsScreen(
     state: CacheSettingsUiState,
     onClearCache: () -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_storage_title),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier,
     ) {
-        Text(stringResource(R.string.settings_storage_title), style = MaterialTheme.typography.headlineMedium)
         StorageBucket.entries.forEach { bucket ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Row(
@@ -611,16 +876,16 @@ fun AboutScreen(
     state: AboutUiState,
     onOpenFeedback: () -> Unit,
     onOpenLicenses: () -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_about_title),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier,
     ) {
-        Text(stringResource(R.string.settings_about_title), style = MaterialTheme.typography.headlineMedium)
         Text(stringResource(R.string.settings_about_summary), style = MaterialTheme.typography.titleLarge)
         Text(state.versionName, style = MaterialTheme.typography.bodyLarge)
         OutlinedButton(
@@ -650,6 +915,15 @@ private fun themeModeLabel(mode: ThemeMode): String =
     )
 
 @Composable
+private fun speechToTextEngineLabel(engine: SpeechToTextEngine): String =
+    stringResource(
+        when (engine) {
+            SpeechToTextEngine.System -> R.string.settings_audio_engine_system
+            SpeechToTextEngine.WhisperApp -> R.string.settings_audio_engine_whisper_app
+        },
+    )
+
+@Composable
 private fun storageBucketLabel(bucket: StorageBucket): String =
     stringResource(
         when (bucket) {
@@ -658,3 +932,42 @@ private fun storageBucketLabel(bucket: StorageBucket): String =
             StorageBucket.TEMP_CACHE -> R.string.settings_storage_bucket_temp_cache
         },
     )
+
+@Composable
+private fun SettingsPageColumn(
+    title: String,
+    onBack: (() -> Unit)?,
+    onOpenDrawer: () -> Unit,
+    modifier: Modifier = Modifier,
+    verticalSpacing: androidx.compose.ui.unit.Dp = 16.dp,
+    content: @Composable () -> Unit,
+) {
+    if (onBack != null) {
+        BackHandler(onBack = onBack)
+    }
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+    ) {
+        KoraGeminiTopBar(title = title, onOpenDrawer = onOpenDrawer)
+        SettingsPageHeader(onBack = onBack)
+        content()
+    }
+}
+
+@Composable
+private fun SettingsPageHeader(
+    onBack: (() -> Unit)?,
+) {
+    if (onBack != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = onBack) {
+                Text(stringResource(R.string.settings_back))
+            }
+        }
+    }
+}

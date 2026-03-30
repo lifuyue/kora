@@ -3,6 +3,7 @@ package com.lifuyue.kora.navigation
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -12,11 +13,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.KoraApplication
 import com.lifuyue.kora.R
 import com.lifuyue.kora.core.common.AppearancePreferences
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.database.store.ShareLinkPayload
 import com.lifuyue.kora.core.common.ThemeMode
 import org.junit.After
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -113,6 +116,7 @@ class KoraNavGraphTest {
             KoraNavGraph(
                 snapshot =
                     ConnectionSnapshot(
+                        connectionType = ConnectionType.FAST_GPT,
                         serverBaseUrl = "https://api.fastgpt.in/",
                         apiKey = "fastgpt-secret",
                         selectedAppId = "app-1",
@@ -132,6 +136,28 @@ class KoraNavGraphTest {
     }
 
     @Test
+    fun shellIsShownWhenOpenAiConnectionReadyWithoutSelectedFastGptApp() {
+        composeRule.setContent {
+            KoraNavGraph(
+                snapshot =
+                    ConnectionSnapshot(
+                        connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                        serverBaseUrl = "https://api.openai.com/v1",
+                        apiKey = "openai-secret",
+                        model = "gpt-4o-mini",
+                        selectedAppId = "direct-openai",
+                        onboardingCompleted = true,
+                    ),
+                shellRoute = { shellSnapshot ->
+                    Text("OpenAI Shell ${shellSnapshot.model}")
+                },
+            )
+        }
+
+        composeRule.onNodeWithText("OpenAI Shell gpt-4o-mini").assertIsDisplayed()
+    }
+
+    @Test
     fun shareLinkPayloadBypassesBootstrapAndShowsShareRoute() {
         composeRule.setContent {
             KoraNavGraph(
@@ -142,5 +168,19 @@ class KoraNavGraphTest {
         }
 
         composeRule.onNodeWithText("Fake Share share-1").assertIsDisplayed()
+    }
+
+    @Test
+    fun chatShellStartRouteDefaultsToNewConversationThread() {
+        val snapshot =
+            ConnectionSnapshot(
+                connectionType = ConnectionType.FAST_GPT,
+                serverBaseUrl = "https://api.fastgpt.in/",
+                apiKey = "fastgpt-secret",
+                selectedAppId = "app-1",
+                onboardingCompleted = true,
+            )
+
+        assertEquals("chat/thread/app-1?chatId=", chatShellStartRoute(snapshot))
     }
 }

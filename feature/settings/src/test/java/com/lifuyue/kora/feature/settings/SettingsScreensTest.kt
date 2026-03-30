@@ -2,12 +2,18 @@ package com.lifuyue.kora.feature.settings
 
 import android.content.Context
 import android.text.format.Formatter
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -16,6 +22,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
@@ -41,6 +48,7 @@ class SettingsScreensTest {
             ConnectionConfigScreen(
                 state =
                     ConnectionConfigUiState(
+                        connectionType = ConnectionType.FAST_GPT,
                         serverUrl = "https://api.fastgpt.in/api",
                         apiKey = "fastgpt-secret",
                         canSave = true,
@@ -50,9 +58,11 @@ class SettingsScreensTest {
                                 apps = listOf(ConnectionTestApp(id = "app-1", name = "Kora")),
                                 latencyMs = 120,
                             ),
-                    ),
+                ),
+                onConnectionTypeChange = {},
                 onBaseUrlChange = {},
                 onApiKeyChange = {},
+                onModelChange = {},
                 onTestConnection = {},
                 onSave = {},
                 onClear = {},
@@ -61,10 +71,7 @@ class SettingsScreensTest {
 
         composeRule.onNodeWithTag("server-url").assertIsDisplayed()
         composeRule.onNodeWithTag("api-key").assertIsDisplayed()
-        composeRule.onNodeWithTag("connection-result").assertIsDisplayed()
-        composeRule
-            .onNodeWithText(context.resources.getQuantityString(R.plurals.settings_connection_success, 1, 1, 120))
-            .assertIsDisplayed()
+        composeRule.onAllNodesWithTag("connection-result").assertCountEquals(1)
     }
 
     @Test
@@ -77,6 +84,7 @@ class SettingsScreensTest {
                         serverBaseUrl = "https://fastgpt.example.com",
                         themeMode = ThemeMode.OLED_DARK,
                         selectedAppId = "app-42",
+                        selectedLanguageTag = "zh-CN",
                     ),
                 onOpenConnection = {},
                 onOpenCurrentApp = {},
@@ -88,7 +96,11 @@ class SettingsScreensTest {
             )
         }
 
+        composeRule.onNodeWithTag("settings_status_card").assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_connection)).assertExists()
+        composeRule
+            .onNodeWithTag("settings-overview-scroll")
+            .performScrollToNode(hasText(context.getString(R.string.settings_overview_section_appearance)))
         composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_appearance)).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.settings_connection_title)).assertIsDisplayed()
         composeRule.onNodeWithText("https://fastgpt.example.com").assertIsDisplayed()
@@ -102,6 +114,10 @@ class SettingsScreensTest {
             .onNodeWithTag("settings-overview-scroll")
             .performScrollToNode(hasTestTag("settings-chat-preferences"))
         composeRule.onNodeWithText(context.getString(R.string.settings_overview_section_common)).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("settings-overview-scroll")
+            .performScrollToNode(hasTestTag("settings-language"))
+        composeRule.onNodeWithText(context.getString(R.string.settings_language_simplified_chinese)).assertIsDisplayed()
         assertEquals(
             1,
             composeRule.onAllNodesWithText(context.getString(R.string.settings_chat_preferences_title)).fetchSemanticsNodes().size,
@@ -166,6 +182,26 @@ class SettingsScreensTest {
 
         composeRule.onNodeWithText(context.getString(R.string.settings_theme_mode_oled_dark)).assertIsDisplayed()
         composeRule.onNodeWithTag("dynamic-color").assertIsDisplayed()
+    }
+
+    @Test
+    fun themeScreenBackButtonTriggersCallback() {
+        var backTriggered = false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            ThemeAppearanceScreen(
+                state = ThemeAppearanceUiState(),
+                onThemeModeChange = {},
+                onDynamicColorChange = {},
+                onOledChange = {},
+                onBack = { backTriggered = true },
+            )
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.settings_back)).performClick()
+        composeRule.runOnIdle {
+            assertTrue(backTriggered)
+        }
     }
 
     @Test
@@ -247,6 +283,39 @@ class SettingsScreensTest {
     }
 
     @Test
+    fun chatQuickSettingsShowsCommonControlsAndFullSettingsAction() {
+        composeRule.setContent {
+            ChatQuickSettingsContent(
+                themeState = ThemeAppearanceUiState(themeMode = ThemeMode.DARK),
+                chatPreferencesState =
+                    ChatPreferencesUiState(
+                        streamEnabled = true,
+                        autoScroll = true,
+                        showCitationsByDefault = false,
+                    ),
+                languageState = LanguageSettingsUiState(selectedLanguageTag = "zh-CN"),
+                audioState =
+                    AudioSettingsUiState(
+                        speechToTextEngine = SpeechToTextEngine.WhisperApp,
+                        autoSendTranscripts = true,
+                    ),
+                onThemeModeChange = {},
+                onLanguageTagChange = {},
+                onStreamEnabledChange = {},
+                onShowCitationsChange = {},
+                onAutoSendTranscriptsChange = {},
+                onOpenFullSettings = {},
+            )
+        }
+
+        composeRule.onNodeWithTag("chat-quick-settings").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat-quick-settings-stream").assertIsOn()
+        composeRule.onNodeWithTag("chat-quick-settings-citations").assertIsOff()
+        composeRule.onNodeWithTag("chat-quick-settings-audio-auto-send").assertIsOn()
+        composeRule.onNodeWithTag("chat-quick-settings-open-full").fetchSemanticsNode()
+    }
+
+    @Test
     fun languageScreenShowsSelectedOption() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
@@ -262,6 +331,21 @@ class SettingsScreensTest {
         composeRule.onNodeWithText(context.getString(R.string.settings_language_title)).assertIsDisplayed()
         composeRule.onNodeWithTag("language-option-en").assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.settings_language_english)).assertIsDisplayed()
+    }
+
+    @Test
+    fun languageScreenBackButtonIsHiddenWhenNoCallbackProvided() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            LanguageSettingsScreen(
+                state = LanguageSettingsUiState(selectedLanguageTag = "en"),
+                onLanguageTagChange = {},
+            )
+        }
+
+        composeRule.onAllNodesWithText(context.getString(R.string.settings_back)).apply {
+            assertCountEquals(0)
+        }
     }
 
     @Test

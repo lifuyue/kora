@@ -7,7 +7,7 @@
     <string name="onboarding_page_2_title">核心体验</string>
     <string name="onboarding_page_2_body">M3 提供引导、设置与主题，M4 打通流式聊天、Markdown 与会话恢复。</string>
     <string name="onboarding_page_3_title">下一步</string>
-    <string name="onboarding_page_3_body">测试连接成功后会自动选中第一个可用 App，并进入主界面。</string>
+    <string name="onboarding_page_3_body">测试连接成功后会自动选中第一个可用应用，并进入主界面。</string>
     <string name="onboarding_page_indicator">%1$d/%2$d</string>
     <string name="onboarding_cta_next">下一步</string>
     <string name="onboarding_cta_finish">进入连接配置</string>
@@ -42,12 +42,12 @@
     <string name="settings_audio_section_stt">语音输入</string>
     <string name="settings_audio_section_tts">语音播报</string>
     <string name="settings_audio_stt_engine">语音识别引擎</string>
-    <string name="settings_audio_stt_engine_system">系统语音识别</string>
-    <string name="settings_audio_stt_engine_whisper">Whisper App</string>
+    <string name="settings_audio_stt_engine_system">系统识别</string>
+    <string name="settings_audio_stt_engine_whisper">Whisper 应用</string>
     <string name="settings_audio_auto_send_transcripts">识别完成自动发送</string>
     <string name="settings_audio_tts_engine">播报引擎</string>
     <string name="settings_audio_tts_engine_system">系统播报</string>
-    <string name="settings_audio_tts_engine_app_managed">App 管理播报</string>
+    <string name="settings_audio_tts_engine_app_managed">应用接管播报</string>
     <string name="settings_audio_speech_rate">语速 %1$.1fx</string>
     <string name="settings_audio_default_voice">默认语音</string>
     <string name="settings_audio_default_voice_hint">留空则使用系统默认语音</string>
@@ -63,4 +63,12 @@
     <string name="adaptive_chat_placeholder_body">在左侧选择已有会话，或新建一个会话开始聊天。</string>
     <string name="adaptive_settings_placeholder_title">选择一个设置项</string>
     <string name="adaptive_settings_placeholder_body">在左侧选择连接、主题、聊天、音频或语言设置继续查看详情。</string>
+    <string name="share_loading">正在加载分享内容</string>
+    <string name="share_ready">分享内容已就绪 %1$s</string>
+    <string name="share_link_expired">分享链接已失效</string>
+    <string name="share_error">分享内容加载失败</string>
+    <string name="debug_demo_stop_generating">这是调试演示页，当前没有真实流式任务可停止。</string>
+    <string name="debug_demo_continue_generation">这是调试演示页，继续生成功能尚未接入真实后端。</string>
+    <string name="debug_demo_regenerated_reply">重新生成后的版本</string>
+    <string name="debug_demo_received_template">已收到：%1$s</string>
 </resources>

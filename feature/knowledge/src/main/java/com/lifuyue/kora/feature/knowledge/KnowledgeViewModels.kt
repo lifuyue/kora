@@ -5,9 +5,12 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lifuyue.kora.core.common.ConnectionType
+import com.lifuyue.kora.core.database.LocalKnowledgeStore
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,12 +33,178 @@ class KnowledgeOverviewViewModel
         val uiState: StateFlow<KnowledgeOverviewUiState> =
             combine(connectionRepository.snapshot, repository.observeDatasets()) { snapshot, datasets ->
                 KnowledgeOverviewUiState(
+                    connectionType = snapshot.connectionType,
                     selectedAppId = snapshot.selectedAppId,
                     datasetCount = datasets.size,
                     recentDatasets = datasets.take(3),
                     status = if (datasets.isEmpty()) KnowledgeLoadState.Empty else KnowledgeLoadState.Content,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KnowledgeOverviewUiState())
+    }
+
+@HiltViewModel
+class KnowledgeModeViewModel
+    @Inject
+    constructor(
+        connectionRepository: ConnectionRepository,
+    ) : ViewModel() {
+        val connectionType: StateFlow<ConnectionType> =
+            connectionRepository.snapshot
+                .map { it.connectionType }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConnectionType.OPENAI_COMPATIBLE)
+    }
+
+@HiltViewModel
+class LocalKnowledgeOverviewViewModel
+    @Inject
+    constructor(
+        localKnowledgeStore: LocalKnowledgeStore,
+    ) : ViewModel() {
+        val uiState: StateFlow<KnowledgeOverviewUiState> =
+            localKnowledgeStore.observeDocuments()
+                .map { documents ->
+                    KnowledgeOverviewUiState(
+                        connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                        selectedAppId = null,
+                        datasetCount = documents.size,
+                        recentDatasets =
+                            documents.take(3).map { item ->
+                                DatasetListItemUiModel(
+                                    datasetId = item.documentId,
+                                    name = item.title,
+                                    intro = item.previewText,
+                                    type = "local_text",
+                                    status = if (item.isEnabled) "enabled" else "paused",
+                                    vectorModel = "",
+                                    updateTime = item.updatedAt,
+                                )
+                            },
+                        status = if (documents.isEmpty()) KnowledgeLoadState.Empty else KnowledgeLoadState.Content,
+                    )
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KnowledgeOverviewUiState(connectionType = ConnectionType.OPENAI_COMPATIBLE))
+    }
+
+@HiltViewModel
+class LocalKnowledgeLibraryViewModel
+    @Inject
+    constructor(
+        private val localKnowledgeStore: LocalKnowledgeStore,
+        private val strings: KnowledgeStrings,
+    ) : ViewModel() {
+        private val meta = MutableStateFlow(LocalKnowledgeLibraryUiState())
+
+        val uiState: StateFlow<LocalKnowledgeLibraryUiState> =
+            combine(meta, localKnowledgeStore.observeDocuments()) { state, documents ->
+                val filtered =
+                    documents.filter { item ->
+                        state.query.isBlank() ||
+                            item.title.contains(state.query, ignoreCase = true) ||
+                            item.previewText.contains(state.query, ignoreCase = true) ||
+                            item.sourceLabel.contains(state.query, ignoreCase = true)
+                    }
+                state.copy(
+                    items =
+                        filtered.map { item ->
+                            LocalKnowledgeDocumentUiModel(
+                                documentId = item.documentId,
+                                title = item.title,
+                                sourceLabel = item.sourceLabel,
+                                previewText = item.previewText,
+                                chunkCount = item.chunkCount,
+                                isEnabled = item.isEnabled,
+                                updatedAt = item.updatedAt,
+                            )
+                        },
+                    status = if (filtered.isEmpty()) KnowledgeLoadState.Empty else KnowledgeLoadState.Content,
+                )
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocalKnowledgeLibraryUiState())
+
+        fun updateQuery(value: String) {
+            meta.update { it.copy(query = value) }
+        }
+
+        fun updateDraftTitle(value: String) {
+            meta.update { it.copy(draftTitle = value) }
+        }
+
+        fun updateDraftSource(value: String) {
+            meta.update { it.copy(draftSource = value) }
+        }
+
+        fun updateDraftText(value: String) {
+            meta.update { it.copy(draftText = value) }
+        }
+
+        fun importDraft() {
+            val snapshot = meta.value
+            val title = snapshot.draftTitle.trim()
+            val text = snapshot.draftText.trim()
+            if (title.isBlank() || text.isBlank()) {
+                meta.update { it.copy(errorMessage = strings.localImportValidationFailed()) }
+                return
+            }
+            viewModelScope.launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        localKnowledgeStore.importText(
+                        title = title,
+                        text = text,
+                        sourceLabel = snapshot.draftSource.trim().ifBlank { strings.localManualImportSource() },
+                    )
+                    }
+                }.onSuccess {
+                    meta.update { it.copy(draftTitle = "", draftSource = "", draftText = "", errorMessage = null) }
+                }.onFailure { error ->
+                    meta.update { it.copy(errorMessage = error.message ?: strings.localImportFailed()) }
+                }
+            }
+        }
+
+        fun deleteDocument(documentId: String) {
+            viewModelScope.launch(Dispatchers.IO) {
+                localKnowledgeStore.deleteDocument(documentId)
+            }
+        }
+
+        fun setEnabled(
+            documentId: String,
+            enabled: Boolean,
+        ) {
+            viewModelScope.launch(Dispatchers.IO) {
+                localKnowledgeStore.setEnabled(documentId, enabled)
+            }
+        }
+    }
+
+@HiltViewModel
+class LocalKnowledgeDocumentViewModel
+    @Inject
+    constructor(
+        savedStateHandle: SavedStateHandle,
+        localKnowledgeStore: LocalKnowledgeStore,
+    ) : ViewModel() {
+        private val documentId: String = checkNotNull(savedStateHandle["datasetId"])
+
+        val uiState: StateFlow<LocalKnowledgeDocumentUiState> =
+            localKnowledgeStore.observeDocumentWithChunks(documentId)
+                .map { (document, chunks) ->
+                    LocalKnowledgeDocumentUiState(
+                        documentId = documentId,
+                        title = document?.title.orEmpty(),
+                        sourceLabel = document?.sourceLabel.orEmpty(),
+                        isEnabled = document?.isEnabled ?: true,
+                        chunks =
+                            chunks.map { chunk ->
+                                ChunkItemUiModel(
+                                    dataId = chunk.chunkId,
+                                    chunkIndex = chunk.chunkIndex + 1,
+                                    question = "片段 ${chunk.chunkIndex + 1}",
+                                    answer = chunk.text,
+                                    status = "active",
+                                )
+                            },
+                    )
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocalKnowledgeDocumentUiState(documentId = documentId))
     }
 
 @HiltViewModel
@@ -529,4 +699,10 @@ open class KnowledgeStrings
         open fun saveFailed(): String = context.getString(R.string.knowledge_error_save_failed)
 
         open fun searchFailed(): String = context.getString(R.string.knowledge_error_search_failed)
+
+        open fun localImportValidationFailed(): String = context.getString(R.string.knowledge_local_error_validation)
+
+        open fun localManualImportSource(): String = context.getString(R.string.knowledge_local_manual_source)
+
+        open fun localImportFailed(): String = context.getString(R.string.knowledge_local_error_import_failed)
     }

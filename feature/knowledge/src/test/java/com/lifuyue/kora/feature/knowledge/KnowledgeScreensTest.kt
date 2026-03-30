@@ -1,10 +1,14 @@
 package com.lifuyue.kora.feature.knowledge
 
 import android.content.Context
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,6 +19,97 @@ import org.robolectric.annotation.Config
 class KnowledgeScreensTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun knowledgeOverviewShowsWorkspaceSummaryCard() {
+        composeRule.setContent {
+            KnowledgeOverviewScreen(
+                state =
+                    KnowledgeOverviewUiState(
+                        selectedAppId = "app-1",
+                        datasetCount = 12,
+                        recentDatasets =
+                            listOf(
+                                DatasetListItemUiModel(
+                                    datasetId = "dataset-1",
+                                    name = "Architecture Notes",
+                                    intro = "核心知识集",
+                                    type = "qa",
+                                    status = "active",
+                                    vectorModel = "bge-m3",
+                                    updateTime = 1_743_120_000_000,
+                                ),
+                            ),
+                    ),
+                onOpenDatasets = {},
+                onOpenRecentDataset = {},
+            )
+        }
+
+        composeRule.onNodeWithTag("knowledge_overview_summary_card").assertIsDisplayed()
+        composeRule.onNodeWithText("Architecture Notes").fetchSemanticsNode()
+    }
+
+    @Test
+    fun knowledgeOverviewShowsReturnToChatActionWhenContextProvided() {
+        var returnedToChat = false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            KnowledgeOverviewScreen(
+                state = KnowledgeOverviewUiState(selectedAppId = "app-1", datasetCount = 3, status = KnowledgeLoadState.Content),
+                onOpenDatasets = {},
+                onOpenRecentDataset = {},
+                onReturnToChat = { returnedToChat = true },
+            )
+        }
+
+        val label = context.getString(R.string.knowledge_return_to_chat)
+        composeRule.onNodeWithText(label).assertExists()
+        composeRule.onNodeWithText(label).performClick()
+        composeRule.runOnIdle {
+            assertTrue(returnedToChat)
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun localKnowledgeLibraryShowsImportComposerAndDocumentActions() {
+        composeRule.setContent {
+            LocalKnowledgeLibraryScreen(
+                state =
+                    LocalKnowledgeLibraryUiState(
+                        items =
+                            listOf(
+                                LocalKnowledgeDocumentUiModel(
+                                    documentId = "doc-1",
+                                    title = "Release Notes",
+                                    sourceLabel = "Manual import",
+                                    previewText = "This note explains the latest OpenAI setup.",
+                                    chunkCount = 2,
+                                    isEnabled = true,
+                                    updatedAt = 1_743_120_000_000,
+                                ),
+                            ),
+                        status = KnowledgeLoadState.Content,
+                    ),
+                onBack = {},
+                onQueryChanged = {},
+                onTitleChanged = {},
+                onSourceChanged = {},
+                onTextChanged = {},
+                onImport = {},
+                onOpenDocument = {},
+                onDeleteDocument = {},
+                onToggleEnabled = { _, _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText("Local references").assertExists()
+        composeRule.onNodeWithText("Import text reference").assertExists()
+        composeRule.onNodeWithText("Release Notes").assertExists()
+        composeRule.onNodeWithText("View snippets").assertExists()
+        composeRule.onNodeWithText("Delete").assertExists()
+    }
 
     @Test
     fun chunkViewerHighlightsCitationTarget() {

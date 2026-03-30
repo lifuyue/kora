@@ -2,6 +2,8 @@ package com.lifuyue.kora.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lifuyue.kora.core.common.ConnectionType
+import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
@@ -30,11 +32,28 @@ class ConnectionConfigViewModel
                 connectionFacade.snapshot.collect { snapshot ->
                     mutableState.value =
                         mutableState.value.copy(
+                            connectionType = snapshot.connectionType,
                             serverUrl = snapshot.serverBaseUrl ?: mutableState.value.serverUrl,
+                            model = snapshot.model ?: mutableState.value.model,
                             apiKeyMaskedSummary = redactApiKey(snapshot.apiKey),
                         )
                 }
             }
+        }
+
+        fun onConnectionTypeChanged(value: ConnectionType) {
+            mutableState.value =
+                mutableState.value.copy(
+                    connectionType = value,
+                    serverUrl =
+                        if (value == ConnectionType.OPENAI_COMPATIBLE) {
+                            "https://api.openai.com/v1"
+                        } else {
+                            "https://api.fastgpt.in/api"
+                        },
+                    canSave = false,
+                    testResult = null,
+                )
         }
 
         fun onBaseUrlChanged(value: String) {
@@ -45,13 +64,19 @@ class ConnectionConfigViewModel
             mutableState.value = mutableState.value.copy(apiKey = value, canSave = false, testResult = null)
         }
 
+        fun onModelChanged(value: String) {
+            mutableState.value = mutableState.value.copy(model = value, canSave = false, testResult = null)
+        }
+
         fun testConnection() {
             viewModelScope.launch {
                 mutableState.value = mutableState.value.copy(isTesting = true, canSave = false)
                 val result =
                     connectionFacade.testConnection(
+                        connectionType = mutableState.value.connectionType,
                         serverBaseUrl = mutableState.value.serverUrl,
                         apiKey = mutableState.value.apiKey,
+                        model = mutableState.value.model,
                     )
                 mutableState.value =
                     mutableState.value.copy(
@@ -64,13 +89,19 @@ class ConnectionConfigViewModel
 
         fun saveConnection(onSaved: () -> Unit) {
             val result = mutableState.value.testResult as? ConnectionTestResult.Success ?: return
-            val selectedAppId = result.apps.firstOrNull()?.id ?: return
+            val selectedAppId =
+                when (mutableState.value.connectionType) {
+                    ConnectionType.OPENAI_COMPATIBLE -> DIRECT_OPENAI_APP_ID
+                    ConnectionType.FAST_GPT -> result.apps.firstOrNull()?.id ?: return
+                }
 
             viewModelScope.launch {
                 mutableState.value = mutableState.value.copy(isSaving = true)
                 connectionFacade.saveConnection(
+                    connectionType = mutableState.value.connectionType,
                     serverBaseUrl = mutableState.value.serverUrl,
                     apiKey = mutableState.value.apiKey,
+                    model = mutableState.value.model.ifBlank { null },
                     selectedAppId = selectedAppId,
                     onboardingCompleted = true,
                 )
@@ -84,8 +115,10 @@ class ConnectionConfigViewModel
                 connectionFacade.clearConnection()
                 mutableState.value =
                     ConnectionConfigUiState(
+                        connectionType = ConnectionType.OPENAI_COMPATIBLE,
                         serverUrl = ConnectionConfigUiState().serverUrl,
                         apiKey = "",
+                        model = "",
                         apiKeyMaskedSummary = "",
                     )
             }
@@ -102,9 +135,12 @@ class SettingsOverviewViewModel
             connectionFacade.snapshot
                 .map { snapshot ->
                     SettingsOverviewUiState(
+                        connectionType = snapshot.connectionType,
                         serverBaseUrl = snapshot.serverBaseUrl,
+                        model = snapshot.model,
                         selectedAppId = snapshot.selectedAppId,
                         themeMode = snapshot.appearancePreferences.themeMode,
+                        selectedLanguageTag = snapshot.appearancePreferences.languageTag,
                     )
                 }
                 .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsOverviewUiState())
@@ -132,7 +168,7 @@ class ThemeAppearanceViewModel
                 val current = connectionFacade.snapshot.value.appearancePreferences
                 connectionFacade.updateAppearance(
                     themeMode = mode,
-                    dynamicColorEnabled = current.dynamicColorEnabled,
+                    dynamicColorEnabled = if (mode == ThemeMode.SYSTEM) current.dynamicColorEnabled else false,
                     oledEnabled = current.oledEnabled,
                 )
             }

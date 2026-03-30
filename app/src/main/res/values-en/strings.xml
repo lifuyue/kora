@@ -63,4 +63,12 @@
     <string name="adaptive_chat_placeholder_body">Choose an existing conversation on the left or start a new one.</string>
     <string name="adaptive_settings_placeholder_title">Select a settings item</string>
     <string name="adaptive_settings_placeholder_body">Choose connection, theme, chat, audio, or language settings on the left.</string>
+    <string name="share_loading">Loading shared content</string>
+    <string name="share_ready">Shared content ready %1$s</string>
+    <string name="share_link_expired">Share link expired</string>
+    <string name="share_error">Failed to load shared content</string>
+    <string name="debug_demo_stop_generating">This is a debug demo screen. There is no live streaming task to stop.</string>
+    <string name="debug_demo_continue_generation">This is a debug demo screen. Continue generation is not connected to the backend yet.</string>
+    <string name="debug_demo_regenerated_reply">Regenerated version</string>
+    <string name="debug_demo_received_template">Received: %1$s</string>
 </resources>

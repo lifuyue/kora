@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatMessageUiModel
 import com.lifuyue.kora.feature.chat.ChatScreen
@@ -17,34 +19,81 @@ import com.lifuyue.kora.testing.KoraTestOverrides
 import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val EXTRA_OPEN_DEMO_CHAT = "com.lifuyue.kora.extra.OPEN_DEMO_CHAT"
+private const val EXTRA_OPEN_DEBUG_SHELL = "com.lifuyue.kora.extra.OPEN_DEBUG_SHELL"
+private const val EXTRA_DEBUG_CONNECTION_TYPE = "com.lifuyue.kora.extra.DEBUG_CONNECTION_TYPE"
+private const val EXTRA_DEBUG_CONNECTION_BASE_URL = "com.lifuyue.kora.extra.DEBUG_CONNECTION_BASE_URL"
+private const val EXTRA_DEBUG_CONNECTION_API_KEY = "com.lifuyue.kora.extra.DEBUG_CONNECTION_API_KEY"
+private const val EXTRA_DEBUG_CONNECTION_MODEL = "com.lifuyue.kora.extra.DEBUG_CONNECTION_MODEL"
 private const val DEMO_APP_ID = "demo-app"
 private const val DEMO_CHAT_ID = "demo-chat"
 
-internal fun installDebugDemoOverrides(intent: Intent?) {
-    if (intent?.getBooleanExtra(EXTRA_OPEN_DEMO_CHAT, false) != true) {
-        return
-    }
+internal data class DebugConnectionOverride(
+    val connectionType: ConnectionType,
+    val serverBaseUrl: String,
+    val apiKey: String,
+    val model: String,
+)
 
-    KoraTestOverrides.snapshotOverride =
-        MutableStateFlow(
-            ConnectionSnapshot(
-                serverBaseUrl = "https://demo.fastgpt.local/api/",
-                apiKey = "fastgpt-demo-key",
-                selectedAppId = DEMO_APP_ID,
-                onboardingCompleted = true,
-            ),
-        )
-    KoraTestOverrides.shellRouteOverride =
-        object : KoraTestOverrides.ShellRouteOverride {
-            @Composable
-            override fun Render(snapshot: ConnectionSnapshot) {
-                DemoChatScreen()
-            }
+internal fun installDebugDemoOverrides(intent: Intent?) {
+    when {
+        intent?.getBooleanExtra(EXTRA_OPEN_DEBUG_SHELL, false) == true -> {
+            KoraTestOverrides.snapshotOverride = MutableStateFlow(createDemoSnapshot())
+            KoraTestOverrides.shellRouteOverride = null
         }
+        intent?.getBooleanExtra(EXTRA_OPEN_DEMO_CHAT, false) == true -> {
+            KoraTestOverrides.snapshotOverride = MutableStateFlow(createDemoSnapshot())
+            KoraTestOverrides.shellRouteOverride =
+                object : KoraTestOverrides.ShellRouteOverride {
+                    @Composable
+                    override fun Render(snapshot: ConnectionSnapshot) {
+                        DemoChatScreen()
+                    }
+                }
+        }
+        else -> {
+            return
+        }
+    }
+}
+
+internal fun readDebugConnectionOverride(intent: Intent?): DebugConnectionOverride? {
+    val type =
+        intent
+            ?.getStringExtra(EXTRA_DEBUG_CONNECTION_TYPE)
+            ?.let { value -> ConnectionType.entries.firstOrNull { it.name == value } }
+            ?: return null
+    if (type != ConnectionType.OPENAI_COMPATIBLE) {
+        return null
+    }
+    val baseUrl = intent.getStringExtra(EXTRA_DEBUG_CONNECTION_BASE_URL)?.trim().orEmpty()
+    val apiKey = intent.getStringExtra(EXTRA_DEBUG_CONNECTION_API_KEY)?.trim().orEmpty()
+    val model = intent.getStringExtra(EXTRA_DEBUG_CONNECTION_MODEL)?.trim().orEmpty()
+    if (baseUrl.isBlank() || apiKey.isBlank() || model.isBlank()) {
+        return null
+    }
+    return DebugConnectionOverride(
+        connectionType = type,
+        serverBaseUrl = baseUrl,
+        apiKey = apiKey,
+        model = model,
+    )
+}
+
+private fun createDemoSnapshot(): ConnectionSnapshot {
+    return ConnectionSnapshot(
+        serverBaseUrl = "https://demo.fastgpt.local/api/",
+        apiKey = "fastgpt-demo-key",
+        selectedAppId = DEMO_APP_ID,
+        onboardingCompleted = true,
+    )
 }
 
 @Composable
 private fun DemoChatScreen() {
+    val stopGeneratingMessage = stringResource(R.string.debug_demo_stop_generating)
+    val continueGenerationMessage = stringResource(R.string.debug_demo_continue_generation)
+    val regeneratedReplyTitle = stringResource(R.string.debug_demo_regenerated_reply)
+    val receivedTemplate = stringResource(R.string.debug_demo_received_template)
     val messages =
         remember {
             mutableStateListOf(
@@ -112,11 +161,11 @@ private fun DemoChatScreen() {
                     role = ChatRole.AI,
                     markdown =
                         """
-                        已收到：$prompt
+                        ${receivedTemplate.format(prompt)}
 
                         ```kotlin
                         suspend fun loadAnswer(): String {
-                            return "Kora demo reply"
+                            return "Kora 演示回复"
                         }
                         ```
                         """.trimIndent(),
@@ -126,10 +175,10 @@ private fun DemoChatScreen() {
             errorMessage = null
         },
         onStopGenerating = {
-            errorMessage = "这是调试演示页，当前没有真实流式任务可停止。"
+            errorMessage = stopGeneratingMessage
         },
         onContinueGeneration = {
-            errorMessage = "这是调试演示页，继续生成功能未接入真实后端。"
+            errorMessage = continueGenerationMessage
         },
         onFeedback = { message, feedback ->
             val index = messages.indexOfFirst { it.messageId == message.messageId }
@@ -144,7 +193,7 @@ private fun DemoChatScreen() {
                     messages[index].copy(
                         markdown =
                             """
-                            ## 重新生成后的版本
+                            ## $regeneratedReplyTitle
 
                             ```kotlin
                             class DemoRegeneratedReply

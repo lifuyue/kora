@@ -3,15 +3,19 @@ package com.lifuyue.kora.navigation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,15 +24,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lifuyue.kora.R
 import com.lifuyue.kora.core.common.ConnectionSnapshot
@@ -36,8 +40,9 @@ import com.lifuyue.kora.core.database.store.ShareLinkPayload
 import com.lifuyue.kora.feature.chat.ChatRoutes
 import com.lifuyue.kora.feature.chat.chatGraph
 import com.lifuyue.kora.feature.knowledge.KnowledgeRoutes
-import com.lifuyue.kora.feature.knowledge.knowledgeGraph
+import com.lifuyue.kora.feature.settings.ChatQuickSettingsRoute
 import com.lifuyue.kora.feature.settings.SettingsRoutes
+import com.lifuyue.kora.feature.knowledge.knowledgeGraph
 import com.lifuyue.kora.feature.settings.settingsGraph
 import kotlinx.coroutines.launch
 
@@ -45,6 +50,9 @@ private const val ROUTE_BOOTSTRAP = "bootstrap"
 private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_CONNECTION = "connection"
 private const val ROUTE_SHELL = "shell"
+
+internal fun chatShellStartRoute(snapshot: ConnectionSnapshot): String =
+    snapshot.selectedAppId?.let { ChatRoutes.thread(it) } ?: SettingsRoutes.CONNECTION
 
 @Composable
 fun KoraNavGraph(
@@ -194,86 +202,107 @@ private fun OnboardingRoute(
     }
 }
 
-private enum class ShellDestination(
-    val labelRes: Int,
-) {
-    Chat(R.string.nav_chat),
-    Knowledge(R.string.nav_knowledge),
-    Settings(R.string.nav_settings),
-}
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun KoraShell(snapshot: ConnectionSnapshot) {
     val navController = rememberNavController()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    var selectedTab by rememberSaveable { mutableStateOf(ShellDestination.Chat) }
-    val chatStartRoute =
-        snapshot.selectedAppId?.let { ChatRoutes.conversations(it) } ?: SettingsRoutes.CONNECTION
+    var showChatQuickSettings by rememberSaveable { mutableStateOf(false) }
+    val chatStartRoute = chatShellStartRoute(snapshot)
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                ShellDestination.entries.forEach { destination ->
-                    val label = stringResource(destination.labelRes)
-                    NavigationBarItem(
-                        selected = selectedTab == destination,
-                        onClick = {
-                            selectedTab = destination
-                            val route =
-                                when (destination) {
-                                    ShellDestination.Chat -> chatStartRoute
-                                    ShellDestination.Knowledge -> KnowledgeRoutes.OVERVIEW
-                                    ShellDestination.Settings -> SettingsRoutes.OVERVIEW
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .testTag("shell_workspace_container"),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                KoraShellDrawer(
+                    currentAppId = snapshot.selectedAppId,
+                    onOpenChat = {
+                        scope.launch {
+                            drawerState.close()
+                            snapshot.selectedAppId?.let { appId ->
+                                navController.navigate(ChatRoutes.thread(appId)) {
+                                    launchSingleTop = true
                                 }
-                            navController.navigate(route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
+                            }
+                        }
+                    },
+                    onOpenKnowledge = {
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(KnowledgeRoutes.OVERVIEW) {
                                 launchSingleTop = true
-                                restoreState = true
+                            }
+                        }
+                    },
+                    onOpenSettings = {
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(SettingsRoutes.OVERVIEW) {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                )
+            },
+        ) {
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            ) { innerPadding ->
+                if (showChatQuickSettings) {
+                    androidx.compose.material3.ModalBottomSheet(onDismissRequest = { showChatQuickSettings = false }) {
+                        ChatQuickSettingsRoute(
+                            onOpenFullSettings = {
+                                showChatQuickSettings = false
+                                navController.navigate(SettingsRoutes.OVERVIEW) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                        )
+                    }
+                }
+                NavHost(
+                    navController = navController,
+                    startDestination = chatStartRoute,
+                    modifier = Modifier.padding(innerPadding),
+                ) {
+                    knowledgeGraph(
+                        navController = navController,
+                        onOpenDrawer = { scope.launch { drawerState.open() } },
+                    )
+                    settingsGraph(
+                        navController = navController,
+                        onConnectionSaved = {
+                            val selectedAppId = snapshot.selectedAppId
+                            if (!selectedAppId.isNullOrBlank()) {
+                                navController.navigate(ChatRoutes.thread(selectedAppId)) {
+                                    popUpTo(SettingsRoutes.CONNECTION) { inclusive = true }
+                                }
                             }
                         },
-                        icon = { Text(label.take(1)) },
-                        label = { Text(label) },
+                        currentAppId = snapshot.selectedAppId,
+                        onOpenCurrentApp = { appId ->
+                            navController.navigate(ChatRoutes.appDetail(appId))
+                        },
+                        onOpenDrawer = { scope.launch { drawerState.open() } },
                     )
-                }
-            }
-        },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = chatStartRoute,
-            modifier = Modifier.padding(innerPadding),
-        ) {
-            knowledgeGraph(navController = navController)
-            settingsGraph(
-                navController = navController,
-                onConnectionSaved = {
-                    val selectedAppId = snapshot.selectedAppId
-                    if (!selectedAppId.isNullOrBlank()) {
-                        navController.navigate(ChatRoutes.conversations(selectedAppId)) {
-                            popUpTo(SettingsRoutes.CONNECTION) { inclusive = true }
-                        }
+                    if (!snapshot.selectedAppId.isNullOrBlank()) {
+                        chatGraph(
+                            navController = navController,
+                            onOpenQuickSettings = { showChatQuickSettings = true },
+                            onOpenDrawer = { scope.launch { drawerState.open() } },
+                        )
                     }
-                },
-                currentAppId = snapshot.selectedAppId,
-                onOpenCurrentApp = { appId ->
-                    navController.navigate(ChatRoutes.appDetail(appId))
-                },
-            )
-            if (!snapshot.selectedAppId.isNullOrBlank()) {
-                chatGraph(navController = navController)
-            }
-        }
-
-        LaunchedEffect(currentRoute) {
-            selectedTab =
-                when {
-                    currentRoute?.startsWith("knowledge") == true -> ShellDestination.Knowledge
-                    currentRoute?.startsWith("settings") == true -> ShellDestination.Settings
-                    else -> ShellDestination.Chat
                 }
+            }
         }
     }
 }

@@ -2,7 +2,14 @@ package com.lifuyue.kora.feature.chat
 
 import android.content.Context
 import android.net.Uri
+import com.lifuyue.kora.feature.chat.buildChatCompletionContent
+import com.lifuyue.kora.feature.chat.chatString
+import com.lifuyue.kora.feature.chat.resolveAttachmentMetadata
+import com.lifuyue.kora.feature.chat.toChatAttachmentConfig
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.ConnectionSnapshot
+import com.lifuyue.kora.core.common.ConnectionSnapshotProvider
+import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.NetworkError
 import com.lifuyue.kora.core.database.dao.ConversationDao
 import com.lifuyue.kora.core.database.dao.ConversationFolderAssignmentRow
@@ -11,6 +18,8 @@ import com.lifuyue.kora.core.database.dao.ConversationTagAssignmentRow
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
 import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
 import com.lifuyue.kora.core.database.dao.MessageDao
+import com.lifuyue.kora.core.database.LocalKnowledgeHit
+import com.lifuyue.kora.core.database.LocalKnowledgeStore
 import com.lifuyue.kora.core.database.entity.ConversationEntity
 import com.lifuyue.kora.core.database.entity.ConversationFolderCrossRef
 import com.lifuyue.kora.core.database.entity.ConversationFolderEntity
@@ -28,6 +37,7 @@ import com.lifuyue.kora.core.network.DeleteChatItemRequest
 import com.lifuyue.kora.core.network.FastGptApi
 import com.lifuyue.kora.core.network.NetworkException
 import com.lifuyue.kora.core.network.NetworkJson
+import com.lifuyue.kora.core.network.OpenAiChatCompletionRequest
 import com.lifuyue.kora.core.network.PaginationRecordsRequest
 import com.lifuyue.kora.core.network.QuestionGuideRequest
 import com.lifuyue.kora.core.network.SseEventData
@@ -43,6 +53,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
@@ -50,12 +61,12 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
@@ -83,9 +94,11 @@ class RoomChatRepository
         private val messageDao: MessageDao,
         private val context: Context,
         private val json: Json = NetworkJson.default,
-        ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+        private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
         private val responsePlanner: AssistantResponsePlanner? = null,
         private val clock: () -> Long = { System.currentTimeMillis() },
+        private val connectionSnapshotProvider: ConnectionSnapshotProvider = ConnectionSnapshotProvider { ConnectionSnapshot() },
+        private val localKnowledgeStore: LocalKnowledgeStore? = null,
     ) : ChatRepository, ConversationRepository {
         private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
         private val streamingJobs = linkedMapOf<String, Job>()
@@ -98,8 +111,18 @@ class RoomChatRepository
             appId: String,
             chatId: String?,
         ): ChatBootstrap {
-            val data = api.initChat(appId = appId, chatId = chatId).data
-            val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: chatId?.takeIf { it.isNotBlank() } ?: nextId("chat")
+            val normalizedChatId = normalizeChatId(chatId)
+            if (isOpenAiMode(appId)) {
+                val resolvedChatId = normalizedChatId ?: nextId("chat")
+                return ChatBootstrap(
+                    chatId = resolvedChatId,
+                    title = context.getString(R.string.chat_repository_new_conversation_title),
+                    welcomeText = null,
+                    attachmentConfig = ChatAttachmentConfig(),
+                ).also { chatBootstrapByChatId[resolvedChatId] = it }
+            }
+            val data = api.initChat(appId = appId, chatId = normalizedChatId).data
+            val resolvedChatId = data?.chatId?.takeIf { it.isNotBlank() } ?: normalizedChatId ?: nextId("chat")
             return ChatBootstrap(
                 chatId = resolvedChatId,
                 title = data?.title.orEmpty(),
@@ -136,38 +159,43 @@ class RoomChatRepository
             }
 
         override suspend fun refreshConversations(appId: String) {
-            val histories = api.getHistories(ChatHistoriesRequest(appId = appId)).data?.list.orEmpty()
-            val existing = conversationDao.getConversationsForAppIncludingDeleted(appId = appId, limit = Int.MAX_VALUE, offset = 0)
-            val existingByChatId = existing.associateBy { it.chatId }
-            val remoteChatIds = histories.map { it.chatId }
-            val missingChatIds = existing.map { it.chatId }.filterNot(remoteChatIds::contains)
-
-            if (histories.isEmpty()) {
-                val existingChatIds = existing.map { it.chatId }
-                conversationDao.clearByAppId(appId)
-                if (existingChatIds.isNotEmpty()) {
-                    conversationFolderDao.clearAssignments(existingChatIds)
-                    conversationTagDao.clearAssignments(existingChatIds)
-                }
-                existingChatIds.forEach(messageDao::deleteMessagesForChat)
+            if (isOpenAiMode(appId)) {
                 return
             }
+            val histories = api.getHistories(ChatHistoriesRequest(appId = appId)).data?.list.orEmpty()
+            onIo {
+                val existing = conversationDao.getConversationsForAppIncludingDeleted(appId = appId, limit = Int.MAX_VALUE, offset = 0)
+                val existingByChatId = existing.associateBy { it.chatId }
+                val remoteChatIds = histories.map { it.chatId }
+                val missingChatIds = existing.map { it.chatId }.filterNot(remoteChatIds::contains)
 
-            histories.forEach { item ->
-                val cached = existingByChatId[item.chatId]
-                conversationDao.upsert(
-                    item.toConversationEntity(
-                        cached = cached,
-                        updateTime = item.updateTime.toEpochMillis(),
-                    ),
-                )
+                if (histories.isEmpty()) {
+                    val existingChatIds = existing.map { it.chatId }
+                    conversationDao.clearByAppId(appId)
+                    if (existingChatIds.isNotEmpty()) {
+                        conversationFolderDao.clearAssignments(existingChatIds)
+                        conversationTagDao.clearAssignments(existingChatIds)
+                    }
+                    existingChatIds.forEach(messageDao::deleteMessagesForChat)
+                    return@onIo
+                }
+
+                histories.forEach { item ->
+                    val cached = existingByChatId[item.chatId]
+                    conversationDao.upsert(
+                        item.toConversationEntity(
+                            cached = cached,
+                            updateTime = item.updateTime.toEpochMillis(),
+                        ),
+                    )
+                }
+                missingChatIds.forEach(conversationDao::softDelete)
+                if (missingChatIds.isNotEmpty()) {
+                    conversationFolderDao.clearAssignments(missingChatIds)
+                    conversationTagDao.clearAssignments(missingChatIds)
+                }
+                missingChatIds.forEach(messageDao::deleteMessagesForChat)
             }
-            missingChatIds.forEach(conversationDao::softDelete)
-            if (missingChatIds.isNotEmpty()) {
-                conversationFolderDao.clearAssignments(missingChatIds)
-                conversationTagDao.clearAssignments(missingChatIds)
-            }
-            missingChatIds.forEach(messageDao::deleteMessagesForChat)
         }
 
         override suspend fun renameConversation(
@@ -183,14 +211,16 @@ class RoomChatRepository
                     customTitle = title,
                 ),
             )
-            conversationDao.updateConversation(
-                chatId = chatId,
-                title = title,
-                customTitle = title,
-                isPinned = null,
-                updateTime = clock(),
-                lastMessagePreview = null,
-            )
+            onIo {
+                conversationDao.updateConversation(
+                    chatId = chatId,
+                    title = title,
+                    customTitle = title,
+                    isPinned = null,
+                    updateTime = clock(),
+                    lastMessagePreview = null,
+                )
+            }
         }
 
         override suspend fun togglePinConversation(
@@ -205,14 +235,16 @@ class RoomChatRepository
                     top = pinned,
                 ),
             )
-            conversationDao.updateConversation(
-                chatId = chatId,
-                title = null,
-                customTitle = conversationDao.getConversationByChatId(chatId)?.customTitle,
-                isPinned = pinned,
-                updateTime = clock(),
-                lastMessagePreview = null,
-            )
+            onIo {
+                conversationDao.updateConversation(
+                    chatId = chatId,
+                    title = null,
+                    customTitle = conversationDao.getConversationByChatId(chatId)?.customTitle,
+                    isPinned = pinned,
+                    updateTime = clock(),
+                    lastMessagePreview = null,
+                )
+            }
         }
 
         override suspend fun deleteConversation(
@@ -221,40 +253,46 @@ class RoomChatRepository
         ) {
             streamingJobs.remove(chatId)?.cancel()
             api.deleteHistory(appId = appId, chatId = chatId)
-            conversationDao.softDelete(chatId)
-            conversationFolderDao.clearAssignment(chatId)
-            conversationTagDao.clearAssignments(chatId)
-            messageDao.deleteMessagesForChat(chatId)
+            onIo {
+                conversationDao.softDelete(chatId)
+                conversationFolderDao.clearAssignment(chatId)
+                conversationTagDao.clearAssignments(chatId)
+                messageDao.deleteMessagesForChat(chatId)
+            }
         }
 
         override suspend fun clearConversations(appId: String) {
-            val chatIds =
-                conversationDao.getConversationsForAppIncludingDeleted(
-                    appId = appId,
-                    limit = Int.MAX_VALUE,
-                    offset = 0,
-                ).map { it.chatId }
             api.clearHistories(appId)
-            conversationDao.clearByAppId(appId)
-            if (chatIds.isNotEmpty()) {
-                conversationFolderDao.clearAssignments(chatIds)
-                conversationTagDao.clearAssignments(chatIds)
+            onIo {
+                val chatIds =
+                    conversationDao.getConversationsForAppIncludingDeleted(
+                        appId = appId,
+                        limit = Int.MAX_VALUE,
+                        offset = 0,
+                    ).map { it.chatId }
+                conversationDao.clearByAppId(appId)
+                if (chatIds.isNotEmpty()) {
+                    conversationFolderDao.clearAssignments(chatIds)
+                    conversationTagDao.clearAssignments(chatIds)
+                }
+                chatIds.forEach(messageDao::deleteMessagesForChat)
             }
-            chatIds.forEach(messageDao::deleteMessagesForChat)
         }
 
         override suspend fun createFolder(
             appId: String,
             name: String,
         ) {
-            conversationFolderDao.upsert(
-                ConversationFolderEntity(
-                    folderId = nextId("folder"),
-                    appId = appId,
-                    name = name,
-                    sortOrder = (conversationFolderDao.getLastFolder(appId)?.sortOrder ?: -1L) + 1L,
-                ),
-            )
+            onIo {
+                conversationFolderDao.upsert(
+                    ConversationFolderEntity(
+                        folderId = nextId("folder"),
+                        appId = appId,
+                        name = name,
+                        sortOrder = (conversationFolderDao.getLastFolder(appId)?.sortOrder ?: -1L) + 1L,
+                    ),
+                )
+            }
         }
 
         override suspend fun renameFolder(
@@ -262,31 +300,33 @@ class RoomChatRepository
             folderId: String,
             name: String,
         ) {
-            conversationFolderDao.rename(folderId = folderId, name = name)
+            onIo { conversationFolderDao.rename(folderId = folderId, name = name) }
         }
 
         override suspend fun deleteFolder(
             appId: String,
             folderId: String,
         ) {
-            conversationFolderDao.delete(folderId)
+            onIo { conversationFolderDao.delete(folderId) }
         }
 
         override suspend fun createTag(
             appId: String,
             name: String,
         ) {
-            val nextSortOrder = (conversationTagDao.getLastTag(appId)?.sortOrder ?: -1L) + 1L
-            val colorToken = tagColorTokens[(nextSortOrder % tagColorTokens.size.toLong()).toInt()]
-            conversationTagDao.upsert(
-                ConversationTagEntity(
-                    tagId = nextId("tag"),
-                    appId = appId,
-                    name = name,
-                    colorToken = colorToken,
-                    sortOrder = nextSortOrder,
-                ),
-            )
+            onIo {
+                val nextSortOrder = (conversationTagDao.getLastTag(appId)?.sortOrder ?: -1L) + 1L
+                val colorToken = tagColorTokens[(nextSortOrder % tagColorTokens.size.toLong()).toInt()]
+                conversationTagDao.upsert(
+                    ConversationTagEntity(
+                        tagId = nextId("tag"),
+                        appId = appId,
+                        name = name,
+                        colorToken = colorToken,
+                        sortOrder = nextSortOrder,
+                    ),
+                )
+            }
         }
 
         override suspend fun renameTag(
@@ -294,14 +334,14 @@ class RoomChatRepository
             tagId: String,
             name: String,
         ) {
-            conversationTagDao.rename(tagId = tagId, name = name)
+            onIo { conversationTagDao.rename(tagId = tagId, name = name) }
         }
 
         override suspend fun deleteTag(
             appId: String,
             tagId: String,
         ) {
-            conversationTagDao.delete(tagId)
+            onIo { conversationTagDao.delete(tagId) }
         }
 
         override suspend fun moveConversationToFolder(
@@ -309,9 +349,11 @@ class RoomChatRepository
             chatId: String,
             folderId: String?,
         ) {
-            conversationFolderDao.clearAssignment(chatId)
-            if (!folderId.isNullOrBlank()) {
-                conversationFolderDao.upsertAssignment(ConversationFolderCrossRef(chatId = chatId, folderId = folderId))
+            onIo {
+                conversationFolderDao.clearAssignment(chatId)
+                if (!folderId.isNullOrBlank()) {
+                    conversationFolderDao.upsertAssignment(ConversationFolderCrossRef(chatId = chatId, folderId = folderId))
+                }
             }
         }
 
@@ -320,10 +362,12 @@ class RoomChatRepository
             chatId: String,
             tagIds: List<String>,
         ) {
-            conversationTagDao.clearAssignments(chatId)
-            val refs = tagIds.distinct().map { tagId -> ConversationTagCrossRef(chatId = chatId, tagId = tagId) }
-            if (refs.isNotEmpty()) {
-                conversationTagDao.upsertAssignments(refs)
+            onIo {
+                conversationTagDao.clearAssignments(chatId)
+                val refs = tagIds.distinct().map { tagId -> ConversationTagCrossRef(chatId = chatId, tagId = tagId) }
+                if (refs.isNotEmpty()) {
+                    conversationTagDao.upsertAssignments(refs)
+                }
             }
         }
 
@@ -332,7 +376,7 @@ class RoomChatRepository
             chatId: String,
             archived: Boolean,
         ) {
-            conversationDao.updateArchived(chatId = chatId, isArchived = archived)
+            onIo { conversationDao.updateArchived(chatId = chatId, isArchived = archived) }
         }
 
         override fun observeMessages(
@@ -343,7 +387,7 @@ class RoomChatRepository
                 return flowOf(emptyList())
             }
             return flow {
-                val needsRestore = messageDao.getMessagesForChat(chatId).isEmpty()
+                val needsRestore = onIo { messageDao.getMessagesForChat(chatId).isEmpty() }
                 if (needsRestore) {
                     ensureMessagesRestored(appId = appId, chatId = chatId)
                     emit(emptyList())
@@ -363,7 +407,10 @@ class RoomChatRepository
             appId: String,
             chatId: String,
         ) {
-            if (messageDao.getMessagesForChat(chatId).isNotEmpty()) {
+            if (isOpenAiMode(appId)) {
+                return
+            }
+            if (onIo { messageDao.getMessagesForChat(chatId).isNotEmpty() }) {
                 return
             }
             val response =
@@ -387,8 +434,10 @@ class RoomChatRepository
                         payload = record.toStoredPayload(),
                     )
                 }
-            messageDao.upsertAll(entities)
-            updateConversationPreview(chatId, entities.lastOrNull()?.let { messageToUiModel(it, null) }?.markdown.orEmpty())
+            onIo {
+                messageDao.upsertAll(entities)
+                updateConversationPreview(chatId, entities.lastOrNull()?.let { messageToUiModel(it, null) }?.markdown.orEmpty())
+            }
         }
 
         override suspend fun sendMessage(
@@ -397,76 +446,97 @@ class RoomChatRepository
             text: String,
             attachments: List<AttachmentDraftUiModel>,
         ): String {
-            val prompt = text.trim()
-            val uploadedAttachments = attachments.filter { it.uploadStatus == AttachmentUploadStatus.Uploaded && it.uploadedRef != null }
-            require(prompt.isNotEmpty() || uploadedAttachments.isNotEmpty()) { "消息不能为空" }
+            return onIo {
+                val normalizedChatId = normalizeChatId(chatId)
+                val prompt = text.trim()
+                val uploadedAttachments = attachments.filter { it.uploadStatus == AttachmentUploadStatus.Uploaded && it.uploadedRef != null }
+                require(prompt.isNotEmpty() || uploadedAttachments.isNotEmpty()) { "消息不能为空" }
 
-            val initData =
-                if (chatId == null) {
-                    api.initChat(appId = appId, chatId = null).data
-                } else {
-                    null
+                val initData =
+                    if (normalizedChatId == null && !isOpenAiMode(appId)) {
+                        api.initChat(appId = appId, chatId = null).data
+                    } else {
+                        null
+                    }
+                val resolvedChatId =
+                    normalizedChatId
+                        ?: initData?.chatId?.takeIf { it.isNotBlank() }
+                        ?: nextId("chat")
+                if (initData != null) {
+                    chatBootstrapByChatId[resolvedChatId] =
+                        ChatBootstrap(
+                            chatId = resolvedChatId,
+                            title = initData.title.orEmpty(),
+                            welcomeText = initData.welcomeText,
+                            questionGuide = initData.questionGuide,
+                            attachmentConfig = initData.fileSelectConfig.toChatAttachmentConfig(),
+                        )
                 }
-            val resolvedChatId =
-                chatId
-                    ?: initData?.chatId?.takeIf { it.isNotBlank() }
-                    ?: nextId("chat")
-            if (initData != null) {
-                chatBootstrapByChatId[resolvedChatId] =
-                    ChatBootstrap(
-                        chatId = resolvedChatId,
-                        title = initData.title.orEmpty(),
-                        welcomeText = initData.welcomeText,
-                        questionGuide = initData.questionGuide,
-                        attachmentConfig = initData.fileSelectConfig.toChatAttachmentConfig(),
-                    )
-            }
-            val createdAt = nextCreatedAt()
-            val previewText =
-                prompt.ifBlank {
-                    uploadedAttachments.joinToString(separator = "、") { it.displayName }
-                }
-            val humanMessage =
-                newMessageEntity(
-                    dataId = nextId("human"),
-                    chatId = resolvedChatId,
-                    appId = appId,
-                    role = ChatRole.Human,
-                    markdown = previewText,
-                    sendStatus = "sent",
-                    isStreaming = false,
-                    createdAt = createdAt,
-                )
-            val assistantMessage =
-                newStreamingAssistantEntity(
-                    chatId = resolvedChatId,
-                    appId = appId,
-                    createdAt = createdAt + 1L,
-                )
-
-            upsertConversation(
-                appId = appId,
-                chatId = resolvedChatId,
-                title =
-                    conversationDao.getConversationByChatId(resolvedChatId)?.displayTitle
-                        ?: initData?.title?.takeIf { it.isNotBlank() }
-                        ?: previewText.take(18).ifBlank { context.getString(R.string.chat_repository_new_conversation_title) },
-                preview = previewText,
-            )
-            messageDao.upsertAll(listOf(humanMessage, assistantMessage))
-
-            startStreaming(
-                appId = appId,
-                chatId = resolvedChatId,
-                prompt = prompt,
-                assistantMessageId = assistantMessage.dataId,
-                userMessage =
+                val createdAt = nextCreatedAt()
+                val previewText =
+                    prompt.ifBlank {
+                        uploadedAttachments.joinToString(separator = "、") { it.displayName }
+                    }
+                val currentUserMessage =
                     ChatCompletionMessageParam(
                         role = "user",
                         content = buildChatCompletionContent(prompt, uploadedAttachments),
-                    ),
-            )
-            return resolvedChatId
+                    )
+                val localHits =
+                    if (isOpenAiMode(appId)) {
+                        localKnowledgeStore?.search(prompt).orEmpty()
+                    } else {
+                        emptyList()
+                    }
+                val humanMessage =
+                    newMessageEntity(
+                        dataId = nextId("human"),
+                        chatId = resolvedChatId,
+                        appId = appId,
+                        role = ChatRole.Human,
+                        markdown = previewText,
+                        sendStatus = "sent",
+                        isStreaming = false,
+                        createdAt = createdAt,
+                    )
+                val assistantMessage =
+                    newStreamingAssistantEntity(
+                        chatId = resolvedChatId,
+                        appId = appId,
+                        createdAt = createdAt + 1L,
+                    )
+
+                upsertConversation(
+                    appId = appId,
+                    chatId = resolvedChatId,
+                    title =
+                        conversationDao.getConversationByChatId(resolvedChatId)?.displayTitle
+                            ?: initData?.title?.takeIf { it.isNotBlank() }
+                            ?: previewText.take(18).ifBlank { context.getString(R.string.chat_repository_new_conversation_title) },
+                    preview = previewText,
+                )
+                messageDao.upsertAll(listOf(humanMessage, assistantMessage))
+
+                startStreaming(
+                    appId = appId,
+                    chatId = resolvedChatId,
+                    prompt = prompt,
+                    assistantMessageId = assistantMessage.dataId,
+                    userMessage = currentUserMessage,
+                    openAiMessages =
+                        if (isOpenAiMode(appId)) {
+                            buildOpenAiConversationMessages(
+                                chatId = resolvedChatId,
+                                currentUserMessage = currentUserMessage,
+                                localHits = localHits,
+                            )
+                        } else {
+                            null
+                        },
+                    localCitations = localHits.map(LocalKnowledgeHit::toCitationPayload),
+                )
+                resolvedChatId
+            }
         }
 
         override suspend fun stopStreaming(
@@ -474,45 +544,66 @@ class RoomChatRepository
             chatId: String,
         ) {
             streamingJobs.remove(chatId)?.cancel()
-            val current = messageDao.getMessagesForChat(chatId).lastOrNull { it.role == ChatRole.AI.name && it.isStreaming } ?: return
-            val stoppedMessage = context.getString(R.string.chat_repository_stopped_message)
-            messageDao.updateMessageState(
-                dataId = current.dataId,
-                payloadJson = updateStoredPayload(current.payloadJson, errorMessage = stoppedMessage, json = json),
-                isStreaming = false,
-                sendStatus = "stopped",
-                errorCode = current.errorCode,
-            )
-            updateConversationPreview(
-                chatId,
-                messageToUiModel(
-                    current.copy(payloadJson = updateStoredPayload(current.payloadJson, errorMessage = stoppedMessage, json = json)),
-                    null,
-                ).markdown,
-            )
+            onIo {
+                val current = messageDao.getMessagesForChat(chatId).lastOrNull { it.role == ChatRole.AI.name && it.isStreaming } ?: return@onIo
+                val stoppedMessage = context.getString(R.string.chat_repository_stopped_message)
+                messageDao.updateMessageState(
+                    dataId = current.dataId,
+                    payloadJson = updateStoredPayload(current.payloadJson, errorMessage = stoppedMessage, json = json),
+                    isStreaming = false,
+                    sendStatus = "stopped",
+                    errorCode = current.errorCode,
+                )
+                updateConversationPreview(
+                    chatId,
+                    messageToUiModel(
+                        current.copy(payloadJson = updateStoredPayload(current.payloadJson, errorMessage = stoppedMessage, json = json)),
+                        null,
+                    ).markdown,
+                )
+            }
         }
 
         override suspend fun continueGeneration(
             appId: String,
             chatId: String,
         ): String {
-            val prompt =
-                messageDao.getMessagesForChat(chatId)
-                    .lastOrNull { it.role == ChatRole.Human.name }
-                    ?.let { messageToUiModel(it, null) }
-                    ?.markdown
-                    .orEmpty()
-                    .ifBlank { context.getString(R.string.chat_repository_continue_prompt) }
-            val assistantMessage =
-                newStreamingAssistantEntity(
-                    chatId = chatId,
+            return onIo {
+                val prompt =
+                    messageDao.getMessagesForChat(chatId)
+                        .lastOrNull { it.role == ChatRole.Human.name }
+                        ?.let { messageToUiModel(it, null) }
+                        ?.markdown
+                        .orEmpty()
+                        .ifBlank { context.getString(R.string.chat_repository_continue_prompt) }
+                val assistantMessage =
+                    newStreamingAssistantEntity(
+                        chatId = chatId,
+                        appId = appId,
+                        createdAt = nextCreatedAt(),
+                    )
+                messageDao.upsert(assistantMessage)
+                updateConversationPreview(chatId, context.getString(R.string.chat_repository_continue_preview))
+                val localHits = if (isOpenAiMode(appId)) localKnowledgeStore?.search(prompt).orEmpty() else emptyList()
+                startStreaming(
                     appId = appId,
-                    createdAt = nextCreatedAt(),
+                    chatId = chatId,
+                    prompt = prompt,
+                    assistantMessageId = assistantMessage.dataId,
+                    openAiMessages =
+                        if (isOpenAiMode(appId)) {
+                            buildOpenAiConversationMessages(
+                                chatId = chatId,
+                                currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt)),
+                                localHits = localHits,
+                            )
+                        } else {
+                            null
+                        },
+                    localCitations = localHits.map(LocalKnowledgeHit::toCitationPayload),
                 )
-            messageDao.upsert(assistantMessage)
-            updateConversationPreview(chatId, context.getString(R.string.chat_repository_continue_preview))
-            startStreaming(appId = appId, chatId = chatId, prompt = prompt, assistantMessageId = assistantMessage.dataId)
-            return chatId
+                chatId
+            }
         }
 
         override suspend fun regenerateResponse(
@@ -520,30 +611,51 @@ class RoomChatRepository
             chatId: String,
             messageId: String,
         ): String {
-            val messages = messageDao.getMessagesForChat(chatId)
-            val targetIndex = messages.indexOfFirst { it.dataId == messageId }.takeIf { it >= 0 } ?: messages.lastIndex
-            val prompt =
-                messages
-                    .take(targetIndex + 1)
-                    .lastOrNull { it.role == ChatRole.Human.name }
-                    ?.let { messageToUiModel(it, null) }
-                    ?.markdown
-                    .orEmpty()
-                    .ifBlank { context.getString(R.string.chat_repository_continue_prompt) }
+            if (!isOpenAiMode(appId)) {
+                api.deleteChatItem(DeleteChatItemRequest(appId = appId, chatId = chatId, contentId = messageId))
+            }
+            return onIo {
+                val messages = messageDao.getMessagesForChat(chatId)
+                val targetIndex = messages.indexOfFirst { it.dataId == messageId }.takeIf { it >= 0 } ?: messages.lastIndex
+                val prompt =
+                    messages
+                        .take(targetIndex + 1)
+                        .lastOrNull { it.role == ChatRole.Human.name }
+                        ?.let { messageToUiModel(it, null) }
+                        ?.markdown
+                        .orEmpty()
+                        .ifBlank { context.getString(R.string.chat_repository_continue_prompt) }
 
-            api.deleteChatItem(DeleteChatItemRequest(appId = appId, chatId = chatId, contentId = messageId))
-            messageDao.deleteMessage(messageId)
+                messageDao.deleteMessage(messageId)
 
-            val assistantMessage =
-                newStreamingAssistantEntity(
-                    chatId = chatId,
+                val assistantMessage =
+                    newStreamingAssistantEntity(
+                        chatId = chatId,
+                        appId = appId,
+                        createdAt = nextCreatedAt(),
+                    )
+                messageDao.upsert(assistantMessage)
+                updateConversationPreview(chatId, context.getString(R.string.chat_repository_regenerate_preview))
+                val localHits = if (isOpenAiMode(appId)) localKnowledgeStore?.search(prompt).orEmpty() else emptyList()
+                startStreaming(
                     appId = appId,
-                    createdAt = nextCreatedAt(),
+                    chatId = chatId,
+                    prompt = prompt,
+                    assistantMessageId = assistantMessage.dataId,
+                    openAiMessages =
+                        if (isOpenAiMode(appId)) {
+                            buildOpenAiConversationMessages(
+                                chatId = chatId,
+                                currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt)),
+                                localHits = localHits,
+                            )
+                        } else {
+                            null
+                        },
+                    localCitations = localHits.map(LocalKnowledgeHit::toCitationPayload),
                 )
-            messageDao.upsert(assistantMessage)
-            updateConversationPreview(chatId, context.getString(R.string.chat_repository_regenerate_preview))
-            startStreaming(appId = appId, chatId = chatId, prompt = prompt, assistantMessageId = assistantMessage.dataId)
-            return chatId
+                chatId
+            }
         }
 
         override suspend fun setFeedback(
@@ -552,16 +664,18 @@ class RoomChatRepository
             messageId: String,
             feedback: MessageFeedback,
         ) {
-            messageDao.updateFeedback(messageId, feedback.toFeedbackType())
-            api.updateUserFeedback(
-                UpdateUserFeedbackRequest(
-                    appId = appId,
-                    chatId = chatId,
-                    dataId = messageId,
-                    userGoodFeedback = if (feedback == MessageFeedback.Upvote) "upvote" else null,
-                    userBadFeedback = if (feedback == MessageFeedback.Downvote) "downvote" else null,
-                ),
-            )
+            onIo { messageDao.updateFeedback(messageId, feedback.toFeedbackType()) }
+            if (!isOpenAiMode(appId)) {
+                api.updateUserFeedback(
+                    UpdateUserFeedbackRequest(
+                        appId = appId,
+                        chatId = chatId,
+                        dataId = messageId,
+                        userGoodFeedback = if (feedback == MessageFeedback.Upvote) "upvote" else null,
+                        userBadFeedback = if (feedback == MessageFeedback.Downvote) "downvote" else null,
+                    ),
+                )
+            }
         }
 
         override suspend fun uploadAttachment(
@@ -608,23 +722,25 @@ class RoomChatRepository
             card: InteractiveCardUiModel,
             draftPayloadJson: String?,
         ) {
-            interactiveDraftDao.upsert(
-                InteractiveDraftEntity(
-                    chatId = chatId,
-                    messageDataId = card.messageDataId,
-                    responseValueId = card.responseValueId,
-                    rawPayloadJson = card.toRawPayloadJson(),
-                    draftPayloadJson = draftPayloadJson,
-                    updatedAt = clock(),
-                ),
-            )
+            onIo {
+                interactiveDraftDao.upsert(
+                    InteractiveDraftEntity(
+                        chatId = chatId,
+                        messageDataId = card.messageDataId,
+                        responseValueId = card.responseValueId,
+                        rawPayloadJson = card.toRawPayloadJson(),
+                        draftPayloadJson = draftPayloadJson,
+                        updatedAt = clock(),
+                    ),
+                )
+            }
         }
 
         override suspend fun clearPendingInteractiveDraft(
             appId: String,
             chatId: String,
         ) {
-            interactiveDraftDao.deleteByChatId(chatId)
+            onIo { interactiveDraftDao.deleteByChatId(chatId) }
         }
 
         override suspend fun submitInteractiveResponse(
@@ -639,21 +755,23 @@ class RoomChatRepository
 
             val createdAt = nextCreatedAt()
             val submissionPayload = card.toDraftPayloadJson(value = trimmed, status = InteractiveCardStatus.Submitting)
-            interactiveDraftDao.upsert(
-                InteractiveDraftEntity(
-                    chatId = chatId,
+            onIo {
+                interactiveDraftDao.upsert(
+                    InteractiveDraftEntity(
+                        chatId = chatId,
+                        messageDataId = card.messageDataId,
+                        responseValueId = card.responseValueId,
+                        rawPayloadJson = card.toRawPayloadJson(),
+                        draftPayloadJson = submissionPayload,
+                        updatedAt = clock(),
+                    ),
+                )
+                updateInteractiveMessageState(
                     messageDataId = card.messageDataId,
-                    responseValueId = card.responseValueId,
-                    rawPayloadJson = card.toRawPayloadJson(),
-                    draftPayloadJson = submissionPayload,
-                    updatedAt = clock(),
-                ),
-            )
-            updateInteractiveMessageState(
-                messageDataId = card.messageDataId,
-                status = InteractiveCardStatus.Submitting,
-                submissionPayloadJson = submissionPayload,
-            )
+                    status = InteractiveCardStatus.Submitting,
+                    submissionPayloadJson = submissionPayload,
+                )
+            }
             val humanMessage =
                 newMessageEntity(
                     dataId = nextId("human"),
@@ -671,8 +789,11 @@ class RoomChatRepository
                     appId = appId,
                     createdAt = createdAt + 1L,
                 )
-            messageDao.upsertAll(listOf(humanMessage, assistantMessage))
-            updateConversationPreview(chatId, displayValue)
+            onIo {
+                messageDao.upsertAll(listOf(humanMessage, assistantMessage))
+                updateConversationPreview(chatId, displayValue)
+            }
+            val localHits = if (isOpenAiMode(appId)) localKnowledgeStore?.search(displayValue).orEmpty() else emptyList()
             startStreaming(
                 appId = appId,
                 chatId = chatId,
@@ -684,6 +805,17 @@ class RoomChatRepository
                         content = JsonPrimitive(displayValue),
                         interactive = card.toSubmissionPayload(trimmed),
                     ),
+                openAiMessages =
+                    if (isOpenAiMode(appId)) {
+                        buildOpenAiConversationMessages(
+                            chatId = chatId,
+                            currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(displayValue)),
+                            localHits = localHits,
+                        )
+                    } else {
+                        null
+                    },
+                localCitations = localHits.map(LocalKnowledgeHit::toCitationPayload),
                 onSuccess = {
                     interactiveDraftDao.deleteByChatId(chatId)
                     updateInteractiveMessageState(
@@ -700,16 +832,15 @@ class RoomChatRepository
             appId: String,
             chatId: String,
         ) {
-            if (messageDao.getMessagesForChat(chatId).isNotEmpty()) {
-                return
-            }
             if (restoringJobs.containsKey(chatId)) {
                 return
             }
             restoringJobs[chatId] =
                 scope.launch {
                     try {
-                        restoreMessages(appId = appId, chatId = chatId)
+                        if (messageDao.getMessagesForChat(chatId).isEmpty()) {
+                            restoreMessages(appId = appId, chatId = chatId)
+                        }
                     } finally {
                         restoringJobs.remove(chatId)
                     }
@@ -722,6 +853,8 @@ class RoomChatRepository
             prompt: String,
             assistantMessageId: String,
             userMessage: ChatCompletionMessageParam? = null,
+            openAiMessages: List<ChatCompletionMessageParam>? = null,
+            localCitations: List<CitationPayload> = emptyList(),
             onSuccess: suspend () -> Unit = {},
         ) {
             streamingJobs.remove(chatId)?.cancel()
@@ -747,8 +880,8 @@ class RoomChatRepository
                                     delay(step.delayMillis)
                                 }
                                 coroutineContext.ensureActive()
-                                markdown += step.markdownDelta
-                                reasoning += step.reasoningDelta
+                                markdown = mergeStreamChunk(markdown, step.markdownDelta)
+                                reasoning = mergeStreamChunk(reasoning, step.reasoningDelta)
                                 persistAssistantState(
                                     dataId = assistantMessageId,
                                     markdown = markdown,
@@ -766,19 +899,27 @@ class RoomChatRepository
                                 }
                             }
                         } else {
-                            sseStreamClient
-                                .streamChatCompletions(
-                                    ChatCompletionRequest(
-                                        chatId = chatId,
-                                        appId = appId,
-                                        responseChatItemId = assistantMessageId,
-                                        messages = listOf(userMessage ?: ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt))),
-                                    ),
-                                ).collect { event ->
+                            streamAssistantUpdates(
+                                appId = appId,
+                                chatId = chatId,
+                                assistantMessageId = assistantMessageId,
+                                prompt = prompt,
+                                userMessage = userMessage,
+                                openAiMessages = openAiMessages,
+                            ).collect { event ->
                                     val update =
                                         event.toAssistantUpdate(
                                             malformedMessage = context.getString(R.string.chat_repository_malformed_sse),
                                         )
+                                    val normalizedUpdate =
+                                        if (isOpenAiMode(appId)) {
+                                            update.copy(
+                                                markdownDelta = normalizeOpenAiVisibleDelta(update.markdownDelta),
+                                                reasoningDelta = "",
+                                            )
+                                        } else {
+                                            update
+                                        }
                                     if (update.error != null) {
                                         failed = true
                                         persistAssistantState(
@@ -792,24 +933,28 @@ class RoomChatRepository
                                             errorMessage = update.error.message,
                                         )
                                         updateConversationPreview(chatId, markdown.ifBlank { update.error.message })
-                                    } else if (
-                                        update.markdownDelta.isNotEmpty() ||
-                                        update.reasoningDelta.isNotEmpty() ||
-                                        update.eventPayloads.isNotEmpty()
-                                    ) {
-                                        markdown += update.markdownDelta
-                                        reasoning += update.reasoningDelta
-                                        eventPayloads = eventPayloads + update.eventPayloads
-                                        persistAssistantState(
-                                            dataId = assistantMessageId,
-                                            markdown = markdown,
-                                            reasoning = reasoning,
-                                            eventPayloads = eventPayloads,
-                                            isStreaming = true,
-                                            sendStatus = "streaming",
-                                            errorCode = null,
-                                            errorMessage = null,
-                                        )
+                                    } else {
+                                        val mergedMarkdown = mergeStreamChunk(markdown, normalizedUpdate.markdownDelta)
+                                        val mergedReasoning = mergeStreamChunk(reasoning, normalizedUpdate.reasoningDelta)
+                                        if (
+                                            mergedMarkdown != markdown ||
+                                            mergedReasoning != reasoning ||
+                                            normalizedUpdate.eventPayloads.isNotEmpty()
+                                        ) {
+                                            markdown = mergedMarkdown
+                                            reasoning = mergedReasoning
+                                            eventPayloads = eventPayloads + normalizedUpdate.eventPayloads
+                                            persistAssistantState(
+                                                dataId = assistantMessageId,
+                                                markdown = markdown,
+                                                reasoning = reasoning,
+                                                eventPayloads = eventPayloads,
+                                                isStreaming = true,
+                                                sendStatus = "streaming",
+                                                errorCode = null,
+                                                errorMessage = null,
+                                            )
+                                        }
                                     }
                                 }
                         }
@@ -831,6 +976,7 @@ class RoomChatRepository
                                 appId = appId,
                                 chatId = chatId,
                                 assistantMessageId = assistantMessageId,
+                                localCitations = localCitations,
                             )
                             onSuccess()
                         }
@@ -1030,8 +1176,25 @@ class RoomChatRepository
             appId: String,
             chatId: String,
             assistantMessageId: String,
+            localCitations: List<CitationPayload> = emptyList(),
         ) {
-            val current = messageDao.getMessagesForChat(chatId).firstOrNull { it.dataId == assistantMessageId } ?: return
+            if (isOpenAiMode(appId)) {
+                if (localCitations.isNotEmpty()) {
+                    val current = onIo { messageDao.getMessagesForChat(chatId).firstOrNull { it.dataId == assistantMessageId } } ?: return
+                    val currentPayload = current.payloadJson.toStoredPayload(json)
+                    onIo {
+                        messageDao.updateMessageState(
+                            dataId = assistantMessageId,
+                            payloadJson = currentPayload.copy(citations = localCitations).toJsonString(),
+                            isStreaming = current.isStreaming,
+                            sendStatus = current.sendStatus,
+                            errorCode = current.errorCode,
+                        )
+                    }
+                }
+                return
+            }
+            val current = onIo { messageDao.getMessagesForChat(chatId).firstOrNull { it.dataId == assistantMessageId } } ?: return
             val currentPayload = current.payloadJson.toStoredPayload(json)
             val shouldLoadCitations =
                 currentPayload.eventPayloads.any { payload ->
@@ -1068,19 +1231,102 @@ class RoomChatRepository
                         emptyList()
                     }
                 }.getOrElse { emptyList() }
-            messageDao.updateMessageState(
-                dataId = assistantMessageId,
-                payloadJson =
-                    currentPayload
-                        .copy(
-                            citations = citations.map(CitationDto::toPayload),
-                            suggestedQuestions = suggestedQuestions,
-                        ).toJsonString(),
-                isStreaming = current.isStreaming,
-                sendStatus = current.sendStatus,
-                errorCode = current.errorCode,
-            )
+            onIo {
+                messageDao.updateMessageState(
+                    dataId = assistantMessageId,
+                    payloadJson =
+                        currentPayload
+                            .copy(
+                                citations = citations.map(CitationDto::toPayload),
+                                suggestedQuestions = suggestedQuestions,
+                            ).toJsonString(),
+                    isStreaming = current.isStreaming,
+                    sendStatus = current.sendStatus,
+                    errorCode = current.errorCode,
+                )
+            }
         }
+
+        private fun streamAssistantUpdates(
+            appId: String,
+            chatId: String,
+            assistantMessageId: String,
+            prompt: String,
+            userMessage: ChatCompletionMessageParam?,
+            openAiMessages: List<ChatCompletionMessageParam>? = null,
+        ): Flow<SseEventData> {
+            val resolvedUserMessage = userMessage ?: ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt))
+            return if (isOpenAiMode(appId)) {
+                sseStreamClient.streamOpenAiChatCompletions(
+                    OpenAiChatCompletionRequest(
+                        model = connectionSnapshotProvider.getSnapshot().model.orEmpty(),
+                        messages = openAiMessages ?: listOf(resolvedUserMessage),
+                    ),
+                )
+            } else {
+                sseStreamClient.streamChatCompletions(
+                    ChatCompletionRequest(
+                        chatId = chatId,
+                        appId = appId,
+                        responseChatItemId = assistantMessageId,
+                        messages = listOf(resolvedUserMessage),
+                    ),
+                )
+            }
+        }
+
+        private fun isOpenAiMode(appId: String): Boolean = appId == DIRECT_OPENAI_APP_ID
+
+        private fun normalizeChatId(chatId: String?): String? = chatId?.takeIf { it.isNotBlank() }
+
+        private fun buildOpenAiConversationMessages(
+            chatId: String,
+            currentUserMessage: ChatCompletionMessageParam,
+            localHits: List<LocalKnowledgeHit>,
+        ): List<ChatCompletionMessageParam> {
+            val history =
+                messageDao.getMessagesForChat(chatId)
+                    .takeLast(12)
+                    .mapNotNull { entity ->
+                        val payload = entity.payloadJson.toStoredPayload(json)
+                        val markdown = payload.markdown.trim()
+                        when (entity.role) {
+                            ChatRole.Human.name ->
+                                markdown.takeIf { it.isNotBlank() }?.let {
+                                    ChatCompletionMessageParam(role = "user", content = JsonPrimitive(it))
+                                }
+                            ChatRole.AI.name ->
+                                markdown.takeIf { it.isNotBlank() }?.let {
+                                    ChatCompletionMessageParam(role = "assistant", content = JsonPrimitive(it))
+                                }
+                            else -> null
+                        }
+                    }
+            val localContextMessage =
+                localHits.takeIf { it.isNotEmpty() }?.let { hits ->
+                    ChatCompletionMessageParam(
+                        role = "system",
+                        content =
+                            JsonPrimitive(
+                                buildString {
+                                    appendLine("Use the following local references when relevant.")
+                                    hits.forEachIndexed { index, hit ->
+                                        appendLine("[${index + 1}] ${hit.title} (${hit.sourceLabel})")
+                                        appendLine(hit.snippet)
+                                        appendLine()
+                                    }
+                                }.trim(),
+                            ),
+                    )
+                }
+            return buildList {
+                localContextMessage?.let(::add)
+                addAll(history)
+                add(currentUserMessage)
+            }
+        }
+
+        private suspend fun <T> onIo(block: suspend () -> T): T = withContext(ioDispatcher) { block() }
     }
 
 private data class AssistantUpdate(
@@ -1383,7 +1629,45 @@ private fun extractVisibleMarkdown(value: JsonElement?): String =
         else -> extractMarkdown(value)
     }
 
-private fun JsonElement?.stringContentOrNull(): String? = (this as? JsonPrimitive)?.content
+private fun JsonElement?.stringContentOrNull(): String? =
+    when (this) {
+        null -> null
+        JsonNull -> null
+        is JsonPrimitive -> content
+        else -> null
+    }
+
+private fun normalizeOpenAiVisibleDelta(delta: String): String =
+    delta.takeUnless { it.equals("null", ignoreCase = true) }.orEmpty()
+
+private fun mergeStreamChunk(
+    current: String,
+    incoming: String,
+): String {
+    if (incoming.isEmpty()) {
+        return current
+    }
+    if (current.isEmpty()) {
+        return incoming
+    }
+    if (incoming == current) {
+        return current
+    }
+    if (incoming.startsWith(current)) {
+        return incoming
+    }
+    if (current.startsWith(incoming)) {
+        return current
+    }
+
+    val maxOverlap = minOf(current.length, incoming.length)
+    for (size in maxOverlap downTo 1) {
+        if (current.endsWith(incoming.substring(0, size))) {
+            return current + incoming.substring(size)
+        }
+    }
+    return current + incoming
+}
 
 private fun JsonElement?.extractInteractiveEventPayloads(): List<String> =
     when (this) {
@@ -1688,6 +1972,18 @@ private fun CitationPayload.toUiModel(): CitationItemUiModel =
         sourceName = sourceName,
         snippet = snippet,
         scoreType = scoreType,
+        score = score,
+    )
+
+private fun LocalKnowledgeHit.toCitationPayload(): CitationPayload =
+    CitationPayload(
+        datasetId = documentId,
+        collectionId = null,
+        dataId = chunkId,
+        title = title,
+        sourceName = sourceLabel,
+        snippet = snippet,
+        scoreType = "local",
         score = score,
     )
 

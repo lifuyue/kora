@@ -3,10 +3,14 @@ package com.lifuyue.kora.feature.settings
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import org.junit.Rule
@@ -27,6 +31,7 @@ class ConnectionConfigScreenTest {
             ConnectionConfigScreen(
                 state =
                     ConnectionConfigUiState(
+                        connectionType = ConnectionType.FAST_GPT,
                         serverUrl = "https://api.fastgpt.in",
                         apiKey = "fastgpt-secret",
                         canSave = true,
@@ -36,18 +41,18 @@ class ConnectionConfigScreenTest {
                                 apps = listOf(ConnectionTestApp(id = "app-1", name = "Kora")),
                                 latencyMs = 120,
                             ),
-                    ),
+                ),
+                onConnectionTypeChange = {},
                 onBaseUrlChange = {},
                 onApiKeyChange = {},
+                onModelChange = {},
                 onTestConnection = {},
                 onSave = {},
                 onClear = {},
             )
         }
 
-        composeRule
-            .onNodeWithText(context.resources.getQuantityString(R.plurals.settings_connection_success, 1, 1, 120))
-            .assertIsDisplayed()
+        composeRule.onAllNodesWithTag("connection-result").assertCountEquals(1)
         composeRule.onNodeWithText(context.getString(R.string.settings_connection_save)).assertIsEnabled()
     }
 }

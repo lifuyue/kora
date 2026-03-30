@@ -128,13 +128,23 @@ class ProtocolTypesTest {
         val disconnected = ConnectionSnapshot()
         val connected =
             ConnectionSnapshot(
+                connectionType = ConnectionType.FAST_GPT,
                 serverBaseUrl = "https://api.fastgpt.in/",
                 apiKey = "fastgpt-secret",
+                selectedAppId = "app-1",
+            )
+        val openAiConnected =
+            ConnectionSnapshot(
+                connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                serverBaseUrl = "https://api.openai.com/v1",
+                apiKey = "openai-secret",
+                model = "gpt-4o-mini",
             )
 
         assertEquals(false, disconnected.hasValidConnection)
         assertEquals(true, connected.hasApiKey)
         assertEquals(true, connected.hasValidConnection)
+        assertEquals(true, openAiConnected.hasValidConnection)
     }
 
     @Test
@@ -142,7 +152,7 @@ class ProtocolTypesTest {
         val preferences = AppearancePreferences()
 
         assertEquals(ThemeMode.SYSTEM, preferences.themeMode)
-        assertEquals(true, preferences.dynamicColorEnabled)
+        assertEquals(false, preferences.dynamicColorEnabled)
         assertEquals(false, preferences.oledEnabled)
         assertNull(preferences.languageTag)
     }

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="knowledge_overview_title">Knowledge</string>
+    <string name="knowledge_overview_workspace_eyebrow">Knowledge workspace</string>
+    <string name="knowledge_overview_workspace_title">Keep import, citations, and retrieval in one flow</string>
+    <string name="knowledge_overview_workspace_meta">Knowledge console</string>
     <string name="knowledge_overview_current_app">Current app: %1$s</string>
     <string name="knowledge_overview_no_app_selected">Not selected</string>
     <plurals name="knowledge_overview_dataset_count">
@@ -8,6 +11,7 @@
         <item quantity="other">%1$d datasets</item>
     </plurals>
     <string name="knowledge_overview_open_datasets">Open datasets</string>
+    <string name="knowledge_return_to_chat">Return to current chat</string>
     <string name="knowledge_back">Back</string>
     <string name="knowledge_refresh">Refresh</string>
     <string name="knowledge_refreshing">Refreshing</string>
@@ -97,4 +101,28 @@
     <string name="knowledge_search_result_title_fallback">Matched snippet</string>
     <string name="knowledge_search_result_snippet_fallback">No preview available</string>
     <string name="knowledge_score_summary">%1$s · %2$s</string>
+    <string name="knowledge_local_overview_title">Library</string>
+    <string name="knowledge_local_workspace_title">Local lightweight library</string>
+    <string name="knowledge_local_workspace_subtitle">Only plain text and Markdown are indexed. Matched snippets are injected into OpenAI replies.</string>
+    <string name="knowledge_local_workspace_eyebrow">OpenAI lightweight RAG</string>
+    <string name="knowledge_local_workspace_meta">%1$d local references ready</string>
+    <string name="knowledge_local_open_library">Open library</string>
+    <string name="knowledge_local_empty">No local references yet. Import text to start lightweight retrieval.</string>
+    <string name="knowledge_local_recent_title">Recent references</string>
+    <string name="knowledge_local_recent_supporting">Local texts used to ground answers</string>
+    <string name="knowledge_local_recent_meta">Status: %1$s</string>
+    <string name="knowledge_local_library_title">Local references</string>
+    <string name="knowledge_local_query_label">Search references</string>
+    <string name="knowledge_local_import_title">Import text reference</string>
+    <string name="knowledge_local_import_name_label">Reference title</string>
+    <string name="knowledge_local_import_source_label">Source label</string>
+    <string name="knowledge_local_import_text_label">Text content</string>
+    <string name="knowledge_local_import_action">Import and index</string>
+    <string name="knowledge_local_manual_source">Manual import</string>
+    <string name="knowledge_local_error_validation">Title and content are required</string>
+    <string name="knowledge_local_error_import_failed">Failed to import</string>
+    <string name="knowledge_local_chunk_count">Chunks: %1$d</string>
+    <string name="knowledge_local_view_chunks">View snippets</string>
+    <string name="knowledge_local_document_title">Reference snippets</string>
+    <string name="knowledge_local_document_empty">This reference has no available snippets.</string>
 </resources>

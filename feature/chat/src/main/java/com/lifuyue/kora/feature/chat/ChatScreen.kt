@@ -1,34 +1,57 @@
 package com.lifuyue.kora.feature.chat
 
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,24 +64,56 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.lifuyue.kora.core.common.ChatRole
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
+internal enum class ChatComposerPrimaryAction {
+    Voice,
+    Send,
+    Stop,
+}
+
+internal fun chatComposerPrimaryAction(uiState: ChatUiState): ChatComposerPrimaryAction =
+    when {
+        uiState.canStopGeneration -> ChatComposerPrimaryAction.Stop
+        uiState.input.isNotBlank() || uiState.attachments.any { it.uploadStatus == AttachmentUploadStatus.Uploaded } -> ChatComposerPrimaryAction.Send
+        else -> ChatComposerPrimaryAction.Voice
+    }
+
+internal fun shouldSubmitFromHardwareEnter(
+    key: Key,
+    type: KeyEventType,
+    canSend: Boolean,
+): Boolean = canSend && type == KeyEventType.KeyUp && (key == Key.Enter || key == Key.NumPadEnter)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     uiState: ChatUiState,
     appSelectorUiState: AppSelectorUiState = AppSelectorUiState(),
+    conversationBrowserUiState: ConversationListUiState = ConversationListUiState(),
     showAppSelector: Boolean = false,
+    showConversationBrowser: Boolean = false,
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
     onStartSpeechInput: () -> Unit = {},
@@ -79,6 +134,29 @@ fun ChatScreen(
     onStopPlayback: () -> Unit = {},
     onOpenAppSelector: () -> Unit = {},
     onDismissAppSelector: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
+    onOpenConversationBrowser: () -> Unit = {},
+    onDismissConversationBrowser: () -> Unit = {},
+    onOpenConversation: (String) -> Unit = {},
+    onNewConversation: () -> Unit = {},
+    onConversationQueryChanged: (String) -> Unit = {},
+    onSelectConversationFolderFilter: (String?) -> Unit = {},
+    onSelectConversationTagFilter: (String?) -> Unit = {},
+    onToggleShowArchivedConversations: (Boolean) -> Unit = {},
+    onDeleteConversation: (String) -> Unit = {},
+    onRenameConversation: (String, String) -> Unit = { _, _ -> },
+    onTogglePinConversation: (String, Boolean) -> Unit = { _, _ -> },
+    onSetConversationArchived: (String, Boolean) -> Unit = { _, _ -> },
+    onClearConversations: () -> Unit = {},
+    onCreateConversationFolder: (String) -> Unit = {},
+    onRenameConversationFolder: (String, String) -> Unit = { _, _ -> },
+    onDeleteConversationFolder: (String) -> Unit = {},
+    onCreateConversationTag: (String) -> Unit = {},
+    onRenameConversationTag: (String, String) -> Unit = { _, _ -> },
+    onDeleteConversationTag: (String) -> Unit = {},
+    onMoveConversationToFolder: (String, String?) -> Unit = { _, _ -> },
+    onSetConversationTags: (String, List<String>) -> Unit = { _, _ -> },
+    onOpenQuickSettings: () -> Unit = {},
     onSwitchApp: (String) -> Unit = {},
     onOpenAppDetail: () -> Unit = {},
     onSuggestedQuestion: (String) -> Unit = {},
@@ -89,6 +167,10 @@ fun ChatScreen(
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val pageBackground = MaterialTheme.colorScheme.background
+    val errorContainer = if (isLightTheme) Color(0xFFFFE2DE) else Color(0xFF351A1A)
+    val errorText = if (isLightTheme) Color(0xFF8C2E27) else Color(0xFFFFC9C5)
     var activeCitationMessage by remember { mutableStateOf<ChatMessageUiModel?>(null) }
     var autoScrollPaused by rememberSaveable { mutableStateOf(false) }
     var hasInitializedScroll by rememberSaveable(uiState.chatId) { mutableStateOf(false) }
@@ -162,6 +244,37 @@ fun ChatScreen(
             }
         }
     }
+    if (showConversationBrowser) {
+        ModalBottomSheet(
+            onDismissRequest = onDismissConversationBrowser,
+            modifier = Modifier.testTag(ChatTestTags.CONVERSATION_BROWSER_SHEET),
+        ) {
+            ConversationListScreen(
+                uiState = conversationBrowserUiState,
+                onQueryChanged = onConversationQueryChanged,
+                onSelectFolderFilter = onSelectConversationFolderFilter,
+                onSelectTagFilter = onSelectConversationTagFilter,
+                onToggleShowArchived = onToggleShowArchivedConversations,
+                onOpenConversation = onOpenConversation,
+                onNewConversation = onNewConversation,
+                onDeleteConversation = onDeleteConversation,
+                onRenameConversation = onRenameConversation,
+                onTogglePin = onTogglePinConversation,
+                onSetArchived = onSetConversationArchived,
+                onClearConversations = onClearConversations,
+                onCreateFolder = onCreateConversationFolder,
+                onRenameFolder = onRenameConversationFolder,
+                onDeleteFolder = onDeleteConversationFolder,
+                onCreateTag = onCreateConversationTag,
+                onRenameTag = onRenameConversationTag,
+                onDeleteTag = onDeleteConversationTag,
+                onMoveConversationToFolder = onMoveConversationToFolder,
+                onSetConversationTags = onSetConversationTags,
+                embeddedMode = true,
+                onCloseEmbedded = onDismissConversationBrowser,
+            )
+        }
+    }
     activeCitationMessage?.let { message ->
         ModalBottomSheet(
             onDismissRequest = { activeCitationMessage = null },
@@ -201,24 +314,28 @@ fun ChatScreen(
         }
     }
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        containerColor = pageBackground,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(stringResource(R.string.chat_title))
-                        TextButton(onClick = onOpenAppSelector) {
-                            Text(appSelectorUiState.currentAppName.ifBlank { uiState.appId })
-                        }
-                    }
-                },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text(stringResource(R.string.chat_back))
-                    }
-                },
-                actions = {
-                    TextButton(onClick = onOpenAppDetail) {
-                        Text(stringResource(R.string.chat_capabilities))
+            ChatGeminiTopBar(
+                onOpenDrawer = onOpenDrawer,
+                onOpenAppSelector = onOpenAppSelector,
+            )
+        },
+        bottomBar = {
+            ChatGeminiComposer(
+                uiState = uiState,
+                onInputChanged = onInputChanged,
+                onSend = onSend,
+                onStopGenerating = onStopGenerating,
+                onStartSpeechInput = onStartSpeechInput,
+                onStopSpeechInput = onStopSpeechInput,
+                onPickImage = onPickImage,
+                onPickFile = onPickFile,
+                onOpenQuickSettings = onOpenQuickSettings,
+                onToggleAttachmentActions = {
+                    if (uiState.attachmentConfig.hasAnySelectionType) {
+                        onPickFile()
                     }
                 },
             )
@@ -230,16 +347,25 @@ fun ChatScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp),
+                    .background(pageBackground)
+                    .padding(horizontal = 20.dp),
         ) {
             if (uiState.messages.isEmpty()) {
-                Text(
-                    text = uiState.welcomeText ?: stringResource(R.string.chat_empty_welcome),
-                    style = MaterialTheme.typography.bodyMedium,
+                ChatGeminiEmptyState(
+                    modifier = Modifier.padding(top = 48.dp).testTag("chat_workspace_header"),
                 )
             }
             if (uiState.errorMessage != null) {
-                Text(uiState.errorMessage, color = MaterialTheme.colorScheme.error)
+                Surface(
+                    color = errorContainer,
+                    contentColor = errorText,
+                    shape = RoundedCornerShape(18.dp),
+                ) {
+                    Text(
+                        text = uiState.errorMessage,
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    )
+                }
             }
             if (uiState.isInitialLoading) {
                 ChatLoadingSkeleton(modifier = Modifier.weight(1f).testTag(ChatTestTags.CHAT_SKELETON))
@@ -247,7 +373,8 @@ fun ChatScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f).testTag(ChatTestTags.CHAT_LIST),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(uiState.messages, key = { it.messageId }) { message ->
                         MessageCard(
@@ -288,9 +415,10 @@ fun ChatScreen(
                     modifier = Modifier.testTag(ChatTestTags.AUTO_SCROLL_RESUME),
                 )
             }
-            if (uiState.attachments.isNotEmpty() || uiState.attachmentConfig.hasAnySelectionType) {
+            if (uiState.attachments.isNotEmpty()) {
                 AttachmentComposer(
                     attachments = uiState.attachments,
+                    showSelectionActions = false,
                     canPickImage = uiState.attachmentConfig.canSelectImg,
                     canPickFile = uiState.attachmentConfig.canSelectFile ||
                         uiState.attachmentConfig.canSelectVideo ||
@@ -315,56 +443,335 @@ fun ChatScreen(
                     onCancel = onCancelSpeechInput,
                 )
             }
-            OutlinedTextField(
-                value = uiState.input,
-                onValueChange = onInputChanged,
-                label = { Text(stringResource(R.string.chat_input_label)) },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { if (uiState.canSend) onSend() }),
-                modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_INPUT),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
-                        uiState.speechInputState.status == SpeechInputStatus.Recognizing
-                    ) {
-                        onStopSpeechInput
-                    } else {
-                        onStartSpeechInput
-                    },
-                    modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
-                ) {
-                    Text(
-                        when (uiState.speechInputState.status) {
-                            SpeechInputStatus.Recording,
-                            SpeechInputStatus.Recognizing,
-                            -> appString("chat_speech_stop")
-                            SpeechInputStatus.Error -> appString("chat_speech_retry")
-                            SpeechInputStatus.Idle -> appString("chat_speech_start")
-                        },
-                    )
-                }
-                if (uiState.canStopGeneration) {
-                    OutlinedButton(onClick = onStopGenerating) {
-                        Text(stringResource(R.string.chat_stop_generation))
-                    }
-                }
-                Button(
-                    onClick = onSend,
-                    enabled = uiState.canSend,
-                ) {
-                    Text(
-                        stringResource(
-                            if (uiState.isSending) {
-                                R.string.chat_sending
-                            } else {
-                                R.string.chat_send
-                            },
-                        ),
-                    )
+            if (uiState.canStopGeneration) {
+                OutlinedButton(onClick = onStopGenerating) {
+                    Text(stringResource(R.string.chat_stop_generation))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ChatGeminiTopBar(
+    onOpenDrawer: () -> Unit,
+    onOpenAppSelector: () -> Unit,
+) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(top = 10.dp, start = 8.dp, end = 8.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onOpenDrawer)
+                    .testTag(ChatTestTags.CHAT_MENU_BUTTON),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.chat_history), tint = onSurface)
+        }
+        Text(
+            text = stringResource(R.string.chat_brand_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = onSurface,
+        )
+        GeminiProfileAvatar(onClick = onOpenAppSelector)
+    }
+}
+
+@Composable
+private fun GeminiProfileAvatar(onClick: () -> Unit) {
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val gradientColors =
+        listOf(
+            Color(0xFF4285F4),
+            Color(0xFFEA4335),
+            Color(0xFFFBBC05),
+            Color(0xFF34A853),
+        )
+    Box(
+        modifier =
+            Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .border(2.dp, Brush.sweepGradient(gradientColors), CircleShape)
+                .background(if (isLightTheme) Color.White else Color(0xFF121212))
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Person,
+            contentDescription = stringResource(R.string.chat_switch_app_title),
+            tint = if (isLightTheme) Color(0xFF5B616C) else Color(0xFFE1E1E1),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
+private fun ChatGeminiEmptyState(
+    modifier: Modifier = Modifier,
+) {
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val primaryText = MaterialTheme.colorScheme.onSurface
+    val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
+    val suggestionItems: List<Pair<ImageVector, String>> =
+        listOf(
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_image),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_music),
+            Icons.Filled.Add to stringResource(R.string.chat_suggestion_video),
+            Icons.Filled.Person to stringResource(R.string.chat_suggestion_study),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_energy),
+        )
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = stringResource(R.string.chat_greeting),
+                style = MaterialTheme.typography.headlineMedium,
+                color = secondaryText,
+            )
+            Text(
+                text = stringResource(R.string.chat_empty_headline),
+                style = MaterialTheme.typography.displaySmall,
+                color = primaryText,
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            suggestionItems.forEachIndexed { index, (icon, label) ->
+                ChatSuggestionChip(
+                    icon = icon,
+                    label = label,
+                    isLightTheme = isLightTheme,
+                    modifier = Modifier.testTag("${ChatTestTags.CHAT_SUGGESTION_PREFIX}$index"),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatSuggestionChip(
+    icon: ImageVector,
+    label: String,
+    isLightTheme: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.wrapContentWidth(),
+        color = if (isLightTheme) Color.White else Color(0xFF1A1A1C),
+        shape = RoundedCornerShape(26.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (isLightTheme) Color(0xFF6A717D) else Color(0xFFC7C7C7),
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                label,
+                color = if (isLightTheme) Color(0xFF2A2D33) else Color(0xFFD5D5D5),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChatGeminiComposer(
+    uiState: ChatUiState,
+    onInputChanged: (String) -> Unit,
+    onSend: () -> Unit,
+    onStopGenerating: () -> Unit,
+    onStartSpeechInput: () -> Unit,
+    onStopSpeechInput: () -> Unit,
+    onPickImage: () -> Unit,
+    onPickFile: () -> Unit,
+    onOpenQuickSettings: () -> Unit,
+    onToggleAttachmentActions: () -> Unit,
+) {
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    Surface(
+        color = if (isLightTheme) Color(0xFFFCFCFD) else Color(0xFF252628),
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp, bottomStart = 34.dp, bottomEnd = 34.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            BasicTextField(
+                value = uiState.input,
+                onValueChange = onInputChanged,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag(ChatTestTags.CHAT_INPUT)
+                        .onPreviewKeyEvent { event ->
+                            if (shouldSubmitFromHardwareEnter(event.key, event.type, uiState.canSend)) {
+                                onSend()
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                singleLine = false,
+                maxLines = 4,
+                textStyle = TextStyle(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+                    fontWeight = MaterialTheme.typography.bodyLarge.fontWeight,
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { if (uiState.canSend) onSend() }),
+                decorationBox = { innerField ->
+                    if (uiState.input.isBlank()) {
+                        Text(
+                            text = stringResource(R.string.chat_input_placeholder),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    innerField()
+                },
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                GeminiComposerIconButton(
+                    icon = Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.chat_composer_add_attachment),
+                    onClick = onToggleAttachmentActions,
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON),
+                )
+                GeminiComposerIconButton(
+                    icon = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.chat_quick_settings),
+                    onClick = onOpenQuickSettings,
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON),
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                when (chatComposerPrimaryAction(uiState)) {
+                    ChatComposerPrimaryAction.Stop -> {
+                        GeminiComposerIconButton(
+                            icon = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.chat_stop_generation),
+                            onClick = onStopGenerating,
+                            modifier = Modifier,
+                        )
+                    }
+                    ChatComposerPrimaryAction.Send -> {
+                        GeminiComposerIconButton(
+                            icon = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = stringResource(R.string.chat_send),
+                            onClick = onSend,
+                            enabled = uiState.canSend,
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_PRIMARY_ACTION_BUTTON),
+                        )
+                    }
+                    ChatComposerPrimaryAction.Voice -> {
+                        GeminiComposerPainterButton(
+                            painter = painterResource(id = android.R.drawable.ic_btn_speak_now),
+                            contentDescription = stringResource(R.string.chat_composer_voice),
+                            onClick = {
+                                if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
+                                    uiState.speechInputState.status == SpeechInputStatus.Recognizing
+                                ) {
+                                    onStopSpeechInput()
+                                } else {
+                                    onStartSpeechInput()
+                                }
+                            },
+                            modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GeminiComposerIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val containerColor =
+        if (isLightTheme) {
+            Color(0xFFF0F2F5)
+        } else {
+            Color.White.copy(alpha = 0.06f)
+        }
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier =
+            modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(containerColor.copy(alpha = if (enabled) 1f else 0.45f)),
+    ) {
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.4f),
+            modifier = Modifier.size(21.dp),
+        )
+    }
+}
+
+@Composable
+private fun GeminiComposerPainterButton(
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier =
+            modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(
+                    if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
+                        Color(0xFFF0F2F5)
+                    } else {
+                        Color.White.copy(alpha = 0.06f)
+                    },
+                ),
+    ) {
+        Icon(
+            painter = painter,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(21.dp),
+        )
     }
 }
 
@@ -486,6 +893,7 @@ private fun ChatLoadingSkeleton(modifier: Modifier = Modifier) {
 @Composable
 private fun AttachmentComposer(
     attachments: List<AttachmentDraftUiModel>,
+    showSelectionActions: Boolean,
     canPickImage: Boolean,
     canPickFile: Boolean,
     onPickImage: () -> Unit,
@@ -495,15 +903,17 @@ private fun AttachmentComposer(
     onCancelAttachmentUpload: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (canPickImage) {
-                OutlinedButton(onClick = onPickImage, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK)) {
-                    Text(chatString("chat_attachment_add_image"))
+        if (showSelectionActions) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (canPickImage) {
+                    OutlinedButton(onClick = onPickImage, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK)) {
+                        Text(chatString("chat_attachment_add_image"))
+                    }
                 }
-            }
-            if (canPickFile) {
-                OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK)) {
-                    Text(chatString("chat_attachment_add_file"))
+                if (canPickFile) {
+                    OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK)) {
+                        Text(chatString("chat_attachment_add_file"))
+                    }
                 }
             }
         }
@@ -669,6 +1079,9 @@ private fun MessageCard(
     onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit,
     onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit,
 ) {
+    val shouldShowThinkingPlaceholder =
+        message.role == ChatRole.AI &&
+            message.deliveryState == MessageDeliveryState.Streaming
     Card(
         modifier =
             Modifier
@@ -690,11 +1103,20 @@ private fun MessageCard(
                     ),
                 style = MaterialTheme.typography.titleSmall,
             )
-            MarkdownMessage(
-                markdown = message.markdown,
-                onCopyCode = onCopyCode,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (shouldShowThinkingPlaceholder) {
+                Text(
+                    text = stringResource(R.string.chat_message_streaming_placeholder),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                MarkdownMessage(
+                    markdown = message.markdown,
+                    onCopyCode = onCopyCode,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             if (message.reasoning.isNotBlank()) {
                 Text(
                     text = message.reasoning,

@@ -4,22 +4,28 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.ConnectionType
+import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.database.KoraDatabase
+import com.lifuyue.kora.core.database.LocalKnowledgeStore
 import com.lifuyue.kora.core.network.FastGptApi
 import com.lifuyue.kora.core.network.MutableConnectionProvider
 import com.lifuyue.kora.core.network.NetworkJson
 import com.lifuyue.kora.core.network.SseStreamClient
 import com.lifuyue.kora.core.network.createRetrofit
 import com.lifuyue.kora.core.testing.MainDispatcherRule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -27,6 +33,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -38,6 +45,8 @@ class RoomChatRepositoryTest {
     private lateinit var server: MockWebServer
     private lateinit var database: KoraDatabase
     private lateinit var repository: RoomChatRepository
+    private lateinit var connectionProvider: MutableConnectionProvider
+    private lateinit var localKnowledgeStore: LocalKnowledgeStore
 
     @Before
     fun setUp() {
@@ -46,13 +55,19 @@ class RoomChatRepositoryTest {
             Room.inMemoryDatabaseBuilder(context, KoraDatabase::class.java)
                 .allowMainThreadQueries()
                 .build()
+        localKnowledgeStore =
+            LocalKnowledgeStore(
+                documentDao = database.localKnowledgeDocumentDao(),
+                chunkDao = database.localKnowledgeChunkDao(),
+            )
         server = MockWebServer()
         server.start()
 
-        val connectionProvider =
+        connectionProvider =
             MutableConnectionProvider().apply {
                 update(
                     getSnapshot().copy(
+                        connectionType = ConnectionType.FAST_GPT,
                         serverBaseUrl = server.url("/").toString(),
                         apiKey = "fastgpt-secret",
                     ),
@@ -73,6 +88,8 @@ class RoomChatRepositoryTest {
                 context = context,
                 json = NetworkJson.default,
                 ioDispatcher = mainDispatcherRule.dispatcher,
+                connectionSnapshotProvider = connectionProvider,
+                localKnowledgeStore = localKnowledgeStore,
             )
     }
 
@@ -150,6 +167,185 @@ class RoomChatRepositoryTest {
             assertEquals(MessageDeliveryState.Failed, assistant.deliveryState)
             assertTrue(assistant.markdown.contains("partial"))
             assertEquals("slow down", assistant.errorMessage)
+        }
+
+    @Test
+    fun openAiModeStreamsWithoutFastGptBootstrapAndUsesModelRequest() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            localKnowledgeStore.importText(
+                title = "API Notes",
+                text = "The OpenAI mode can use local references to answer questions about setup.",
+                sourceLabel = "manual",
+                now = 1L,
+            )
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":"OpenAI 模式"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = DIRECT_OPENAI_APP_ID, chatId = null, text = "测试 OpenAI")
+            advanceUntilIdle()
+
+            val request = server.takeRequest()
+            assertEquals("POST", request.method)
+            assertEquals("/v1/chat/completions", request.path)
+            val requestBody = request.body.readUtf8()
+            assertTrue(requestBody.contains("\"model\":\"gpt-4o-mini\""))
+            assertTrue(requestBody.contains("\"role\":\"system\""))
+
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("OpenAI 模式", messages.last().markdown)
+            assertTrue(messages.last().citations.isNotEmpty())
+        }
+
+    @Test
+    fun openAiStreamIgnoresJsonNullContentAndDoesNotExposeReasoning() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":null,"reasoning_content":"思考中"}}]}
+
+                data: {"choices":[{"delta":{"content":"null","reasoning_content":"null"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好","reasoning_content":null}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = DIRECT_OPENAI_APP_ID, chatId = null, text = "kora")
+            advanceUntilIdle()
+
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("你好", messages.last().markdown)
+            assertEquals("", messages.last().reasoning)
+        }
+
+    @Test
+    fun openAiStreamCoalescesCumulativeRepeatedChunks() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":"你好"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好，"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好，世界"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好，世界"}}]}
+
+                data: {"choices":[{"delta":{"content":"你好，世界！"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = DIRECT_OPENAI_APP_ID, chatId = null, text = "kora")
+            advanceUntilIdle()
+
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("你好，世界！", messages.last().markdown)
+        }
+
+    @Test
+    fun blankChatIdInOpenAiModeIsNormalizedToGeneratedConversationId() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":"空 chatId 也应显示"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = DIRECT_OPENAI_APP_ID, chatId = "", text = "kora")
+            advanceUntilIdle()
+
+            assertTrue(chatId.isNotBlank())
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("kora", messages.first().markdown)
+            assertEquals("空 chatId 也应显示", messages.last().markdown)
+        }
+
+    @Test
+    fun nonDirectAppKeepsFastGptChatFlowEvenWhenConnectionTypeIsOpenAiCompatible() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueJson(
+                """
+                {"code":200,"statusText":"","message":"","data":{"chatId":"chat-init-openai-compat","appId":"app-1","title":"兼容应用"}}
+                """.trimIndent(),
+            )
+            server.enqueueSse(
+                """
+                event: answer
+                data: {"choices":[{"delta":{"content":"兼容模式应用回复"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId = repository.sendMessage(appId = "app-1", chatId = null, text = "测试兼容模式应用")
+            advanceUntilIdle()
+
+            val initRequest = server.takeRequest(2, TimeUnit.SECONDS)
+            val completionRequest = server.takeRequest(2, TimeUnit.SECONDS)
+            assertNotNull(initRequest)
+            assertNotNull(completionRequest)
+            val recordedInitRequest = requireNotNull(initRequest)
+            val recordedCompletionRequest = requireNotNull(completionRequest)
+            assertEquals("/api/core/chat/init?appId=app-1", recordedInitRequest.path)
+            assertEquals("/api/v1/chat/completions", recordedCompletionRequest.path)
+
+            val messages = repository.observeMessages("app-1", chatId).first()
+            assertEquals(2, messages.size)
+            assertEquals("兼容模式应用回复", messages.last().markdown)
         }
 
     @Test
@@ -248,6 +444,39 @@ class RoomChatRepositoryTest {
             assertEquals("原问题", messages.first().markdown)
             assertEquals("第二次", messages.last().markdown)
             assertTrue(messages.none { it.messageId == originalAssistantId })
+        }
+
+    @Test
+    fun observeMessagesCanBeCollectedFromMainThreadWithoutRoomViolation() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val strictDatabase =
+                Room.inMemoryDatabaseBuilder(context, KoraDatabase::class.java)
+                    .build()
+            val strictRepository =
+                RoomChatRepository(
+                    api = createRetrofit(server.url("/").toString(), OkHttpClient()).create(FastGptApi::class.java),
+                    sseStreamClient = SseStreamClient(okHttpClient = OkHttpClient(), baseUrlProvider = MutableConnectionProvider()),
+                    conversationDao = strictDatabase.conversationDao(),
+                    conversationFolderDao = strictDatabase.conversationFolderDao(),
+                    conversationTagDao = strictDatabase.conversationTagDao(),
+                    interactiveDraftDao = strictDatabase.interactiveDraftDao(),
+                    messageDao = strictDatabase.messageDao(),
+                context = context,
+                json = NetworkJson.default,
+                connectionSnapshotProvider = MutableConnectionProvider(),
+            )
+
+            try {
+                val messages =
+                    withContext(Dispatchers.Main) {
+                        strictRepository.observeMessages(appId = "app-1", chatId = "chat-main-thread").first()
+                    }
+
+                assertTrue(messages.isEmpty())
+            } finally {
+                strictDatabase.close()
+            }
         }
 }
 

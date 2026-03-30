@@ -1,45 +1,38 @@
 # Component Catalog
 
-## Chat Components
-| Component | Key props | Usage |
+## Shared Workspace
+| Component | Responsibility | Notes |
 |---|---|---|
-| `MessageBubble` | `role`, `content`, `status` | user/assistant/system shell |
-| `RenderedMarkdown` | `markdown`, `policy` | assistant rich text |
-| `ReasoningPanel` | `text`, `expanded` | thinking content |
-| `ToolStatusCard` | `toolName`, `params`, `response`, `status` | tool call lifecycle |
-| `CitationSummaryChip` | `count`, `onClick` | message citation entry |
-| `SuggestedQuestionRow` | `items`, `onSelect` | assistant follow-up questions |
-| `AttachmentDraftRow` | `attachments`, `onRemove`, `onRetry` | composer uploads |
-| `InteractiveCard` | `model`, `onSubmit` | workflow interactive node |
+| `KoraWorkspaceHeroCard` | Screen summary, orientation, status entry | Used at the top of chat empty state, conversation list, knowledge, settings |
+| `KoraSectionCard` | Standard workspace card container | Shared tonal layer and spacing |
+| `KoraMetricRow` | Two-column summary row | Used for connection/theme/app summaries |
+| `KoraWorkspaceSectionTitle` | Section title + supporting copy | Keeps section hierarchy consistent |
 
-## Conversation Components
-| Component | Key props | Usage |
+## Chat
+| Component | Responsibility | Notes |
 |---|---|---|
-| `ConversationRow` | `item`, `onOpen`, `onMore` | conversation list |
-| `ConversationFilterBar` | `query`, `filters` | search/filter UI |
-| `ConversationActionSheet` | `actions`, `onAction` | rename/delete/pin/etc |
+| `MessageCard` | Message shell for user/assistant/system content | Must preserve clear role distinction |
+| `RenderedMarkdown` | Rich text rendering | Optimized for reading, copy, code, citations |
+| `AttachmentComposer` | Upload draft surface | Treated as part of the main composer, not a separate page |
+| `SpeechInputComposer` | Voice capture state | Must always expose explicit static state cues |
 
-## Knowledge Components
-| Component | Key props | Usage |
+## Conversation
+| Component | Responsibility | Notes |
 |---|---|---|
-| `DatasetCard` | `dataset`, `onOpen` | dataset browser |
-| `CollectionRow` | `collection`, `onOpen`, `onMore` | collection list |
-| `ChunkRow` | `chunk`, `onOpen` | chunk viewer |
-| `SearchResultCard` | `result`, `onOpenSource` | search test result |
-| `ImportTaskCard` | `task`, `onRetry` | upload/import status |
+| `ConversationListCard` | Conversation summary row/card | Long press opens action sheet |
+| `OutlinedActionChip` | Search/filter toggles | Shared selection grammar across pages |
+| `ConversationActionSheet` | Rename, pin, archive, delete | Action hierarchy must stay stable |
 
-## Settings Components
-| Component | Key props | Usage |
+## Knowledge
+| Component | Responsibility | Notes |
 |---|---|---|
-| `SettingsRow` | `title`, `summary`, `onClick` | settings overview |
-| `SettingsSwitchRow` | `checked`, `onCheckedChange` | boolean preference |
-| `SettingsSliderRow` | `value`, `range`, `onChange` | font scale / speed |
-| `ConnectionStatusCard` | `status`, `details` | connection result |
+| `DatasetCard` | Dataset summary and entry point | Must expose name, type, status, recency |
+| `CollectionCard` | Collection summary | Same tonal system as conversation cards |
+| `ImportTaskCard` | Background import status | Error state requires recovery affordance |
 
-## Shared Components
-| Component | Key props | Usage |
+## Settings
+| Component | Responsibility | Notes |
 |---|---|---|
-| `LoadingSkeleton` | `variant` | loading states |
-| `EmptyStateCard` | `title`, `body`, `action` | empty states |
-| `ErrorStateCard` | `title`, `message`, `retry` | recoverable failure |
-| `ConfirmActionDialog` | `title`, `body`, `confirmKind` | dangerous actions |
+| `SettingsStatusCard` | Global workspace summary | Connection, theme, selected app |
+| `SettingsEntry` | Section entry row | Summary-first, action-second |
+| `ConnectionTestResultCard` | Validation feedback | Success and failure must read clearly |

@@ -4,6 +4,25 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 object ConnectionConfig {
     fun normalizeBaseUrl(input: String): String {
+        return normalizeUrl(input) { segments ->
+            if (segments.lastOrNull() == "api") {
+                segments.removeLast()
+            }
+        }
+    }
+
+    fun normalizeOpenAiCompatibleBaseUrl(input: String): String {
+        return normalizeUrl(input) { segments ->
+            if (segments.lastOrNull() == "v1") {
+                segments.removeLast()
+            }
+        }
+    }
+
+    private fun normalizeUrl(
+        input: String,
+        trimTrailingSegments: (MutableList<String>) -> Unit,
+    ): String {
         val trimmed = input.trim()
         require(trimmed.isNotBlank()) { "Server URL is required" }
         require(!trimmed.contains("://") || trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
@@ -19,9 +38,7 @@ object ConnectionConfig {
 
         val parsed = requireNotNull(withScheme.toHttpUrlOrNull()) { "Server URL is invalid" }
         val rawSegments = parsed.pathSegments.filter { it.isNotBlank() }.toMutableList()
-        if (rawSegments.lastOrNull() == "api") {
-            rawSegments.removeLast()
-        }
+        trimTrailingSegments(rawSegments)
 
         val normalizedPath =
             if (rawSegments.isEmpty()) {

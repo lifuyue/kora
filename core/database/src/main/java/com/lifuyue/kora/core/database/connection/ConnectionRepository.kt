@@ -2,10 +2,12 @@ package com.lifuyue.kora.core.database.connection
 
 import com.lifuyue.kora.core.common.AudioPreferences
 import com.lifuyue.kora.core.common.AppearancePreferences
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.core.common.ConnectionTestApp
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.ConnectionValidationError
+import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.NetworkError
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
@@ -18,6 +20,7 @@ import com.lifuyue.kora.core.network.ConnectionValidator
 import com.lifuyue.kora.core.network.FastGptApiFactory
 import com.lifuyue.kora.core.network.MutableConnectionProvider
 import com.lifuyue.kora.core.network.NetworkException
+import com.lifuyue.kora.core.network.OpenAiCompatibleApiFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,9 +42,18 @@ class ConnectionRepository
         private val apiKeySecureStore: ApiKeySecureStore,
         private val connectionProvider: MutableConnectionProvider,
         private val apiFactory: FastGptApiFactory,
+        private val openAiApiFactory: OpenAiCompatibleApiFactory,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        private val mutableSnapshot = MutableStateFlow(loadSnapshot(ConnectionPreferences()))
+        private val mutableSnapshot =
+            MutableStateFlow(
+                loadSnapshot(
+                    ConnectionPreferences(
+                        languageInitialized = true,
+                        languageTag = DEFAULT_LANGUAGE_TAG,
+                    ),
+                ),
+            )
 
         val snapshot: StateFlow<ConnectionSnapshot> = mutableSnapshot.asStateFlow()
 
@@ -49,6 +61,7 @@ class ConnectionRepository
             connectionProvider.update(mutableSnapshot.value)
             scope.launch {
                 preferencesStore.preferences.collectLatest { preferences ->
+                    ensureLanguageInitialized(preferences)
                     val snapshot = loadSnapshot(preferences)
                     mutableSnapshot.value = snapshot
                     connectionProvider.update(snapshot)
@@ -57,9 +70,11 @@ class ConnectionRepository
         }
 
         suspend fun saveConnection(
+            connectionType: ConnectionType,
             serverBaseUrl: String,
             apiKey: String,
-            selectedAppId: String,
+            model: String? = null,
+            selectedAppId: String? = null,
             onboardingCompleted: Boolean,
             themeMode: ThemeMode = mutableSnapshot.value.appearancePreferences.themeMode,
             dynamicColorEnabled: Boolean = mutableSnapshot.value.appearancePreferences.dynamicColorEnabled,
@@ -70,13 +85,21 @@ class ConnectionRepository
             showCitationsByDefault: Boolean = mutableSnapshot.value.appearancePreferences.showCitationsByDefault,
             languageTag: String? = mutableSnapshot.value.appearancePreferences.languageTag,
         ) {
-            val normalizedBaseUrl = ConnectionValidator.normalizeServerBaseUrl(serverBaseUrl)
+            val normalizedBaseUrl = normalizeBaseUrl(connectionType, serverBaseUrl)
             val trimmedApiKey = apiKey.trim()
+            val normalizedModel = model?.trim()?.ifBlank { null }
+            val resolvedSelectedAppId =
+                when (connectionType) {
+                    ConnectionType.OPENAI_COMPATIBLE -> DIRECT_OPENAI_APP_ID
+                    ConnectionType.FAST_GPT -> selectedAppId
+                }
 
             apiKeySecureStore.save(trimmedApiKey)
+            preferencesStore.updateConnectionType(connectionType)
             preferencesStore.updateServerBaseUrl(normalizedBaseUrl)
             preferencesStore.updateApiKeyPresence(true)
-            preferencesStore.updateSelectedAppId(selectedAppId)
+            preferencesStore.updateModel(normalizedModel)
+            preferencesStore.updateSelectedAppId(resolvedSelectedAppId)
             preferencesStore.updateOnboardingCompleted(onboardingCompleted)
             preferencesStore.updateThemeMode(themeMode)
             preferencesStore.updateDynamicColorEnabled(dynamicColorEnabled)
@@ -85,13 +108,16 @@ class ConnectionRepository
             preferencesStore.updateAutoScroll(autoScroll)
             preferencesStore.updateFontSizeScale(fontSizeScale)
             preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
+            preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
 
             publishSnapshot(
                 ConnectionSnapshot(
+                    connectionType = connectionType,
                     serverBaseUrl = normalizedBaseUrl,
                     apiKey = trimmedApiKey,
-                    selectedAppId = selectedAppId,
+                    model = normalizedModel,
+                    selectedAppId = resolvedSelectedAppId,
                     onboardingCompleted = onboardingCompleted,
                     appearancePreferences =
                         AppearancePreferences(
@@ -126,6 +152,7 @@ class ConnectionRepository
             preferencesStore.updateAutoScroll(autoScroll)
             preferencesStore.updateFontSizeScale(fontSizeScale)
             preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
+            preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
         }
 
@@ -142,6 +169,7 @@ class ConnectionRepository
         }
 
         suspend fun updateLanguageTag(languageTag: String?) {
+            preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
         }
 
@@ -191,34 +219,43 @@ class ConnectionRepository
 
         suspend fun clearConnection() {
             apiKeySecureStore.clear()
+            preferencesStore.updateConnectionType(ConnectionType.OPENAI_COMPATIBLE)
             preferencesStore.updateServerBaseUrl(null)
             preferencesStore.updateApiKeyPresence(false)
+            preferencesStore.updateModel(null)
             preferencesStore.updateSelectedAppId(null)
             publishSnapshot(
                 mutableSnapshot.value.copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
                     serverBaseUrl = null,
                     apiKey = null,
+                    model = null,
                     selectedAppId = null,
                 ),
             )
         }
 
         suspend fun testConnection(
+            connectionType: ConnectionType,
             serverBaseUrl: String,
             apiKey: String,
+            model: String? = null,
         ): ConnectionTestResult {
             ConnectionValidator.validateServerBaseUrl(serverBaseUrl)?.let {
                 return ConnectionTestResult.ValidationError(it)
             }
-            ConnectionValidator.validateApiKey(apiKey)?.let {
+            ConnectionValidator.validateApiKey(connectionType, apiKey)?.let {
                 return ConnectionTestResult.ValidationError(it)
             }
+            if (connectionType == ConnectionType.OPENAI_COMPATIBLE && model.isNullOrBlank()) {
+                return ConnectionTestResult.ValidationError(ConnectionValidationError.EMPTY_MODEL)
+            }
 
-            val normalizedBaseUrl = ConnectionValidator.normalizeServerBaseUrl(serverBaseUrl)
+            val normalizedBaseUrl = normalizeBaseUrl(connectionType, serverBaseUrl)
             var result: ConnectionTestResult = ConnectionTestResult.ValidationError(ConnectionValidationError.INVALID_SERVER_URL)
             val latencyMs =
                 measureTimeMillis {
-                    result = performConnectionTest(normalizedBaseUrl, apiKey.trim())
+                    result = performConnectionTest(connectionType, normalizedBaseUrl, apiKey.trim(), model?.trim())
                 }
 
             return when (result) {
@@ -233,30 +270,58 @@ class ConnectionRepository
         }
 
         private suspend fun performConnectionTest(
+            connectionType: ConnectionType,
             normalizedBaseUrl: String,
             apiKey: String,
+            model: String?,
         ): ConnectionTestResult {
             return try {
-                val response = apiFactory.create(normalizedBaseUrl, apiKey, enableDebugLogging = true).listApps()
-                if (response.code !in 200..299) {
-                    return mapServerError(
-                        NetworkError(
-                            code = response.code,
-                            statusText = response.statusText,
-                            message = response.message,
-                        ),
-                    )
-                }
+                when (connectionType) {
+                    ConnectionType.FAST_GPT -> {
+                        val response = apiFactory.create(normalizedBaseUrl, apiKey, enableDebugLogging = true).listApps()
+                        if (response.code !in 200..299) {
+                            return mapServerError(
+                                NetworkError(
+                                    code = response.code,
+                                    statusText = response.statusText,
+                                    message = response.message,
+                                ),
+                            )
+                        }
 
-                val apps = response.data.orEmpty().map { ConnectionTestApp(id = it.id, name = it.name) }
-                if (apps.isEmpty()) {
-                    ConnectionTestResult.ValidationError(ConnectionValidationError.NO_AVAILABLE_APPS)
-                } else {
-                    ConnectionTestResult.Success(
-                        normalizedBaseUrl = normalizedBaseUrl,
-                        apps = apps,
-                        latencyMs = 0L,
-                    )
+                        val apps = response.data.orEmpty().map { ConnectionTestApp(id = it.id, name = it.name) }
+                        if (apps.isEmpty()) {
+                            ConnectionTestResult.ValidationError(ConnectionValidationError.NO_AVAILABLE_APPS)
+                        } else {
+                            ConnectionTestResult.Success(
+                                normalizedBaseUrl = normalizedBaseUrl,
+                                apps = apps,
+                                latencyMs = 0L,
+                            )
+                        }
+                    }
+                    ConnectionType.OPENAI_COMPATIBLE -> {
+                        val response = openAiApiFactory.create(normalizedBaseUrl, apiKey, enableDebugLogging = true).listModels()
+                        val resolvedModel = model.orEmpty()
+                        val modelExists = response.data.any { it.id == resolvedModel }
+                        if (!modelExists) {
+                            ConnectionTestResult.ServerError(
+                                error =
+                                    NetworkError(
+                                        code = 404,
+                                        statusText = "modelNotFound",
+                                        message = "Model $resolvedModel is not available on this endpoint",
+                                    ),
+                                latencyMs = 0L,
+                            )
+                        } else {
+                            ConnectionTestResult.Success(
+                                normalizedBaseUrl = normalizedBaseUrl,
+                                apps = emptyList(),
+                                latencyMs = 0L,
+                            )
+                        }
+                    }
                 }
             } catch (error: NetworkException) {
                 mapServerError(error.networkError)
@@ -274,8 +339,13 @@ class ConnectionRepository
 
         private fun loadSnapshot(preferences: ConnectionPreferences): ConnectionSnapshot =
             ConnectionSnapshot(
-                serverBaseUrl = preferences.serverBaseUrl,
+                connectionType = preferences.connectionType,
+                serverBaseUrl =
+                    preferences.serverBaseUrl
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { normalizeBaseUrl(preferences.connectionType, it) },
                 apiKey = apiKeySecureStore.get(),
+                model = preferences.model,
                 selectedAppId = preferences.selectedAppId,
                 onboardingCompleted = preferences.onboardingCompleted,
                 appearancePreferences =
@@ -287,7 +357,7 @@ class ConnectionRepository
                         autoScroll = preferences.autoScroll,
                         fontSizeScale = preferences.fontSizeScale,
                         showCitationsByDefault = preferences.showCitationsByDefault,
-                        languageTag = preferences.languageTag,
+                        languageTag = resolvedLanguageTag(preferences),
                     ),
                 audioPreferences =
                     AudioPreferences(
@@ -304,7 +374,33 @@ class ConnectionRepository
             connectionProvider.update(snapshot)
         }
 
+        private suspend fun ensureLanguageInitialized(preferences: ConnectionPreferences) {
+            if (preferences.languageInitialized) {
+                return
+            }
+            preferencesStore.updateLanguageTag(DEFAULT_LANGUAGE_TAG)
+            preferencesStore.updateLanguageInitialized(true)
+        }
+
+        private fun resolvedLanguageTag(preferences: ConnectionPreferences): String? =
+            if (preferences.languageInitialized) {
+                preferences.languageTag
+            } else {
+                DEFAULT_LANGUAGE_TAG
+            }
+
+        private fun normalizeBaseUrl(
+            connectionType: ConnectionType,
+            serverBaseUrl: String,
+        ): String =
+            when (connectionType) {
+                ConnectionType.OPENAI_COMPATIBLE -> ConnectionConfig.normalizeOpenAiCompatibleBaseUrl(serverBaseUrl)
+                ConnectionType.FAST_GPT -> ConnectionValidator.normalizeServerBaseUrl(serverBaseUrl)
+            }
+
         companion object {
+            private const val DEFAULT_LANGUAGE_TAG = "zh-CN"
+
             fun redactApiKey(apiKey: String?): String = ConnectionConfig.redactApiKey(apiKey)
         }
     }

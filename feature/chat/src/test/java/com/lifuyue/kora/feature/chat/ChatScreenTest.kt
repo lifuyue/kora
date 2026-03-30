@@ -8,15 +8,22 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -28,6 +35,7 @@ import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
+@OptIn(ExperimentalTestApi::class)
 class ChatScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -105,6 +113,148 @@ class ChatScreenTest {
     }
 
     @Test
+    fun emptyChatShowsGeminiLandingLayout() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_MENU_BUTTON).assertIsDisplayed()
+        composeRule.onNodeWithTag("chat_workspace_header").assertIsDisplayed()
+        composeRule.onNodeWithText("Kora").assertExists()
+        composeRule.onNodeWithTag("${ChatTestTags.CHAT_SUGGESTION_PREFIX}0").assertExists()
+    }
+
+    @Test
+    fun menuButtonTriggersCallback() {
+        var openedDrawer = false
+
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+                onOpenDrawer = { openedDrawer = true },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_MENU_BUTTON).performClick()
+        composeRule.runOnIdle { assertTrue(openedDrawer) }
+    }
+
+    @Test
+    fun quickSettingsButtonIsPresentInGeminiComposer() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON).assertExists()
+    }
+
+    @Test
+    fun geminiComposerUsesThreePrimaryControlsAndAttachmentTriggerFileFlow() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        attachmentConfig =
+                            ChatAttachmentConfig(
+                                canSelectImg = true,
+                                canSelectFile = true,
+                            ),
+                ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_MIC_BUTTON).assertExists()
+        composeRule.onNodeWithText(context.chatString("chat_mode_fast")).assertDoesNotExist()
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON).performClick()
+
+        composeRule.onNodeWithContentDescription(context.chatString("chat_composer_voice")).assertExists()
+    }
+
+    @Test
+    fun inputDraftStillRendersInsideGeminiComposer() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1", input = "继续整理发布说明"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_INPUT).assertTextContains("继续整理发布说明")
+    }
+
+    @Test
+    fun draftInputShowsSendActionAndTriggersSendCallback() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1", input = "你好"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_PRIMARY_ACTION_BUTTON).assertExists().assertIsEnabled()
+    }
+
+    @Test
+    fun hardwareEnterShortcutHelperOnlyTriggersForSendableEnterKeyUp() {
+        assertTrue(shouldSubmitFromHardwareEnter(Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyUp, canSend = true))
+        assertTrue(shouldSubmitFromHardwareEnter(Key.NumPadEnter, androidx.compose.ui.input.key.KeyEventType.KeyUp, canSend = true))
+        assertFalse(shouldSubmitFromHardwareEnter(Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyDown, canSend = true))
+        assertFalse(shouldSubmitFromHardwareEnter(Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyUp, canSend = false))
+        assertFalse(shouldSubmitFromHardwareEnter(Key.Spacebar, androidx.compose.ui.input.key.KeyEventType.KeyUp, canSend = true))
+    }
+
+    @Test
     fun assistantMessageShowsPlaybackActionsForActiveMessage() {
         composeRule.setContent {
             ChatScreen(
@@ -149,8 +299,6 @@ class ChatScreenTest {
     @Test
     fun composerShowsAttachmentActionsAndPreviewControls() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        var pickedImage = false
-        var pickedFile = false
         composeRule.setContent {
             ChatScreen(
                 uiState =
@@ -191,8 +339,6 @@ class ChatScreenTest {
                     ),
                 onInputChanged = {},
                 onSend = {},
-                onPickImage = { pickedImage = true },
-                onPickFile = { pickedFile = true },
                 onRemoveAttachment = {},
                 onRetryAttachment = {},
                 onCancelAttachmentUpload = {},
@@ -204,18 +350,13 @@ class ChatScreenTest {
             )
         }
 
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_IMAGE_PICK).performClick()
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_FILE_PICK).performClick()
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_LIST).assertIsDisplayed()
-        composeRule.onNodeWithText("picture.png").assertIsDisplayed()
-        composeRule.onNodeWithText("uploading.pdf").assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON).performClick()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_LIST).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.attachmentItem("content://local/picture.png")).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.attachmentItem("content://local/uploading.pdf")).assertExists()
         composeRule.onNodeWithText("failed.txt").assertExists()
         composeRule.onNodeWithText(context.chatString("chat_attachment_cancel"), useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText(context.chatString("chat_attachment_retry"), useUnmergedTree = true).assertExists()
-        composeRule.runOnIdle {
-            assertTrue(pickedImage)
-            assertTrue(pickedFile)
-        }
     }
 
     @Test
@@ -277,6 +418,42 @@ class ChatScreenTest {
 
         composeRule.onNodeWithText(context.chatString("chat_stop_generation")).assertIsDisplayed()
         composeRule.onNodeWithText(context.chatString("chat_message_streaming")).assertExists()
+        composeRule.onNodeWithText(context.chatString("chat_message_streaming_placeholder")).assertExists()
+    }
+
+    @Test
+    fun streamingAssistantWithoutVisibleAnswerShowsThinkingPlaceholder() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        chatId = "chat-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "assistant-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "",
+                                    isStreaming = true,
+                                    deliveryState = MessageDeliveryState.Streaming,
+                                ),
+                            ),
+                    ),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText(context.chatString("chat_message_streaming_placeholder")).assertIsDisplayed()
     }
 
     @Test
@@ -590,3 +767,24 @@ class ChatScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.interactiveSubmit("assistant-2")).assertIsEnabled()
     }
 }
+
+private val sampleConversationItems =
+    listOf(
+        ConversationListItemUiModel(
+            chatId = "chat-1",
+            appId = "app-1",
+            title = "架构讨论",
+            preview = "最新内容",
+            folderId = "folder-1",
+            folderName = "工作",
+            tags = listOf(ConversationTagUiModel(tagId = "tag-1", name = "Kotlin", colorToken = "sky")),
+            isPinned = true,
+        ),
+        ConversationListItemUiModel(
+            chatId = "chat-2",
+            appId = "app-1",
+            title = "周报整理",
+            preview = "待发送",
+            isPinned = false,
+        ),
+    )

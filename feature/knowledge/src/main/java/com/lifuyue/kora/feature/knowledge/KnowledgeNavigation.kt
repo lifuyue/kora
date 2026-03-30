@@ -11,6 +11,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.lifuyue.kora.core.common.ConnectionType
 
 object KnowledgeRoutes {
     const val OVERVIEW = "knowledge"
@@ -35,12 +36,33 @@ object KnowledgeRoutes {
     fun search(datasetId: String): String = "knowledge/datasets/$datasetId/search-test"
 }
 
-fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
+fun NavGraphBuilder.knowledgeGraph(
+    navController: NavController,
+    onOpenDrawer: () -> Unit = {},
+) {
     composable(KnowledgeRoutes.OVERVIEW) {
-        val viewModel: KnowledgeOverviewViewModel = hiltViewModel()
-        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val modeViewModel: KnowledgeModeViewModel = hiltViewModel()
+        val connectionType by modeViewModel.connectionType.collectAsStateWithLifecycle()
         val useDualPane = rememberKnowledgeDualPaneEnabled()
-        if (useDualPane) {
+        val onReturnToChat =
+            if (navController.previousBackStackEntry?.destination?.route?.startsWith("chat") == true) {
+                { navController.popBackStack(); Unit }
+            } else {
+                null
+            }
+        if (connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+            val viewModel: LocalKnowledgeOverviewViewModel = hiltViewModel()
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            LocalKnowledgeOverviewScreen(
+                state = uiState,
+                onOpenLibrary = { navController.navigate(KnowledgeRoutes.DATASETS) },
+                onOpenRecentDocument = { navController.navigate(KnowledgeRoutes.collections(it)) },
+                onReturnToChat = onReturnToChat,
+                onOpenDrawer = onOpenDrawer,
+            )
+        } else if (useDualPane) {
+            val viewModel: KnowledgeOverviewViewModel = hiltViewModel()
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             AdaptiveKnowledgeScaffold(
                 isExpanded = true,
                 listPane = {
@@ -48,61 +70,101 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
                         state = uiState,
                         onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
                         onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
+                        onReturnToChat = onReturnToChat,
+                        onOpenDrawer = onOpenDrawer,
                     )
                 },
                 detailPane = { KnowledgeAdaptivePlaceholder() },
             )
         } else {
+            val viewModel: KnowledgeOverviewViewModel = hiltViewModel()
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             KnowledgeOverviewScreen(
                 state = uiState,
                 onOpenDatasets = { navController.navigate(KnowledgeRoutes.DATASETS) },
                 onOpenRecentDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
+                onReturnToChat = onReturnToChat,
+                onOpenDrawer = onOpenDrawer,
             )
         }
     }
     composable(KnowledgeRoutes.DATASETS) {
-        val viewModel: DatasetBrowserViewModel = hiltViewModel()
-        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        DatasetBrowserScreen(
-            state = uiState,
-            onBack = { navController.popBackStack() },
-            onQueryChanged = viewModel::updateQuery,
-            onCreateNameChanged = viewModel::updateCreateName,
-            onTypeFilterSelected = viewModel::selectTypeFilter,
-            onStatusFilterSelected = viewModel::selectStatusFilter,
-            onRefresh = viewModel::refresh,
-            onCreateDataset = viewModel::createDataset,
-            onDeleteDataset = viewModel::deleteDataset,
-            onOpenDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
-            onOpenSearch = { navController.navigate(KnowledgeRoutes.search(it)) },
-        )
+        val modeViewModel: KnowledgeModeViewModel = hiltViewModel()
+        val connectionType by modeViewModel.connectionType.collectAsStateWithLifecycle()
+        if (connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+            val viewModel: LocalKnowledgeLibraryViewModel = hiltViewModel()
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            LocalKnowledgeLibraryScreen(
+                state = uiState,
+                onBack = { navController.popBackStack() },
+                onQueryChanged = viewModel::updateQuery,
+                onTitleChanged = viewModel::updateDraftTitle,
+                onSourceChanged = viewModel::updateDraftSource,
+                onTextChanged = viewModel::updateDraftText,
+                onImport = viewModel::importDraft,
+                onOpenDocument = { navController.navigate(KnowledgeRoutes.collections(it)) },
+                onDeleteDocument = viewModel::deleteDocument,
+                onToggleEnabled = viewModel::setEnabled,
+                onOpenDrawer = onOpenDrawer,
+            )
+        } else {
+            val viewModel: DatasetBrowserViewModel = hiltViewModel()
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            DatasetBrowserScreen(
+                state = uiState,
+                onBack = { navController.popBackStack() },
+                onQueryChanged = viewModel::updateQuery,
+                onCreateNameChanged = viewModel::updateCreateName,
+                onTypeFilterSelected = viewModel::selectTypeFilter,
+                onStatusFilterSelected = viewModel::selectStatusFilter,
+                onRefresh = viewModel::refresh,
+                onCreateDataset = viewModel::createDataset,
+                onDeleteDataset = viewModel::deleteDataset,
+                onOpenDataset = { navController.navigate(KnowledgeRoutes.collections(it)) },
+                onOpenSearch = { navController.navigate(KnowledgeRoutes.search(it)) },
+                onOpenDrawer = onOpenDrawer,
+            )
+        }
     }
     composable(
         route = KnowledgeRoutes.COLLECTIONS,
         arguments = listOf(navArgument("datasetId") { type = NavType.StringType }),
     ) {
-        val viewModel: CollectionManagementViewModel = hiltViewModel()
-        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        val documentLauncher =
-            rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-                if (uri != null) {
-                    viewModel.setSelectedDocument(uri, uri.lastPathSegment ?: "document")
+        val modeViewModel: KnowledgeModeViewModel = hiltViewModel()
+        val connectionType by modeViewModel.connectionType.collectAsStateWithLifecycle()
+        if (connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+            val viewModel: LocalKnowledgeDocumentViewModel = hiltViewModel()
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            LocalKnowledgeDocumentScreen(
+                state = uiState,
+                onBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
+            )
+        } else {
+            val viewModel: CollectionManagementViewModel = hiltViewModel()
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val documentLauncher =
+                rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+                    if (uri != null) {
+                        viewModel.setSelectedDocument(uri, uri.lastPathSegment ?: "document")
+                    }
                 }
-            }
-        CollectionManagementScreen(
-            state = uiState,
-            onBack = { navController.popBackStack() },
-            onRefresh = viewModel::refresh,
-            onModeChanged = viewModel::switchMode,
-            onTextNameChanged = viewModel::updateTextName,
-            onTextValueChanged = viewModel::updateTextValue,
-            onLinkValueChanged = viewModel::updateLinkValue,
-            onLinkSelectorChanged = viewModel::updateLinkSelector,
-            onPickDocument = { documentLauncher.launch(arrayOf("*/*")) },
-            onSubmit = viewModel::submit,
-            onOpenCollection = { collectionId -> navController.navigate(KnowledgeRoutes.chunks(viewModel.datasetId, collectionId)) },
-            onOpenSearch = { navController.navigate(KnowledgeRoutes.search(viewModel.datasetId)) },
-        )
+            CollectionManagementScreen(
+                state = uiState,
+                onBack = { navController.popBackStack() },
+                onRefresh = viewModel::refresh,
+                onModeChanged = viewModel::switchMode,
+                onTextNameChanged = viewModel::updateTextName,
+                onTextValueChanged = viewModel::updateTextValue,
+                onLinkValueChanged = viewModel::updateLinkValue,
+                onLinkSelectorChanged = viewModel::updateLinkSelector,
+                onPickDocument = { documentLauncher.launch(arrayOf("*/*")) },
+                onSubmit = viewModel::submit,
+                onOpenCollection = { collectionId -> navController.navigate(KnowledgeRoutes.chunks(viewModel.datasetId, collectionId)) },
+                onOpenSearch = { navController.navigate(KnowledgeRoutes.search(viewModel.datasetId)) },
+                onOpenDrawer = onOpenDrawer,
+            )
+        }
     }
     composable(
         route = KnowledgeRoutes.CHUNKS,
@@ -129,6 +191,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
             onSave = viewModel::saveEditing,
             onDelete = viewModel::deleteChunk,
             onLoadMore = viewModel::loadMore,
+            onOpenDrawer = onOpenDrawer,
         )
     }
     composable(
@@ -157,6 +220,7 @@ fun NavGraphBuilder.knowledgeGraph(navController: NavController) {
                     )
                 }
             },
+            onOpenDrawer = onOpenDrawer,
         )
     }
 }

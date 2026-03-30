@@ -24,6 +24,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideOpenAiCompatibleApiFactory(json: Json): OpenAiCompatibleApiFactory = OpenAiCompatibleApiFactory(json)
+
+    @Provides
+    @Singleton
     fun provideMutableConnectionProvider(): MutableConnectionProvider = MutableConnectionProvider()
 
     @Provides
@@ -75,5 +79,6 @@ object NetworkModule {
         okHttpClient: OkHttpClient,
         json: Json,
         baseUrlProvider: BaseUrlProvider,
-    ): SseStreamClient = SseStreamClient(okHttpClient, json, baseUrlProvider)
+        connectionProvider: MutableConnectionProvider,
+    ): SseStreamClient = SseStreamClient(okHttpClient, json, baseUrlProvider, connectionProvider)
 }

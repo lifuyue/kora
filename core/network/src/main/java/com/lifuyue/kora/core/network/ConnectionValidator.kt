@@ -1,5 +1,6 @@
 package com.lifuyue.kora.core.network
 
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionValidationError
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
@@ -36,10 +37,14 @@ object ConnectionValidator {
         }
     }
 
-    fun validateApiKey(apiKey: String): ConnectionValidationError? =
+    fun validateApiKey(
+        connectionType: ConnectionType,
+        apiKey: String,
+    ): ConnectionValidationError? =
         when {
             apiKey.trim().isEmpty() -> ConnectionValidationError.EMPTY_API_KEY
-            !ConnectionConfig.isValidApiKey(apiKey) -> ConnectionValidationError.INVALID_API_KEY
+            connectionType == ConnectionType.FAST_GPT && !ConnectionConfig.isValidApiKey(apiKey) ->
+                ConnectionValidationError.INVALID_API_KEY
             else -> null
         }
 }

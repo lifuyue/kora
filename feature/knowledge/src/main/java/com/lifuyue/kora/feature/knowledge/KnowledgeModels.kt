@@ -2,6 +2,7 @@ package com.lifuyue.kora.feature.knowledge
 
 import android.net.Uri
 import androidx.compose.runtime.Immutable
+import com.lifuyue.kora.core.common.ConnectionType
 
 enum class KnowledgeLoadState {
     Loading,
@@ -67,10 +68,41 @@ data class SearchResultUiModel(
 )
 
 data class KnowledgeOverviewUiState(
+    val connectionType: ConnectionType = ConnectionType.FAST_GPT,
     val selectedAppId: String? = null,
     val datasetCount: Int = 0,
     val recentDatasets: List<DatasetListItemUiModel> = emptyList(),
     val status: KnowledgeLoadState = KnowledgeLoadState.Loading,
+    val errorMessage: String? = null,
+)
+
+@Immutable
+data class LocalKnowledgeDocumentUiModel(
+    val documentId: String,
+    val title: String,
+    val sourceLabel: String,
+    val previewText: String,
+    val chunkCount: Int,
+    val isEnabled: Boolean,
+    val updatedAt: Long,
+)
+
+data class LocalKnowledgeLibraryUiState(
+    val query: String = "",
+    val draftTitle: String = "",
+    val draftSource: String = "",
+    val draftText: String = "",
+    val items: List<LocalKnowledgeDocumentUiModel> = emptyList(),
+    val status: KnowledgeLoadState = KnowledgeLoadState.Loading,
+    val errorMessage: String? = null,
+)
+
+data class LocalKnowledgeDocumentUiState(
+    val documentId: String = "",
+    val title: String = "",
+    val sourceLabel: String = "",
+    val chunks: List<ChunkItemUiModel> = emptyList(),
+    val isEnabled: Boolean = true,
     val errorMessage: String? = null,
 )
 

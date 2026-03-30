@@ -14,11 +14,14 @@ import com.lifuyue.kora.core.database.dao.ConversationFolderDao
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
 import com.lifuyue.kora.core.database.dao.ImportTaskDao
 import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
+import com.lifuyue.kora.core.database.dao.LocalKnowledgeChunkDao
+import com.lifuyue.kora.core.database.dao.LocalKnowledgeDocumentDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
 import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
 import com.lifuyue.kora.core.network.FastGptApiFactory
 import com.lifuyue.kora.core.network.MutableConnectionProvider
+import com.lifuyue.kora.core.network.OpenAiCompatibleApiFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -67,6 +70,12 @@ object DatabaseModule {
     fun provideInteractiveDraftDao(database: KoraDatabase): InteractiveDraftDao = database.interactiveDraftDao()
 
     @Provides
+    fun provideLocalKnowledgeDocumentDao(database: KoraDatabase): LocalKnowledgeDocumentDao = database.localKnowledgeDocumentDao()
+
+    @Provides
+    fun provideLocalKnowledgeChunkDao(database: KoraDatabase): LocalKnowledgeChunkDao = database.localKnowledgeChunkDao()
+
+    @Provides
     @Singleton
     fun providePreferencesDataStore(
         @ApplicationContext context: Context,
@@ -95,11 +104,13 @@ object DatabaseModule {
         apiKeySecureStore: ApiKeySecureStore,
         connectionProvider: MutableConnectionProvider,
         apiFactory: FastGptApiFactory,
+        openAiApiFactory: OpenAiCompatibleApiFactory,
     ): ConnectionRepository =
         ConnectionRepository(
             preferencesStore = connectionPreferencesStore,
             apiKeySecureStore = apiKeySecureStore,
             connectionProvider = connectionProvider,
             apiFactory = apiFactory,
+            openAiApiFactory = openAiApiFactory,
         )
 }

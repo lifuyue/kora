@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.core.app.ApplicationProvider
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.SpeechToTextEngine
 import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
@@ -32,8 +33,10 @@ class ConnectionPreferencesStoreTest {
                     file = File(context.filesDir, "connection-preferences.preferences_pb"),
                 )
 
+            store.updateConnectionType(ConnectionType.OPENAI_COMPATIBLE)
             store.updateServerBaseUrl("https://api.fastgpt.in/api")
             store.updateApiKeyPresence(true)
+            store.updateModel("gpt-4o-mini")
             store.updateSelectedAppId("app-1")
             store.updateOnboardingCompleted(true)
             store.updateStreamEnabled(false)
@@ -41,6 +44,7 @@ class ConnectionPreferencesStoreTest {
             store.updateThemeMode(ThemeMode.DARK)
             store.updateDynamicColorEnabled(false)
             store.updateOledEnabled(true)
+            store.updateLanguageInitialized(true)
             store.updateLanguageTag("zh-CN")
             store.updateSpeechToTextEngine(SpeechToTextEngine.WhisperApp)
             store.updateAutoSendTranscripts(true)
@@ -50,8 +54,10 @@ class ConnectionPreferencesStoreTest {
 
             val preferences = store.preferences.first()
 
+            assertEquals(ConnectionType.OPENAI_COMPATIBLE, preferences.connectionType)
             assertEquals("https://api.fastgpt.in/api", preferences.serverBaseUrl)
             assertTrue(preferences.apiKeyPresent)
+            assertEquals("gpt-4o-mini", preferences.model)
             assertEquals("app-1", preferences.selectedAppId)
             assertTrue(preferences.onboardingCompleted)
             assertFalse(preferences.streamEnabled)
@@ -59,6 +65,7 @@ class ConnectionPreferencesStoreTest {
             assertEquals(ThemeMode.DARK, preferences.themeMode)
             assertFalse(preferences.dynamicColorEnabled)
             assertTrue(preferences.oledEnabled)
+            assertTrue(preferences.languageInitialized)
             assertEquals("zh-CN", preferences.languageTag)
             assertEquals(SpeechToTextEngine.WhisperApp, preferences.speechToTextEngine)
             assertTrue(preferences.autoSendTranscripts)

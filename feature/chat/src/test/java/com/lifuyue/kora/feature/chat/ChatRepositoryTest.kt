@@ -3,6 +3,9 @@ package com.lifuyue.kora.feature.chat
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.ConnectionSnapshot
+import com.lifuyue.kora.core.common.ConnectionSnapshotProvider
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.database.KoraDatabase
 import com.lifuyue.kora.core.network.NetworkFactory
 import com.lifuyue.kora.core.network.SseStreamClient
@@ -60,6 +63,7 @@ class ChatRepositoryTest {
                 interactiveDraftDao = database.interactiveDraftDao(),
                 messageDao = database.messageDao(),
                 context = ApplicationProvider.getApplicationContext(),
+                connectionSnapshotProvider = fastGptSnapshotProvider(),
             )
     }
 
@@ -201,6 +205,7 @@ class ChatRepositoryTest {
                                 listOf(AssistantResponseStep(markdownDelta = "继续完成"))
                             }
                         },
+                    connectionSnapshotProvider = fastGptSnapshotProvider(),
                 )
 
             val chatId = stopRepository.sendMessage(appId = "app-1", chatId = null, text = "测试停止继续")
@@ -448,3 +453,13 @@ class ChatRepositoryTest {
         throw AssertionError("Condition not satisfied within ${timeoutMs}ms")
     }
 }
+
+private fun fastGptSnapshotProvider(): ConnectionSnapshotProvider =
+    ConnectionSnapshotProvider {
+        ConnectionSnapshot(
+            connectionType = ConnectionType.FAST_GPT,
+            serverBaseUrl = "https://example.com/api/",
+            apiKey = "fastgpt-secret",
+            selectedAppId = "app-1",
+        )
+    }

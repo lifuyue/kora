@@ -1,17 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_selected">已选中</string>
+    <string name="settings_back">返回</string>
     <string name="settings_summary_not_configured">未配置</string>
     <string name="settings_summary_not_selected">未选择</string>
 
     <string name="settings_overview_title">设置</string>
+    <string name="settings_overview_status_title">工作台状态</string>
+    <string name="settings_overview_status_summary">连接、当前应用与主题配置在这里快速确认。</string>
+    <string name="settings_overview_status_connection">连接</string>
+    <string name="settings_overview_status_theme">主题</string>
+    <string name="settings_overview_status_app">当前应用</string>
     <string name="settings_overview_section_connection">连接与账号</string>
     <string name="settings_overview_section_appearance">外观与主题</string>
     <string name="settings_overview_section_common">常用与信息</string>
 
     <string name="settings_connection_title">连接配置</string>
-    <string name="settings_connection_server_url_label">Server URL</string>
-    <string name="settings_connection_api_key_label">API Key</string>
+    <string name="settings_connection_type_openai">OpenAI 兼容</string>
+    <string name="settings_connection_type_fastgpt">FastGPT</string>
+    <string name="settings_connection_server_url_label">服务器地址</string>
+    <string name="settings_connection_api_key_label">API 密钥</string>
+    <string name="settings_connection_model_label">模型</string>
     <string name="settings_connection_test">测试连接</string>
     <string name="settings_connection_testing">测试中...</string>
     <string name="settings_connection_save">保存</string>
@@ -19,14 +28,15 @@
     <string name="settings_connection_clear">清除</string>
     <string name="settings_connection_api_key_summary">当前密钥摘要：%1$s</string>
     <plurals name="settings_connection_success">
-        <item quantity="other">连接成功，发现 %1$d 个 App，耗时 %2$dms</item>
+        <item quantity="other">连接成功，发现 %1$d 个应用，耗时 %2$dms</item>
     </plurals>
+    <string name="settings_connection_success_openai">连接成功，模型接口可用，耗时 %1$dms</string>
     <string name="settings_connection_validation_error">校验失败：%1$s</string>
     <string name="settings_connection_auth_error">认证失败：%1$s</string>
     <string name="settings_connection_network_error">网络错误：%1$s</string>
     <string name="settings_connection_server_error">服务端错误：%1$s</string>
 
-    <string name="settings_current_app_title">当前 App</string>
+    <string name="settings_current_app_title">当前应用</string>
     <string name="settings_theme_title">主题外观</string>
     <string name="settings_theme_dynamic_color">动态取色</string>
     <string name="settings_theme_oled">OLED 深色增强</string>
@@ -41,11 +51,20 @@
     <string name="settings_chat_preferences_auto_scroll">自动滚动到底部</string>
     <string name="settings_chat_preferences_citations">默认显示引用</string>
     <string name="settings_chat_preferences_font_scale">字体大小 %1$d%%</string>
+    <string name="settings_quick_title">聊天快速设置</string>
+    <string name="settings_quick_summary">不离开当前对话，直接调整常用偏好。</string>
+    <string name="settings_quick_theme_title">主题</string>
+    <string name="settings_quick_language_title">语言</string>
+    <string name="settings_quick_voice_title">语音偏好</string>
+    <string name="settings_quick_voice_summary">语音识别引擎：%1$s</string>
+    <string name="settings_quick_open_full">打开完整设置</string>
+    <string name="settings_audio_engine_system">系统语音</string>
+    <string name="settings_audio_engine_whisper_app">Whisper 应用</string>
 
     <string name="settings_language_title">语言</string>
     <string name="settings_language_follow_system">跟随系统</string>
     <string name="settings_language_simplified_chinese">简体中文</string>
-    <string name="settings_language_english">English</string>
+    <string name="settings_language_english">英文</string>
 
     <string name="settings_storage_title">缓存</string>
     <string name="settings_storage_summary">查看并清理临时缓存</string>
@@ -56,7 +75,7 @@
     <string name="settings_storage_clearing">清理中...</string>
 
     <string name="settings_about_title">关于</string>
-    <string name="settings_about_summary">Kora Android Client</string>
+    <string name="settings_about_summary">Kora 安卓客户端</string>
     <string name="settings_about_feedback">反馈</string>
     <string name="settings_about_licenses">开源许可</string>
 </resources>

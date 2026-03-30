@@ -3,6 +3,7 @@ package com.lifuyue.kora.feature.chat
 import android.Manifest
 import android.net.Uri
 import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -23,6 +24,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.core.content.ContextCompat
 import androidx.navigation.navArgument
+import kotlinx.coroutines.launch
 
 object ChatRoutes {
     const val CONVERSATIONS = "chat/{appId}"
@@ -37,7 +39,7 @@ object ChatRoutes {
         chatId: String? = null,
     ): String =
         if (chatId == null) {
-            "chat/thread/$appId?chatId="
+            "chat/thread/$appId"
         } else {
             "chat/thread/$appId?chatId=$chatId"
         }
@@ -47,7 +49,7 @@ object ChatRoutes {
         chatId: String? = null,
     ): String =
         if (chatId == null) {
-            "chat/app/$appId?chatId="
+            "chat/app/$appId"
         } else {
             "chat/app/$appId?chatId=$chatId"
         }
@@ -55,7 +57,11 @@ object ChatRoutes {
     fun appAnalytics(appId: String): String = "chat/app/$appId/analytics"
 }
 
-fun NavGraphBuilder.chatGraph(navController: NavController) {
+fun NavGraphBuilder.chatGraph(
+    navController: NavController,
+    onOpenQuickSettings: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
+) {
     composable(
         route = ChatRoutes.CONVERSATIONS,
         arguments = listOf(navArgument("appId") { type = NavType.StringType }),
@@ -81,7 +87,11 @@ fun NavGraphBuilder.chatGraph(navController: NavController) {
                 },
             ),
     ) {
-        ChatRoute(navController = navController, onBack = { navController.popBackStack() })
+        ChatRoute(
+            navController = navController,
+            onOpenQuickSettings = onOpenQuickSettings,
+            onOpenDrawer = onOpenDrawer,
+        )
     }
     composable(
         route = ChatRoutes.APP_DETAIL,
@@ -184,12 +194,15 @@ private fun ConversationListRoute(
 @Composable
 private fun ChatRoute(
     navController: NavController,
-    onBack: () -> Unit,
+    onOpenQuickSettings: () -> Unit,
+    onOpenDrawer: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel(),
     appSelectorViewModel: AppSelectorViewModel = hiltViewModel(),
+    conversationListViewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val appSelectorUiState = appSelectorViewModel.uiState.collectAsStateWithLifecycle()
+    val conversationBrowserUiState = conversationListViewModel.uiState.collectAsStateWithLifecycle()
     var showAppSelector by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -223,11 +236,18 @@ private fun ChatRoute(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    val handleBack = {
+        if (!navController.popBackStack()) {
+            Unit
+        }
+    }
+    BackHandler(onBack = handleBack)
     ChatScreen(
         uiState = uiState.value,
         appSelectorUiState = appSelectorUiState.value,
+        conversationBrowserUiState = conversationBrowserUiState.value,
         showAppSelector = showAppSelector,
-        onBack = onBack,
+        onBack = handleBack,
         onInputChanged = viewModel::updateInput,
         onStartSpeechInput = {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -265,10 +285,12 @@ private fun ChatRoute(
         onStopPlayback = viewModel::stopPlayback,
         onOpenAppSelector = { showAppSelector = true },
         onDismissAppSelector = { showAppSelector = false },
+        onOpenDrawer = onOpenDrawer,
+        onOpenQuickSettings = onOpenQuickSettings,
         onSwitchApp = { appId ->
             showAppSelector = false
             appSelectorViewModel.switchApp(appId) { selected ->
-                navController.navigate(ChatRoutes.conversations(selected)) {
+                navController.navigate(ChatRoutes.thread(selected)) {
                     popUpTo(ChatRoutes.CONVERSATIONS) { inclusive = false }
                     launchSingleTop = true
                 }

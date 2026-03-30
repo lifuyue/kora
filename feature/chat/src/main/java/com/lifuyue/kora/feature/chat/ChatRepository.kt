@@ -1,6 +1,7 @@
 package com.lifuyue.kora.feature.chat
 
 import android.content.Context
+import com.lifuyue.kora.core.database.LocalKnowledgeStore
 import com.lifuyue.kora.core.database.dao.ConversationDao
 import com.lifuyue.kora.core.database.dao.ConversationFolderDao
 import com.lifuyue.kora.core.database.dao.ConversationTagDao
@@ -8,6 +9,7 @@ import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.network.AppQuestionGuideConfigDto
 import com.lifuyue.kora.core.network.FastGptApi
+import com.lifuyue.kora.core.network.MutableConnectionProvider
 import com.lifuyue.kora.core.network.SseStreamClient
 import com.lifuyue.kora.core.network.UploadedAssetRef
 import dagger.Module
@@ -229,6 +231,8 @@ object ChatRepositoryModule {
         interactiveDraftDao: InteractiveDraftDao,
         messageDao: MessageDao,
         @ApplicationContext context: Context,
+        connectionProvider: MutableConnectionProvider,
+        localKnowledgeStore: LocalKnowledgeStore,
     ): RoomChatRepository =
         RoomChatRepository(
             api = api,
@@ -239,6 +243,8 @@ object ChatRepositoryModule {
             interactiveDraftDao = interactiveDraftDao,
             messageDao = messageDao,
             context = context,
+            connectionSnapshotProvider = connectionProvider,
+            localKnowledgeStore = localKnowledgeStore,
         )
 
     @Provides
