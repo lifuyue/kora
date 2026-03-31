@@ -81,6 +81,9 @@ import okio.BufferedSink
 import java.io.File
 import java.time.Instant
 
+private const val AUTO_CONVERSATION_TITLE_LIMIT = 40
+private val WHITESPACE_REGEX = "\\s+".toRegex()
+
 typealias RoomBackedChatRepository = RoomChatRepository
 
 class RoomChatRepository
@@ -510,9 +513,12 @@ class RoomChatRepository
                     appId = appId,
                     chatId = resolvedChatId,
                     title =
-                        conversationDao.getConversationByChatId(resolvedChatId)?.displayTitle
-                            ?: initData?.title?.takeIf { it.isNotBlank() }
-                            ?: previewText.take(18).ifBlank { context.getString(R.string.chat_repository_new_conversation_title) },
+                        conversationDao.getConversationByChatId(resolvedChatId)?.title
+                            ?: autoConversationTitle(
+                                appId = appId,
+                                initTitle = initData?.title,
+                                previewText = previewText,
+                            ),
                     preview = previewText,
                 )
                 messageDao.upsertAll(listOf(humanMessage, assistantMessage))
@@ -1071,6 +1077,22 @@ class RoomChatRepository
                 updateTime = clock(),
                 lastMessagePreview = preview.take(140),
             )
+        }
+
+        private fun autoConversationTitle(
+            appId: String,
+            initTitle: String?,
+            previewText: String,
+        ): String {
+            if (!isOpenAiMode(appId)) {
+                return initTitle?.takeIf { it.isNotBlank() } ?: previewText.take(18).ifBlank {
+                    context.getString(R.string.chat_repository_new_conversation_title)
+                }
+            }
+            val normalizedPreview = previewText.replace(WHITESPACE_REGEX, " ").trim()
+            return normalizedPreview.take(AUTO_CONVERSATION_TITLE_LIMIT).ifBlank {
+                context.getString(R.string.chat_repository_new_conversation_title)
+            }
         }
 
         private fun newMessageEntity(

@@ -25,10 +25,11 @@ import androidx.navigation.compose.composable
 import androidx.core.content.ContextCompat
 import androidx.navigation.navArgument
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 object ChatRoutes {
     const val CONVERSATIONS = "chat/{appId}"
-    const val THREAD = "chat/thread/{appId}?chatId={chatId}"
+    const val THREAD = "chat/thread/{appId}?chatId={chatId}&sessionKey={sessionKey}"
     const val APP_DETAIL = "chat/app/{appId}?chatId={chatId}"
     const val APP_ANALYTICS = "chat/app/{appId}/analytics"
 
@@ -37,12 +38,23 @@ object ChatRoutes {
     fun thread(
         appId: String,
         chatId: String? = null,
+        sessionKey: String? = null,
     ): String =
-        if (chatId == null) {
-            "chat/thread/$appId"
-        } else {
-            "chat/thread/$appId?chatId=$chatId"
+        buildString {
+            append("chat/thread/")
+            append(appId)
+            val queryParams =
+                listOfNotNull(
+                    chatId?.let { "chatId=$it" },
+                    sessionKey?.let { "sessionKey=$it" },
+                )
+            if (queryParams.isNotEmpty()) {
+                append("?")
+                append(queryParams.joinToString("&"))
+            }
         }
+
+    fun newThread(appId: String): String = thread(appId = appId, sessionKey = UUID.randomUUID().toString())
 
     fun appDetail(
         appId: String,
@@ -71,7 +83,7 @@ fun NavGraphBuilder.chatGraph(
                 navController.navigate(ChatRoutes.thread(appId, chatId))
             },
             onNewConversation = { appId ->
-                navController.navigate(ChatRoutes.thread(appId))
+                navController.navigate(ChatRoutes.newThread(appId))
             },
         )
     }
@@ -81,6 +93,11 @@ fun NavGraphBuilder.chatGraph(
             listOf(
                 navArgument("appId") { type = NavType.StringType },
                 navArgument("chatId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("sessionKey") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
@@ -290,9 +307,8 @@ private fun ChatRoute(
         onSwitchApp = { appId ->
             showAppSelector = false
             appSelectorViewModel.switchApp(appId) { selected ->
-                navController.navigate(ChatRoutes.thread(selected)) {
+                navController.navigate(ChatRoutes.newThread(selected)) {
                     popUpTo(ChatRoutes.CONVERSATIONS) { inclusive = false }
-                    launchSingleTop = true
                 }
             }
         },
