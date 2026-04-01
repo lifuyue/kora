@@ -525,11 +525,11 @@ private fun ChatGeminiEmptyState(
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val suggestionItems: List<Pair<ImageVector, String>> =
         listOf(
-            Icons.Filled.Search to stringResource(R.string.chat_suggestion_image),
-            Icons.Filled.Search to stringResource(R.string.chat_suggestion_music),
-            Icons.Filled.Add to stringResource(R.string.chat_suggestion_video),
-            Icons.Filled.Person to stringResource(R.string.chat_suggestion_study),
-            Icons.Filled.Search to stringResource(R.string.chat_suggestion_energy),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_knowledge_search),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_knowledge_summary),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_knowledge_answer),
+            Icons.Filled.Person to stringResource(R.string.chat_suggestion_explain_concept),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_daily_reply),
         )
     Column(
         modifier = modifier.fillMaxWidth(),

@@ -15,7 +15,7 @@
     <string name="chat_open_citation">查看知识来源</string>
     <string name="chat_citation_title_fallback">引用</string>
     <string name="chat_score_summary">%1$s · %2$s</string>
-    <string name="chat_greeting">富悦，你好</string>
+    <string name="chat_greeting">你好，有什么可以帮你？</string>
     <string name="chat_empty_welcome">开始一个新对话，消息会在这里以 Markdown 和代码块形式渲染。</string>
     <string name="chat_empty_headline">需要我为你做些什么？</string>
     <string name="chat_input_label">输入消息</string>
@@ -32,11 +32,11 @@
     <string name="chat_drawer_gem_title">Gem</string>
     <string name="chat_drawer_empty_history">这里会显示最近的对话记录。</string>
     <string name="chat_mode_fast">快速</string>
-    <string name="chat_suggestion_image">制作图片</string>
-    <string name="chat_suggestion_music">创作音乐</string>
-    <string name="chat_suggestion_video">创作视频</string>
-    <string name="chat_suggestion_study">帮我学习</string>
-    <string name="chat_suggestion_energy">给我的一天注入活力</string>
+    <string name="chat_suggestion_knowledge_search">搜索知识库资料</string>
+    <string name="chat_suggestion_knowledge_summary">总结这份资料的要点</string>
+    <string name="chat_suggestion_knowledge_answer">根据知识库回答问题</string>
+    <string name="chat_suggestion_explain_concept">帮我解释一个概念</string>
+    <string name="chat_suggestion_daily_reply">帮我写一段日常回复</string>
     <string name="chat_stop_generation">停止生成</string>
     <string name="chat_resume_auto_scroll">回到底部</string>
     <string name="chat_sending">发送中...</string>
