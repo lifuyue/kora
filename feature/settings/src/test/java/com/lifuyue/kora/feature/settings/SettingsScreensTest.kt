@@ -7,15 +7,16 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -306,7 +307,10 @@ class SettingsScreensTest {
 
         composeRule.onNodeWithTag("chat_settings_sheet").assertIsDisplayed()
         composeRule.onNodeWithText("local@kora.app").assertIsDisplayed()
-        composeRule.onNodeWithTag("chat-settings-theme").assertExists()
+        composeRule
+            .onNodeWithTag("chat_settings_sheet")
+            .performScrollToNode(hasTestTag("chat-settings-theme"))
+        composeRule.onNodeWithTag("chat-settings-theme").assertIsDisplayed()
         composeRule.onNodeWithText("https://fastgpt.example.com").assertIsDisplayed()
     }
 
@@ -333,8 +337,39 @@ class SettingsScreensTest {
         }
 
         composeRule.onNodeWithTag("chat_settings_sheet").assertIsDisplayed()
-        composeRule.onNodeWithTag("chat-settings-about").assertExists()
         composeRule.onNodeWithText("local@kora.app").assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("chat_settings_sheet")
+            .performScrollToNode(hasTestTag("chat-settings-about"))
+        composeRule.onNodeWithTag("chat-settings-about").assertIsDisplayed()
+    }
+
+    @Test
+    fun chatSettingsSheetScrollsToBottomEntriesOnSmallHeight() {
+        composeRule.setContent {
+            ChatSettingsSheetContent(
+                state =
+                    SettingsOverviewUiState(
+                        serverBaseUrl = "https://fastgpt.example.com",
+                        themeMode = ThemeMode.DARK,
+                        selectedLanguageTag = "zh-CN",
+                    ),
+                onOpenConnection = {},
+                onOpenTheme = {},
+                onOpenChatPreferences = {},
+                onOpenAudio = {},
+                onOpenLanguage = {},
+                onOpenCache = {},
+                onOpenAbout = {},
+                modifier = Modifier.padding(top = 320.dp),
+            )
+        }
+
+        composeRule.onNodeWithText("local@kora.app").assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("chat_settings_sheet")
+            .performScrollToNode(hasTestTag("chat-settings-about"))
+        composeRule.onNodeWithTag("chat-settings-about").assertIsDisplayed()
     }
 
     @Test

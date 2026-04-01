@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -480,29 +483,41 @@ fun ChatSettingsSheetContent(
     val secondaryText = colorScheme.onSurfaceVariant
 
     Surface(
-        modifier = modifier.fillMaxWidth().testTag("chat_settings_sheet"),
+        modifier = modifier.fillMaxWidth(),
         color = containerColor,
         contentColor = primaryText,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 20.dp),
+        val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().testTag("chat_settings_sheet"),
+            contentPadding =
+                PaddingValues(
+                    start = 18.dp,
+                    top = 20.dp,
+                    end = 18.dp,
+                    bottom = 24.dp + bottomInset,
+                ),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            ChatSettingsAccountHeader(
-                titleColor = primaryText,
-                subtitleColor = secondaryText,
-                avatarBackgroundColor = colorScheme.surface,
-                buttonContainerColor = colorScheme.surface,
-                buttonContentColor = primaryText,
-                onOpenConnection = onOpenConnection,
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                ChatSettingsAccountHeader(
+                    titleColor = primaryText,
+                    subtitleColor = secondaryText,
+                    avatarBackgroundColor = colorScheme.surface,
+                    buttonContainerColor = colorScheme.surface,
+                    buttonContentColor = primaryText,
+                    onOpenConnection = onOpenConnection,
+                )
+            }
+            item {
                 Text(
                     text = stringResource(R.string.settings_sheet_section_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = secondaryText,
                 )
+            }
+            item {
                 ChatSettingsSheetEntry(
                     title = stringResource(R.string.settings_connection_title),
                     summary = state.serverBaseUrl ?: stringResource(R.string.settings_summary_not_configured),
@@ -510,6 +525,8 @@ fun ChatSettingsSheetContent(
                     containerColor = cardColor,
                     testTag = "chat-settings-connection",
                 )
+            }
+            item {
                 ChatSettingsSheetEntry(
                     title = stringResource(R.string.settings_theme_title),
                     summary = themeModeLabel(state.themeMode),
@@ -517,6 +534,8 @@ fun ChatSettingsSheetContent(
                     containerColor = cardColor,
                     testTag = "chat-settings-theme",
                 )
+            }
+            item {
                 ChatSettingsSheetEntry(
                     title = stringResource(R.string.settings_chat_preferences_title),
                     summary = stringResource(R.string.settings_chat_preferences_summary),
@@ -524,6 +543,8 @@ fun ChatSettingsSheetContent(
                     containerColor = cardColor,
                     testTag = "chat-settings-chat-preferences",
                 )
+            }
+            item {
                 ChatSettingsSheetEntry(
                     title = appString("settings_audio_title"),
                     summary = appString("settings_audio_summary"),
@@ -531,6 +552,8 @@ fun ChatSettingsSheetContent(
                     containerColor = cardColor,
                     testTag = "chat-settings-audio",
                 )
+            }
+            item {
                 ChatSettingsSheetEntry(
                     title = stringResource(R.string.settings_language_title),
                     summary = languageLabel(state.selectedLanguageTag),
@@ -538,6 +561,8 @@ fun ChatSettingsSheetContent(
                     containerColor = cardColor,
                     testTag = "chat-settings-language",
                 )
+            }
+            item {
                 ChatSettingsSheetEntry(
                     title = stringResource(R.string.settings_storage_title),
                     summary = stringResource(R.string.settings_storage_summary),
@@ -545,6 +570,8 @@ fun ChatSettingsSheetContent(
                     containerColor = cardColor,
                     testTag = "chat-settings-cache",
                 )
+            }
+            item {
                 ChatSettingsSheetEntry(
                     title = stringResource(R.string.settings_about_title),
                     summary = stringResource(R.string.settings_about_summary),
