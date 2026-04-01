@@ -21,6 +21,9 @@ interface LocalKnowledgeChunkDao {
     @Query("DELETE FROM local_knowledge_chunks WHERE documentId = :documentId")
     fun deleteByDocumentId(documentId: String)
 
+    @Query("DELETE FROM local_knowledge_chunks")
+    fun clearAll()
+
     @Query("SELECT * FROM local_knowledge_chunks")
     fun getAllChunks(): List<LocalKnowledgeChunkEntity>
 

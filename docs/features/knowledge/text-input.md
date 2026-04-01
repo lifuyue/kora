@@ -31,9 +31,14 @@ phase: 2-knowledge
 ## Architecture Notes
 文本录入属于 collection 创建链路的一种来源，提交成功后不再停留在编辑页，而是回到 collection 管理页查看处理结果。
 
+已安装 debug Kora 的本地知识库种子化与验收走独立设备链路，不复用线上 collection API。`make seed` 会构建并安装 debug APK，把 benchmark fixture 推到应用私有目录后触发 debug-only 导入入口；`make seed-e2e` 会在此基础上先自动探测设备、包安装状态、`run-as` 可用性和设备内目标路径，再执行导入并校验状态文件中的 `state/imported/ready/elapsedMs`。
+
 ## Dependencies
 - [collection-management.md](collection-management.md)
+- [../../architecture/testing-strategy.md](../../architecture/testing-strategy.md)
 
 ## Acceptance Criteria
 - 纯文本和 QA 两种模式都可完整走通。
 - 草稿在切后台后可恢复。
+- 已连接单个设备或显式传 `SERIAL` 时，`make seed-e2e` 可完成已安装 debug Kora 的本地知识库导入验收。
+- 导入失败时优先查看脚本输出和 `build/seed-e2e/last-run.json`。

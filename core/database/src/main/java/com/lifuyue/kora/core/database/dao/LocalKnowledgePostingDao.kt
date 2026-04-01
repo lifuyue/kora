@@ -14,6 +14,9 @@ interface LocalKnowledgePostingDao {
     @Query("DELETE FROM local_knowledge_postings WHERE documentId = :documentId")
     fun deleteByDocumentId(documentId: String)
 
+    @Query("DELETE FROM local_knowledge_postings")
+    fun clearAll()
+
     @Query("SELECT * FROM local_knowledge_postings WHERE term IN (:terms)")
     fun getPostingsForTerms(terms: List<String>): List<LocalKnowledgePostingEntity>
 }
