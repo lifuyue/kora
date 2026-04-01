@@ -68,9 +68,12 @@ class SettingsScreensTest {
             ThemeAppearanceScreen(
                 state = ThemeAppearanceUiState(themeMode = ThemeMode.DARK),
                 onThemeModeChange = {},
+                onBack = {},
             )
         }
 
+        composeRule.onNodeWithTag("global_drawer_button").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_back)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.settings_theme_mode_light)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.settings_theme_mode_dark)).assertIsDisplayed()
         composeRule.onAllNodesWithText("跟随系统").assertCountEquals(0)

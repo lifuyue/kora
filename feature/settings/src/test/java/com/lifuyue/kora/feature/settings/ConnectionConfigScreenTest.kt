@@ -54,5 +54,7 @@ class ConnectionConfigScreenTest {
 
         composeRule.onAllNodesWithTag("connection-result").assertCountEquals(1)
         composeRule.onNodeWithText(context.getString(R.string.settings_connection_save)).assertIsEnabled()
+        composeRule.onNodeWithTag("global_drawer_button").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_back)).assertIsDisplayed()
     }
 }

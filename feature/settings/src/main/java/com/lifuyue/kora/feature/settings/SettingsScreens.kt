@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -32,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -813,17 +813,25 @@ private fun SettingsPageColumn(
     if (onBack != null) {
         BackHandler(onBack = onBack)
     }
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
-    ) {
-        KoraGeminiTopBar(title = title, onOpenDrawer = onOpenDrawer)
-        SettingsPageHeader(onBack = onBack)
-        content()
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
+            KoraGeminiTopBar(title = title, onOpenDrawer = onOpenDrawer)
+        },
+    ) { innerPadding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+        ) {
+            SettingsPageHeader(onBack = onBack)
+            content()
+        }
     }
 }
 
