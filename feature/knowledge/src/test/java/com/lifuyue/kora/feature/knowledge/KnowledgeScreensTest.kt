@@ -2,7 +2,10 @@ package com.lifuyue.kora.feature.knowledge
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -74,7 +77,7 @@ class KnowledgeScreensTest {
 
     @Test
     @Config(qualifiers = "en")
-    fun localKnowledgeLibraryShowsImportComposerAndDocumentActions() {
+    fun localKnowledgeLibraryShowsFabAndDocumentActions() {
         composeRule.setContent {
             LocalKnowledgeLibraryScreen(
                 state =
@@ -107,10 +110,39 @@ class KnowledgeScreensTest {
         }
 
         composeRule.onNodeWithText("Local references").assertExists()
-        composeRule.onNodeWithText("Import text reference").assertExists()
+        composeRule.onNodeWithTag("knowledge_local_import_fab").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Import text reference").assertCountEquals(0)
         composeRule.onNodeWithText("Release Notes").assertExists()
         composeRule.onNodeWithText("View snippets").assertExists()
         composeRule.onNodeWithText("Delete").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun localKnowledgeLibraryOpensImportSheet() {
+        composeRule.setContent {
+            LocalKnowledgeLibraryScreen(
+                state = LocalKnowledgeLibraryUiState(status = KnowledgeLoadState.Empty),
+                onBack = {},
+                onQueryChanged = {},
+                onTitleChanged = {},
+                onSourceChanged = {},
+                onTextChanged = {},
+                onImport = {},
+                onOpenDocument = {},
+                onDeleteDocument = {},
+                onToggleEnabled = { _, _ -> },
+            )
+        }
+
+        composeRule.onAllNodesWithTag("knowledge_local_import_sheet").assertCountEquals(0)
+        composeRule.onNodeWithTag("knowledge_local_import_fab").performClick()
+        composeRule.onNodeWithTag("knowledge_local_import_sheet").assertIsDisplayed()
+        composeRule.onNodeWithText("Import text reference").assertExists()
+        composeRule.onNodeWithText("Reference title").assertExists()
+        composeRule.onNodeWithText("Source label").assertExists()
+        composeRule.onNodeWithText("Text content").assertExists()
+        composeRule.onNodeWithTag("knowledge_local_import_submit").assertExists()
     }
 
     @Test
