@@ -37,7 +37,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -114,9 +113,7 @@ internal fun shouldSubmitFromHardwareEnter(
 @Composable
 fun ChatScreen(
     uiState: ChatUiState,
-    appSelectorUiState: AppSelectorUiState = AppSelectorUiState(),
     conversationBrowserUiState: ConversationListUiState = ConversationListUiState(),
-    showAppSelector: Boolean = false,
     showConversationBrowser: Boolean = false,
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
@@ -136,8 +133,6 @@ fun ChatScreen(
     onPlayMessage: (String, String) -> Unit = { _, _ -> },
     onPausePlayback: () -> Unit = {},
     onStopPlayback: () -> Unit = {},
-    onOpenAppSelector: () -> Unit = {},
-    onDismissAppSelector: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
     onOpenConversationBrowser: () -> Unit = {},
     onDismissConversationBrowser: () -> Unit = {},
@@ -161,8 +156,6 @@ fun ChatScreen(
     onMoveConversationToFolder: (String, String?) -> Unit = { _, _ -> },
     onSetConversationTags: (String, List<String>) -> Unit = { _, _ -> },
     onOpenQuickSettings: () -> Unit = {},
-    onSwitchApp: (String) -> Unit = {},
-    onOpenAppDetail: () -> Unit = {},
     onSuggestedQuestion: (String) -> Unit = {},
     onOpenCitation: (CitationItemUiModel) -> Unit = {},
     onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit = { _, _ -> },
@@ -206,48 +199,6 @@ fun ChatScreen(
         autoScrollPaused = !isNearListBottom(listState, uiState.messages.lastIndex)
     }
 
-    if (showAppSelector) {
-        ModalBottomSheet(onDismissRequest = onDismissAppSelector) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(stringResource(R.string.chat_switch_app_title), style = MaterialTheme.typography.titleLarge)
-                appSelectorUiState.items.forEach { item ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(item.name, style = MaterialTheme.typography.titleMedium)
-                                if (item.intro.isNotBlank()) {
-                                    Text(item.intro, style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                            TextButton(onClick = { onSwitchApp(item.appId) }) {
-                                Text(
-                                    stringResource(
-                                        if (appSelectorUiState.currentAppId == item.appId) {
-                                            R.string.chat_switch_app_current
-                                        } else {
-                                            R.string.chat_switch_app_action
-                                        },
-                                    ),
-                                )
-                            }
-                        }
-                    }
-                }
-                TextButton(onClick = onOpenAppDetail, enabled = appSelectorUiState.currentAppId != null) {
-                    Text(stringResource(R.string.chat_open_app_detail))
-                }
-                appSelectorUiState.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            }
-        }
-    }
     if (showConversationBrowser) {
         ModalBottomSheet(
             onDismissRequest = onDismissConversationBrowser,
@@ -323,7 +274,7 @@ fun ChatScreen(
         topBar = {
             ChatGeminiTopBar(
                 onOpenDrawer = onOpenDrawer,
-                onOpenAppSelector = onOpenAppSelector,
+                onOpenQuickSettings = onOpenQuickSettings,
             )
         },
         bottomBar = {
@@ -336,7 +287,6 @@ fun ChatScreen(
                 onStopSpeechInput = onStopSpeechInput,
                 onPickImage = onPickImage,
                 onPickFile = onPickFile,
-                onOpenQuickSettings = onOpenQuickSettings,
                 onToggleAttachmentActions = {
                     if (uiState.attachmentConfig.hasAnySelectionType) {
                         onPickFile()
@@ -460,7 +410,7 @@ fun ChatScreen(
 @Composable
 private fun ChatGeminiTopBar(
     onOpenDrawer: () -> Unit,
-    onOpenAppSelector: () -> Unit,
+    onOpenQuickSettings: () -> Unit,
 ) {
     val onSurface = MaterialTheme.colorScheme.onSurface
     Row(
@@ -488,7 +438,7 @@ private fun ChatGeminiTopBar(
             style = MaterialTheme.typography.titleLarge,
             color = onSurface,
         )
-        GeminiProfileAvatar(onClick = onOpenAppSelector)
+        GeminiProfileAvatar(onClick = onOpenQuickSettings)
     }
 }
 
@@ -509,12 +459,13 @@ private fun GeminiProfileAvatar(onClick: () -> Unit) {
                 .clip(CircleShape)
                 .border(2.dp, Brush.sweepGradient(gradientColors), CircleShape)
                 .background(if (isLightTheme) Color.White else Color(0xFF121212))
-                .clickable(onClick = onClick),
+                .clickable(onClick = onClick)
+                .testTag(ChatTestTags.CHAT_SETTINGS_BUTTON),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = Icons.Filled.Person,
-            contentDescription = stringResource(R.string.chat_switch_app_title),
+            contentDescription = stringResource(R.string.chat_quick_settings),
             tint = if (isLightTheme) Color(0xFF5B616C) else Color(0xFFE1E1E1),
             modifier = Modifier.size(22.dp),
         )
@@ -628,7 +579,6 @@ private fun ChatGeminiComposer(
     onStopSpeechInput: () -> Unit,
     onPickImage: () -> Unit,
     onPickFile: () -> Unit,
-    onOpenQuickSettings: () -> Unit,
     onToggleAttachmentActions: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -691,12 +641,6 @@ private fun ChatGeminiComposer(
                     contentDescription = stringResource(R.string.chat_composer_add_attachment),
                     onClick = onToggleAttachmentActions,
                     modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON),
-                )
-                GeminiComposerIconButton(
-                    icon = Icons.Filled.Settings,
-                    contentDescription = stringResource(R.string.chat_quick_settings),
-                    onClick = onOpenQuickSettings,
-                    modifier = Modifier.testTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON),
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 when (chatComposerPrimaryAction(uiState)) {

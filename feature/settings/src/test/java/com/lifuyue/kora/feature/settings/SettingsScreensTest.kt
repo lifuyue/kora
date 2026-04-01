@@ -2,6 +2,8 @@ package com.lifuyue.kora.feature.settings
 
 import android.content.Context
 import android.text.format.Formatter
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -283,36 +285,56 @@ class SettingsScreensTest {
     }
 
     @Test
-    fun chatQuickSettingsShowsCommonControlsAndFullSettingsAction() {
+    fun chatSettingsSheetShowsAccountHeaderAndSettingsEntries() {
         composeRule.setContent {
-            ChatQuickSettingsContent(
-                themeState = ThemeAppearanceUiState(themeMode = ThemeMode.DARK),
-                chatPreferencesState =
-                    ChatPreferencesUiState(
-                        streamEnabled = true,
-                        autoScroll = true,
-                        showCitationsByDefault = false,
+            ChatSettingsSheetContent(
+                state =
+                    SettingsOverviewUiState(
+                        serverBaseUrl = "https://fastgpt.example.com",
+                        themeMode = ThemeMode.DARK,
+                        selectedLanguageTag = "zh-CN",
                     ),
-                languageState = LanguageSettingsUiState(selectedLanguageTag = "zh-CN"),
-                audioState =
-                    AudioSettingsUiState(
-                        speechToTextEngine = SpeechToTextEngine.WhisperApp,
-                        autoSendTranscripts = true,
-                    ),
-                onThemeModeChange = {},
-                onLanguageTagChange = {},
-                onStreamEnabledChange = {},
-                onShowCitationsChange = {},
-                onAutoSendTranscriptsChange = {},
-                onOpenFullSettings = {},
+                onOpenConnection = {},
+                onOpenTheme = {},
+                onOpenChatPreferences = {},
+                onOpenAudio = {},
+                onOpenLanguage = {},
+                onOpenCache = {},
+                onOpenAbout = {},
             )
         }
 
-        composeRule.onNodeWithTag("chat-quick-settings").assertIsDisplayed()
-        composeRule.onNodeWithTag("chat-quick-settings-stream").assertIsOn()
-        composeRule.onNodeWithTag("chat-quick-settings-citations").assertIsOff()
-        composeRule.onNodeWithTag("chat-quick-settings-audio-auto-send").assertIsOn()
-        composeRule.onNodeWithTag("chat-quick-settings-open-full").fetchSemanticsNode()
+        composeRule.onNodeWithTag("chat_settings_sheet").assertIsDisplayed()
+        composeRule.onNodeWithText("local@kora.app").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat-settings-theme").assertExists()
+        composeRule.onNodeWithText("https://fastgpt.example.com").assertIsDisplayed()
+    }
+
+    @Test
+    fun chatSettingsSheetAlsoRendersInDarkTheme() {
+        composeRule.setContent {
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                ChatSettingsSheetContent(
+                    state =
+                        SettingsOverviewUiState(
+                            serverBaseUrl = "https://fastgpt.example.com",
+                            themeMode = ThemeMode.DARK,
+                            selectedLanguageTag = "en",
+                        ),
+                    onOpenConnection = {},
+                    onOpenTheme = {},
+                    onOpenChatPreferences = {},
+                    onOpenAudio = {},
+                    onOpenLanguage = {},
+                    onOpenCache = {},
+                    onOpenAbout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("chat_settings_sheet").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat-settings-about").assertExists()
+        composeRule.onNodeWithText("local@kora.app").assertIsDisplayed()
     }
 
     @Test

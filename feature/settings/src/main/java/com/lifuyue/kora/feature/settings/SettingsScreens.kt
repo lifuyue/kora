@@ -2,40 +2,52 @@ package com.lifuyue.kora.feature.settings
 
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lifuyue.kora.core.common.ConnectionType
@@ -450,116 +462,97 @@ fun ThemeAppearanceScreen(
 }
 
 @Composable
-fun ChatQuickSettingsContent(
-    themeState: ThemeAppearanceUiState,
-    chatPreferencesState: ChatPreferencesUiState,
-    languageState: LanguageSettingsUiState,
-    audioState: AudioSettingsUiState,
-    onThemeModeChange: (ThemeMode) -> Unit,
-    onLanguageTagChange: (String?) -> Unit,
-    onStreamEnabledChange: (Boolean) -> Unit,
-    onShowCitationsChange: (Boolean) -> Unit,
-    onAutoSendTranscriptsChange: (Boolean) -> Unit,
-    onOpenFullSettings: () -> Unit,
+fun ChatSettingsSheetContent(
+    state: SettingsOverviewUiState,
+    onOpenConnection: () -> Unit,
+    onOpenTheme: () -> Unit,
+    onOpenChatPreferences: () -> Unit,
+    onOpenAudio: () -> Unit,
+    onOpenLanguage: () -> Unit,
+    onOpenCache: () -> Unit,
+    onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-                .testTag("chat-quick-settings"),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    val colorScheme = MaterialTheme.colorScheme
+    val containerColor = colorScheme.surfaceContainerHigh
+    val cardColor = colorScheme.surfaceContainer
+    val primaryText = colorScheme.onSurface
+    val secondaryText = colorScheme.onSurfaceVariant
+
+    Surface(
+        modifier = modifier.fillMaxWidth().testTag("chat_settings_sheet"),
+        color = containerColor,
+        contentColor = primaryText,
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringResource(R.string.settings_quick_title), style = MaterialTheme.typography.headlineSmall)
-            Text(
-                stringResource(R.string.settings_quick_summary),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        KoraSectionCard {
-            Text(stringResource(R.string.settings_quick_theme_title), style = MaterialTheme.typography.titleMedium)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf(ThemeMode.LIGHT, ThemeMode.DARK, ThemeMode.SYSTEM).forEach { mode ->
-                    OutlinedButton(
-                        onClick = { onThemeModeChange(mode) },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(
-                            themeModeLabel(mode),
-                            color =
-                                if (themeState.themeMode == mode) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                        )
-                    }
-                }
-            }
-        }
-        KoraSectionCard {
-            Text(stringResource(R.string.settings_quick_language_title), style = MaterialTheme.typography.titleMedium)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                QuickLanguageChoice(
-                    label = stringResource(R.string.settings_language_follow_system),
-                    selected = languageState.selectedLanguageTag == null,
-                    onClick = { onLanguageTagChange(null) },
-                )
-                QuickLanguageChoice(
-                    label = stringResource(R.string.settings_language_simplified_chinese),
-                    selected = languageState.selectedLanguageTag == "zh-CN",
-                    onClick = { onLanguageTagChange("zh-CN") },
-                )
-                QuickLanguageChoice(
-                    label = stringResource(R.string.settings_language_english),
-                    selected = languageState.selectedLanguageTag == "en",
-                    onClick = { onLanguageTagChange("en") },
-                )
-            }
-        }
-        KoraSectionCard {
-            Text(stringResource(R.string.settings_chat_preferences_title), style = MaterialTheme.typography.titleMedium)
-            QuickToggleRow(
-                title = stringResource(R.string.settings_chat_preferences_stream),
-                checked = chatPreferencesState.streamEnabled,
-                testTag = "chat-quick-settings-stream",
-                onCheckedChange = onStreamEnabledChange,
-            )
-            QuickToggleRow(
-                title = stringResource(R.string.settings_chat_preferences_citations),
-                checked = chatPreferencesState.showCitationsByDefault,
-                testTag = "chat-quick-settings-citations",
-                onCheckedChange = onShowCitationsChange,
-            )
-        }
-        KoraSectionCard {
-            Text(stringResource(R.string.settings_quick_voice_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = stringResource(R.string.settings_quick_voice_summary, speechToTextEngineLabel(audioState.speechToTextEngine)),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            QuickToggleRow(
-                title = appString("settings_audio_auto_send_transcripts"),
-                checked = audioState.autoSendTranscripts,
-                testTag = "chat-quick-settings-audio-auto-send",
-                onCheckedChange = onAutoSendTranscriptsChange,
-            )
-        }
-        Button(
-            onClick = onOpenFullSettings,
-            modifier = Modifier.fillMaxWidth().testTag("chat-quick-settings-open-full"),
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Text(stringResource(R.string.settings_quick_open_full))
+            ChatSettingsAccountHeader(
+                titleColor = primaryText,
+                subtitleColor = secondaryText,
+                avatarBackgroundColor = colorScheme.surface,
+                buttonContainerColor = colorScheme.surface,
+                buttonContentColor = primaryText,
+                onOpenConnection = onOpenConnection,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_sheet_section_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = secondaryText,
+                )
+                ChatSettingsSheetEntry(
+                    title = stringResource(R.string.settings_connection_title),
+                    summary = state.serverBaseUrl ?: stringResource(R.string.settings_summary_not_configured),
+                    onClick = onOpenConnection,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-connection",
+                )
+                ChatSettingsSheetEntry(
+                    title = stringResource(R.string.settings_theme_title),
+                    summary = themeModeLabel(state.themeMode),
+                    onClick = onOpenTheme,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-theme",
+                )
+                ChatSettingsSheetEntry(
+                    title = stringResource(R.string.settings_chat_preferences_title),
+                    summary = stringResource(R.string.settings_chat_preferences_summary),
+                    onClick = onOpenChatPreferences,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-chat-preferences",
+                )
+                ChatSettingsSheetEntry(
+                    title = appString("settings_audio_title"),
+                    summary = appString("settings_audio_summary"),
+                    onClick = onOpenAudio,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-audio",
+                )
+                ChatSettingsSheetEntry(
+                    title = stringResource(R.string.settings_language_title),
+                    summary = languageLabel(state.selectedLanguageTag),
+                    onClick = onOpenLanguage,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-language",
+                )
+                ChatSettingsSheetEntry(
+                    title = stringResource(R.string.settings_storage_title),
+                    summary = stringResource(R.string.settings_storage_summary),
+                    onClick = onOpenCache,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-cache",
+                )
+                ChatSettingsSheetEntry(
+                    title = stringResource(R.string.settings_about_title),
+                    summary = stringResource(R.string.settings_about_summary),
+                    onClick = onOpenAbout,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-about",
+                )
+            }
         }
     }
 }
@@ -754,28 +747,6 @@ private fun LanguageOption(
 }
 
 @Composable
-private fun RowScope.QuickLanguageChoice(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier.weight(1f),
-    ) {
-        Text(
-            label,
-            color =
-                if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-        )
-    }
-}
-
-@Composable
 private fun AudioEngineOption(
     tag: String,
     label: String,
@@ -800,23 +771,116 @@ private fun AudioEngineOption(
 }
 
 @Composable
-private fun QuickToggleRow(
-    title: String,
-    checked: Boolean,
-    testTag: String,
-    onCheckedChange: (Boolean) -> Unit,
+private fun ChatSettingsAccountHeader(
+    titleColor: Color,
+    subtitleColor: Color,
+    avatarBackgroundColor: Color,
+    buttonContainerColor: Color,
+    buttonContentColor: Color,
+    onOpenConnection: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier.testTag(testTag),
+    val gradientColors =
+        listOf(
+            Color(0xFF4285F4),
+            Color(0xFFEA4335),
+            Color(0xFFFBBC05),
+            Color(0xFF34A853),
         )
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_sheet_account_email),
+            style = MaterialTheme.typography.titleMedium,
+            color = titleColor,
+        )
+        Box(
+            modifier =
+                Modifier
+                    .size(84.dp)
+                    .clip(CircleShape)
+                    .border(3.dp, Brush.sweepGradient(gradientColors), CircleShape)
+                    .background(avatarBackgroundColor, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_sheet_account_avatar_initials),
+                style = MaterialTheme.typography.headlineMedium,
+                color = titleColor,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_sheet_account_name),
+                style = MaterialTheme.typography.headlineSmall,
+                color = titleColor,
+            )
+            Text(
+                text = stringResource(R.string.settings_sheet_account_summary),
+                style = MaterialTheme.typography.bodyMedium,
+                color = subtitleColor,
+            )
+        }
+        Card(
+            onClick = onOpenConnection,
+            colors = CardDefaults.cardColors(containerColor = buttonContainerColor),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_sheet_account_manage),
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                color = buttonContentColor,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChatSettingsSheetEntry(
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+    containerColor: Color,
+    testTag: String,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().testTag(testTag),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.size(4.dp))
+            Text(
+                text = stringResource(R.string.settings_sheet_item_chevron),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

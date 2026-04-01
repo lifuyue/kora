@@ -5,7 +5,7 @@
     <string name="chat_brand_title">Kora</string>
     <string name="chat_history">历史</string>
     <string name="chat_history_close">关闭历史</string>
-    <string name="chat_quick_settings">快捷设置</string>
+    <string name="chat_quick_settings">设置与选项</string>
     <string name="chat_capabilities">能力</string>
     <string name="chat_switch_app_title">切换应用</string>
     <string name="chat_switch_app_current">当前</string>
@@ -27,9 +27,7 @@
     <string name="chat_drawer_new_conversation">发起新对话</string>
     <string name="chat_drawer_history_title">对话</string>
     <string name="chat_drawer_knowledge">知识库</string>
-    <string name="chat_drawer_settings">设置</string>
     <string name="chat_drawer_my_content">我的内容</string>
-    <string name="chat_drawer_gem_title">Gem</string>
     <string name="chat_drawer_empty_history">这里会显示最近的对话记录。</string>
     <string name="chat_mode_fast">快速</string>
     <string name="chat_suggestion_knowledge_search">搜索知识库资料</string>

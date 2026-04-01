@@ -59,6 +59,13 @@
     <string name="settings_quick_voice_title">Voice preferences</string>
     <string name="settings_quick_voice_summary">Speech-to-text engine: %1$s</string>
     <string name="settings_quick_open_full">Open full settings</string>
+    <string name="settings_sheet_section_title">Settings and options</string>
+    <string name="settings_sheet_account_email">local@kora.app</string>
+    <string name="settings_sheet_account_avatar_initials">K</string>
+    <string name="settings_sheet_account_name">Kora local workspace</string>
+    <string name="settings_sheet_account_summary">Manage settings and preferences on this device.</string>
+    <string name="settings_sheet_account_manage">Manage connection</string>
+    <string name="settings_sheet_item_chevron">›</string>
     <string name="settings_audio_engine_system">System speech</string>
     <string name="settings_audio_engine_whisper_app">Whisper app</string>
 

@@ -24,7 +24,6 @@ internal fun KoraShellDrawer(
     onNewConversation: () -> Unit,
     onOpenConversation: (String) -> Unit,
     onOpenKnowledge: () -> Unit,
-    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val repository = rememberConversationRepository(LocalContext.current)
@@ -58,7 +57,6 @@ internal fun KoraShellDrawer(
         onNewConversation = onNewConversation,
         onOpenConversation = onOpenConversation,
         onOpenKnowledge = onOpenKnowledge,
-        onOpenSettings = onOpenSettings,
         modifier = modifier,
     )
 }

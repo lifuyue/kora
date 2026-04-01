@@ -58,6 +58,13 @@
     <string name="settings_quick_voice_title">语音偏好</string>
     <string name="settings_quick_voice_summary">语音识别引擎：%1$s</string>
     <string name="settings_quick_open_full">打开完整设置</string>
+    <string name="settings_sheet_section_title">设置与选项</string>
+    <string name="settings_sheet_account_email">local@kora.app</string>
+    <string name="settings_sheet_account_avatar_initials">K</string>
+    <string name="settings_sheet_account_name">Kora 本地工作台</string>
+    <string name="settings_sheet_account_summary">当前设备上的设置入口与偏好管理。</string>
+    <string name="settings_sheet_account_manage">管理连接配置</string>
+    <string name="settings_sheet_item_chevron">›</string>
     <string name="settings_audio_engine_system">系统语音</string>
     <string name="settings_audio_engine_whisper_app">Whisper 应用</string>
 
