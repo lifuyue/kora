@@ -3,6 +3,7 @@ package com.lifuyue.kora.feature.knowledge
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import com.lifuyue.kora.core.common.ConnectionType
+import com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus
 
 enum class KnowledgeLoadState {
     Loading,
@@ -84,6 +85,8 @@ data class LocalKnowledgeDocumentUiModel(
     val previewText: String,
     val chunkCount: Int,
     val isEnabled: Boolean,
+    val indexStatus: LocalKnowledgeIndexStatus,
+    val indexErrorMessage: String? = null,
     val updatedAt: Long,
 )
 

@@ -12,6 +12,7 @@ import com.lifuyue.kora.core.database.dao.ImportTaskDao
 import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
 import com.lifuyue.kora.core.database.dao.LocalKnowledgeChunkDao
 import com.lifuyue.kora.core.database.dao.LocalKnowledgeDocumentDao
+import com.lifuyue.kora.core.database.dao.LocalKnowledgePostingDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.entity.CachedCollectionEntity
 import com.lifuyue.kora.core.database.entity.CachedDatasetEntity
@@ -24,6 +25,7 @@ import com.lifuyue.kora.core.database.entity.ImportTaskEntity
 import com.lifuyue.kora.core.database.entity.InteractiveDraftEntity
 import com.lifuyue.kora.core.database.entity.LocalKnowledgeChunkEntity
 import com.lifuyue.kora.core.database.entity.LocalKnowledgeDocumentEntity
+import com.lifuyue.kora.core.database.entity.LocalKnowledgePostingEntity
 import com.lifuyue.kora.core.database.entity.MessageEntity
 
 @Database(
@@ -40,8 +42,9 @@ import com.lifuyue.kora.core.database.entity.MessageEntity
         InteractiveDraftEntity::class,
         LocalKnowledgeDocumentEntity::class,
         LocalKnowledgeChunkEntity::class,
+        LocalKnowledgePostingEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 @TypeConverters(KoraTypeConverters::class)
@@ -65,4 +68,6 @@ abstract class KoraDatabase : RoomDatabase() {
     abstract fun localKnowledgeDocumentDao(): LocalKnowledgeDocumentDao
 
     abstract fun localKnowledgeChunkDao(): LocalKnowledgeChunkDao
+
+    abstract fun localKnowledgePostingDao(): LocalKnowledgePostingDao
 }

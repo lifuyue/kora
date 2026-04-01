@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -87,6 +88,7 @@ class KnowledgeScreensTest {
                                     previewText = "This note explains the latest OpenAI setup.",
                                     chunkCount = 2,
                                     isEnabled = true,
+                                    indexStatus = LocalKnowledgeIndexStatus.Ready,
                                     updatedAt = 1_743_120_000_000,
                                 ),
                             ),

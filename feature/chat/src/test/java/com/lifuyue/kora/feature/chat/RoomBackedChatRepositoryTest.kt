@@ -3,6 +3,7 @@ package com.lifuyue.kora.feature.chat
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.ResponseEnvelope
 import com.lifuyue.kora.core.database.KoraDatabase
 import com.lifuyue.kora.core.database.entity.ConversationEntity
@@ -149,6 +150,67 @@ class RoomBackedChatRepositoryTest {
                 assertEquals(listOf("app-1:null"), fixture.api.initChatCalls)
                 assertEquals("chat-server", fixture.database.conversationDao().getConversationsForApp("app-1", 10, 0).single().chatId)
                 assertEquals("chat-server", fixture.database.messageDao().getMessagesForChat("chat-server").first().chatId)
+            }
+        }
+
+    @Test
+    fun openAiNewConversationUsesFirstMessageSummaryAsStableTitle() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                val expectedTitle = "第一条消息 会被压成一行，而且长度应该被限制在四十个字符以内用于标题".take(40)
+                val chatId =
+                    fixture.repository.sendMessage(
+                        appId = DIRECT_OPENAI_APP_ID,
+                        chatId = null,
+                        text = "  第一条消息\n会被压成一行，而且长度应该被限制在四十个字符以内用于标题  ",
+                    )
+                advanceUntilIdle()
+
+                val createdConversation = fixture.database.conversationDao().getConversationByChatId(chatId)!!
+                assertEquals(expectedTitle, createdConversation.title)
+
+                fixture.repository.sendMessage(
+                    appId = DIRECT_OPENAI_APP_ID,
+                    chatId = chatId,
+                    text = "第二条消息不应该覆盖首条标题",
+                )
+                advanceUntilIdle()
+
+                val updatedConversation = fixture.database.conversationDao().getConversationByChatId(chatId)!!
+                assertEquals(expectedTitle, updatedConversation.title)
+            }
+        }
+
+    @Test
+    fun existingConversationKeepsManualCustomTitleWhenSendingMoreMessages() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            newFixture().use { fixture ->
+                fixture.database.conversationDao().upsert(
+                    ConversationEntity(
+                        chatId = "chat-existing",
+                        appId = DIRECT_OPENAI_APP_ID,
+                        title = "自动标题",
+                        customTitle = "手动标题",
+                        isPinned = false,
+                        source = "local",
+                        updateTime = 1L,
+                        lastMessagePreview = "旧预览",
+                        hasDraft = false,
+                        isDeleted = false,
+                        isArchived = false,
+                    ),
+                )
+
+                fixture.repository.sendMessage(
+                    appId = DIRECT_OPENAI_APP_ID,
+                    chatId = "chat-existing",
+                    text = "新的消息不应该覆盖手动标题",
+                )
+                advanceUntilIdle()
+
+                val updatedConversation = fixture.database.conversationDao().getConversationByChatId("chat-existing")!!
+                assertEquals("自动标题", updatedConversation.title)
+                assertEquals("手动标题", updatedConversation.customTitle)
             }
         }
 

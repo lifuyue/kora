@@ -2,6 +2,7 @@ package com.lifuyue.kora.core.database
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -28,6 +29,7 @@ class LocalKnowledgeStoreTest {
             LocalKnowledgeStore(
                 documentDao = database.localKnowledgeDocumentDao(),
                 chunkDao = database.localKnowledgeChunkDao(),
+                postingDao = database.localKnowledgePostingDao(),
             )
     }
 
@@ -45,6 +47,7 @@ class LocalKnowledgeStoreTest {
                 sourceLabel = "manual",
                 now = 100L,
             )
+            waitUntilIndexed()
 
             val documents = store.observeDocuments().first()
             val chunks = store.observeChunks(documents.single().documentId).first()
@@ -55,18 +58,51 @@ class LocalKnowledgeStoreTest {
         }
 
     @Test
-    fun searchReturnsEnabledMatchingSnippet() =
+    fun searchReturnsEnabledMatchingSnippetForChineseMixedQuery() =
         runBlocking {
             store.importText(
-                title = "Android Notes",
-                text = "Jetpack Compose works well for Android chat surfaces.",
+                title = "OpenRouter 配置说明",
+                text = "Jetpack Compose works well for Android chat surfaces. OpenRouter 的模型配置也可以写在这里。",
                 sourceLabel = "manual",
                 now = 200L,
             )
+            waitUntilIndexed()
 
-            val hit = store.search("android chat").first()
+            val hit = store.search("openrouter 配置").first()
 
-            assertEquals("Android Notes", hit.title)
-            assertTrue(hit.snippet.contains("Android", ignoreCase = true))
+            assertEquals("OpenRouter 配置说明", hit.title)
+            assertTrue(hit.snippet.contains("OpenRouter", ignoreCase = true))
         }
+
+    @Test
+    fun titleMatchesRankAboveBodyOnlyMatches() =
+        runBlocking {
+            store.importText(
+                title = "Android 权限说明",
+                text = "这里只提到通知栏样式。",
+                sourceLabel = "manual",
+                now = 300L,
+            )
+            store.importText(
+                title = "杂项记录",
+                text = "Android 权限说明放在这段正文里，但标题不相关。",
+                sourceLabel = "manual",
+                now = 301L,
+            )
+            waitUntilIndexed(expectedReady = 2)
+
+            val hits = store.search("android 权限").take(2)
+            assertEquals("Android 权限说明", hits.first().title)
+        }
+
+    private suspend fun waitUntilIndexed(expectedReady: Int = 1) {
+        repeat(50) {
+            val readyCount = store.observeDocuments().first().count { it.indexStatus == com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Ready }
+            if (readyCount >= expectedReady) {
+                return
+            }
+            delay(20)
+        }
+        throw AssertionError("Local knowledge indexing did not finish in time")
+    }
 }

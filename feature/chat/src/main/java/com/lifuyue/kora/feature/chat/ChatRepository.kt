@@ -204,6 +204,15 @@ data class AssistantResponseRequest(
     val chatId: String,
     val prompt: String,
     val attempt: Int,
+    val localReferences: List<AssistantLocalReference> = emptyList(),
+)
+
+data class AssistantLocalReference(
+    val documentId: String,
+    val chunkId: String,
+    val title: String,
+    val sourceLabel: String,
+    val snippet: String,
 )
 
 data class AssistantResponseStep(

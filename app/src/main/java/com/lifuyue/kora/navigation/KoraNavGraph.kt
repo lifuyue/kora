@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -52,7 +53,7 @@ private const val ROUTE_CONNECTION = "connection"
 private const val ROUTE_SHELL = "shell"
 
 internal fun chatShellStartRoute(snapshot: ConnectionSnapshot): String =
-    snapshot.selectedAppId?.let { ChatRoutes.thread(it) } ?: SettingsRoutes.CONNECTION
+    snapshot.selectedAppId?.let { ChatRoutes.newThread(it) } ?: SettingsRoutes.CONNECTION
 
 @Composable
 fun KoraNavGraph(
@@ -207,9 +208,17 @@ private fun OnboardingRoute(
 private fun KoraShell(snapshot: ConnectionSnapshot) {
     val navController = rememberNavController()
     var showChatQuickSettings by rememberSaveable { mutableStateOf(false) }
-    val chatStartRoute = chatShellStartRoute(snapshot)
+    val chatStartRoute = remember(snapshot.selectedAppId) { chatShellStartRoute(snapshot) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val openFreshThread: (String) -> Unit = { appId ->
+        val isThreadDestination = navController.currentBackStackEntry?.destination?.route == ChatRoutes.THREAD
+        navController.navigate(ChatRoutes.newThread(appId)) {
+            if (isThreadDestination) {
+                popUpTo(ChatRoutes.THREAD) { inclusive = true }
+            }
+        }
+    }
 
     Surface(
         modifier =
@@ -223,12 +232,20 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
             drawerContent = {
                 KoraShellDrawer(
                     currentAppId = snapshot.selectedAppId,
-                    onOpenChat = {
+                    onNewConversation = {
                         scope.launch {
                             drawerState.close()
                             snapshot.selectedAppId?.let { appId ->
-                                navController.navigate(ChatRoutes.thread(appId)) {
-                                    launchSingleTop = true
+                                openFreshThread(appId)
+                            }
+                        }
+                    },
+                    onOpenConversation = { chatId ->
+                        scope.launch {
+                            drawerState.close()
+                            snapshot.selectedAppId?.let { appId ->
+                                navController.navigate(ChatRoutes.thread(appId, chatId)) {
+                                    popUpTo(ChatRoutes.THREAD) { inclusive = true }
                                 }
                             }
                         }
@@ -283,7 +300,7 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
                         onConnectionSaved = {
                             val selectedAppId = snapshot.selectedAppId
                             if (!selectedAppId.isNullOrBlank()) {
-                                navController.navigate(ChatRoutes.thread(selectedAppId)) {
+                                navController.navigate(ChatRoutes.newThread(selectedAppId)) {
                                     popUpTo(SettingsRoutes.CONNECTION) { inclusive = true }
                                 }
                             }

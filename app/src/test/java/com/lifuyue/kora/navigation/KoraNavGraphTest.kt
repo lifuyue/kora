@@ -181,6 +181,8 @@ class KoraNavGraphTest {
                 onboardingCompleted = true,
             )
 
-        assertEquals("chat/thread/app-1?chatId=", chatShellStartRoute(snapshot))
+        val route = chatShellStartRoute(snapshot)
+
+        assertTrue(route.startsWith("chat/thread/app-1?sessionKey="))
     }
 }

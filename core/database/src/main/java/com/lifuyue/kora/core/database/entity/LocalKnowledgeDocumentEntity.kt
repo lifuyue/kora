@@ -7,11 +7,14 @@ import androidx.room.PrimaryKey
 data class LocalKnowledgeDocumentEntity(
     @PrimaryKey val documentId: String,
     val title: String,
+    val normalizedTitle: String,
     val sourceLabel: String,
     val rawText: String,
     val previewText: String,
     val chunkCount: Int,
     val isEnabled: Boolean,
+    val indexStatus: String,
+    val indexErrorMessage: String?,
     val createdAt: Long,
     val updatedAt: Long,
 )

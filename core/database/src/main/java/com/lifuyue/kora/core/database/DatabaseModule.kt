@@ -16,6 +16,7 @@ import com.lifuyue.kora.core.database.dao.ImportTaskDao
 import com.lifuyue.kora.core.database.dao.InteractiveDraftDao
 import com.lifuyue.kora.core.database.dao.LocalKnowledgeChunkDao
 import com.lifuyue.kora.core.database.dao.LocalKnowledgeDocumentDao
+import com.lifuyue.kora.core.database.dao.LocalKnowledgePostingDao
 import com.lifuyue.kora.core.database.dao.MessageDao
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
 import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
@@ -74,6 +75,9 @@ object DatabaseModule {
 
     @Provides
     fun provideLocalKnowledgeChunkDao(database: KoraDatabase): LocalKnowledgeChunkDao = database.localKnowledgeChunkDao()
+
+    @Provides
+    fun provideLocalKnowledgePostingDao(database: KoraDatabase): LocalKnowledgePostingDao = database.localKnowledgePostingDao()
 
     @Provides
     @Singleton

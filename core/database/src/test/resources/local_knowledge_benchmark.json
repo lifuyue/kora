@@ -1,0 +1,961 @@
+{
+  "metadata": {
+    "documentCount": 100,
+    "queryCount": 50,
+    "generator": "scripts/generate_local_knowledge_benchmark.py"
+  },
+  "documents": [
+    {
+      "id": "bench-openrouter-00",
+      "title": "OpenRouter 配置 OpenRouter Routing 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "OpenRouter 配置 的标准做法同时要求 offline cache 与 模型路由 保持一致。 这份指南给出 or-01-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-openrouter-01",
+      "title": "杂项记录 or-01-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 OpenRouter 配置、模型路由 和 offline cache，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-openrouter-02",
+      "title": "路由缓存 实战 or-01-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "路由缓存 是团队内部对 模型路由 的另一种叫法。 实战笔记会同时出现 offline cache、首屏延迟 和 OpenRouter Routing。"
+    },
+    {
+      "id": "bench-openrouter-03",
+      "title": "OpenRouter 配置 边界命中 or-01-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "OpenRouter 配置 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 OpenRouter 配置 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 OpenRouter 配置 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 OpenRouter 配置 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 OpenRouter 配置 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 OpenRouter 配置 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 OpenRouter 配置 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 OpenRouter 配置 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 or-01-k03 在边界 chunk 里必须保留 offline cache 与 模型路由，否则 首屏延迟 指标会失真。\n\n补充说明继续讨论 路由缓存、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 路由缓存、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 路由缓存、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 路由缓存、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 路由缓存、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-openrouter-04",
+      "title": "OpenRouter Routing bilingual memo or-01-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers OpenRouter Routing, offline cache, 模型路由, and the mobile tradeoff named 首屏延迟."
+    },
+    {
+      "id": "bench-openrouter-05",
+      "title": "OpenRouter 配置 噪声对照 or-01-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 模型路由 和 offline cache。"
+    },
+    {
+      "id": "bench-openrouter-06",
+      "title": "OpenRouter 配置 邻近主题 or-01-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 模型路由 相邻的话题，会多次出现 offline cache，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-openrouter-07",
+      "title": "OpenRouter 配置 编号案例 or-01-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 or-01-k07 记录了 模型路由 的线上故障。 只有这份文档同时给出了编号、offline cache 和恢复步骤。"
+    },
+    {
+      "id": "bench-openrouter-08",
+      "title": "OpenRouter 配置 移动端优化 or-01-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 首屏延迟。 文档建议限制 chunk 数量，保留 offline cache，并让 模型路由 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-openrouter-09",
+      "title": "OpenRouter 配置 近重复样本 or-01-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 模型路由、offline cache、路由缓存，但编号是 or-01-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-notify-00",
+      "title": "Android 通知权限 Android Notification Permission 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "Android 通知权限 的标准做法同时要求 permission gate 与 通知权限 保持一致。 这份指南给出 nt-02-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-notify-01",
+      "title": "杂项记录 nt-02-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 Android 通知权限、通知权限 和 permission gate，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-notify-02",
+      "title": "提醒授权 实战 nt-02-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "提醒授权 是团队内部对 通知权限 的另一种叫法。 实战笔记会同时出现 permission gate、后台保活 和 Android Notification Permission。"
+    },
+    {
+      "id": "bench-notify-03",
+      "title": "Android 通知权限 边界命中 nt-02-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "Android 通知权限 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Android 通知权限 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Android 通知权限 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Android 通知权限 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Android 通知权限 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Android 通知权限 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Android 通知权限 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Android 通知权限 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 nt-02-k03 在边界 chunk 里必须保留 permission gate 与 通知权限，否则 后台保活 指标会失真。\n\n补充说明继续讨论 提醒授权、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 提醒授权、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 提醒授权、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 提醒授权、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 提醒授权、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-notify-04",
+      "title": "Android Notification Permission bilingual memo nt-02-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers Android Notification Permission, permission gate, 通知权限, and the mobile tradeoff named 后台保活."
+    },
+    {
+      "id": "bench-notify-05",
+      "title": "Android 通知权限 噪声对照 nt-02-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 通知权限 和 permission gate。"
+    },
+    {
+      "id": "bench-notify-06",
+      "title": "Android 通知权限 邻近主题 nt-02-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 通知权限 相邻的话题，会多次出现 permission gate，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-notify-07",
+      "title": "Android 通知权限 编号案例 nt-02-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 nt-02-k07 记录了 通知权限 的线上故障。 只有这份文档同时给出了编号、permission gate 和恢复步骤。"
+    },
+    {
+      "id": "bench-notify-08",
+      "title": "Android 通知权限 移动端优化 nt-02-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 后台保活。 文档建议限制 chunk 数量，保留 permission gate，并让 通知权限 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-notify-09",
+      "title": "Android 通知权限 近重复样本 nt-02-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 通知权限、permission gate、提醒授权，但编号是 nt-02-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-compose-00",
+      "title": "Compose 列表性能 Compose List Performance 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "Compose 列表性能 的标准做法同时要求 lazy list 与 滚动卡顿 保持一致。 这份指南给出 cp-03-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-compose-01",
+      "title": "杂项记录 cp-03-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 Compose 列表性能、滚动卡顿 和 lazy list，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-compose-02",
+      "title": "列表预取 实战 cp-03-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "列表预取 是团队内部对 滚动卡顿 的另一种叫法。 实战笔记会同时出现 lazy list、掉帧控制 和 Compose List Performance。"
+    },
+    {
+      "id": "bench-compose-03",
+      "title": "Compose 列表性能 边界命中 cp-03-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "Compose 列表性能 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Compose 列表性能 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Compose 列表性能 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Compose 列表性能 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Compose 列表性能 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Compose 列表性能 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Compose 列表性能 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Compose 列表性能 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 cp-03-k03 在边界 chunk 里必须保留 lazy list 与 滚动卡顿，否则 掉帧控制 指标会失真。\n\n补充说明继续讨论 列表预取、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 列表预取、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 列表预取、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 列表预取、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 列表预取、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-compose-04",
+      "title": "Compose List Performance bilingual memo cp-03-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers Compose List Performance, lazy list, 滚动卡顿, and the mobile tradeoff named 掉帧控制."
+    },
+    {
+      "id": "bench-compose-05",
+      "title": "Compose 列表性能 噪声对照 cp-03-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 滚动卡顿 和 lazy list。"
+    },
+    {
+      "id": "bench-compose-06",
+      "title": "Compose 列表性能 邻近主题 cp-03-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 滚动卡顿 相邻的话题，会多次出现 lazy list，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-compose-07",
+      "title": "Compose 列表性能 编号案例 cp-03-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 cp-03-k07 记录了 滚动卡顿 的线上故障。 只有这份文档同时给出了编号、lazy list 和恢复步骤。"
+    },
+    {
+      "id": "bench-compose-08",
+      "title": "Compose 列表性能 移动端优化 cp-03-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 掉帧控制。 文档建议限制 chunk 数量，保留 lazy list，并让 滚动卡顿 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-compose-09",
+      "title": "Compose 列表性能 近重复样本 cp-03-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 滚动卡顿、lazy list、列表预取，但编号是 cp-03-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-rag-00",
+      "title": "本地 RAG 检索 Local RAG Retrieval 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "本地 RAG 检索 的标准做法同时要求 semantic overlap 与 分块重叠 保持一致。 这份指南给出 rg-04-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-rag-01",
+      "title": "杂项记录 rg-04-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 本地 RAG 检索、分块重叠 和 semantic overlap，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-rag-02",
+      "title": "段落续接 实战 rg-04-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "段落续接 是团队内部对 分块重叠 的另一种叫法。 实战笔记会同时出现 semantic overlap、索引体积 和 Local RAG Retrieval。"
+    },
+    {
+      "id": "bench-rag-03",
+      "title": "本地 RAG 检索 边界命中 rg-04-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "本地 RAG 检索 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 本地 RAG 检索 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 本地 RAG 检索 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 本地 RAG 检索 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 本地 RAG 检索 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 本地 RAG 检索 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 本地 RAG 检索 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 本地 RAG 检索 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 rg-04-k03 在边界 chunk 里必须保留 semantic overlap 与 分块重叠，否则 索引体积 指标会失真。\n\n补充说明继续讨论 段落续接、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 段落续接、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 段落续接、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 段落续接、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 段落续接、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-rag-04",
+      "title": "Local RAG Retrieval bilingual memo rg-04-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers Local RAG Retrieval, semantic overlap, 分块重叠, and the mobile tradeoff named 索引体积."
+    },
+    {
+      "id": "bench-rag-05",
+      "title": "本地 RAG 检索 噪声对照 rg-04-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 分块重叠 和 semantic overlap。"
+    },
+    {
+      "id": "bench-rag-06",
+      "title": "本地 RAG 检索 邻近主题 rg-04-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 分块重叠 相邻的话题，会多次出现 semantic overlap，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-rag-07",
+      "title": "本地 RAG 检索 编号案例 rg-04-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 rg-04-k07 记录了 分块重叠 的线上故障。 只有这份文档同时给出了编号、semantic overlap 和恢复步骤。"
+    },
+    {
+      "id": "bench-rag-08",
+      "title": "本地 RAG 检索 移动端优化 rg-04-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 索引体积。 文档建议限制 chunk 数量，保留 semantic overlap，并让 分块重叠 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-rag-09",
+      "title": "本地 RAG 检索 近重复样本 rg-04-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 分块重叠、semantic overlap、段落续接，但编号是 rg-04-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-delta-00",
+      "title": "Delta Stream 重连 Delta Stream Recovery 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "Delta Stream 重连 的标准做法同时要求 heartbeat window 与 流式重连 保持一致。 这份指南给出 ds-05-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-delta-01",
+      "title": "杂项记录 ds-05-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 Delta Stream 重连、流式重连 和 heartbeat window，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-delta-02",
+      "title": "连接续传 实战 ds-05-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "连接续传 是团队内部对 流式重连 的另一种叫法。 实战笔记会同时出现 heartbeat window、省电模式 和 Delta Stream Recovery。"
+    },
+    {
+      "id": "bench-delta-03",
+      "title": "Delta Stream 重连 边界命中 ds-05-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "Delta Stream 重连 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Delta Stream 重连 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Delta Stream 重连 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Delta Stream 重连 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Delta Stream 重连 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Delta Stream 重连 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Delta Stream 重连 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Delta Stream 重连 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 ds-05-k03 在边界 chunk 里必须保留 heartbeat window 与 流式重连，否则 省电模式 指标会失真。\n\n补充说明继续讨论 连接续传、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 连接续传、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 连接续传、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 连接续传、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 连接续传、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-delta-04",
+      "title": "Delta Stream Recovery bilingual memo ds-05-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers Delta Stream Recovery, heartbeat window, 流式重连, and the mobile tradeoff named 省电模式."
+    },
+    {
+      "id": "bench-delta-05",
+      "title": "Delta Stream 重连 噪声对照 ds-05-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 流式重连 和 heartbeat window。"
+    },
+    {
+      "id": "bench-delta-06",
+      "title": "Delta Stream 重连 邻近主题 ds-05-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 流式重连 相邻的话题，会多次出现 heartbeat window，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-delta-07",
+      "title": "Delta Stream 重连 编号案例 ds-05-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 ds-05-k07 记录了 流式重连 的线上故障。 只有这份文档同时给出了编号、heartbeat window 和恢复步骤。"
+    },
+    {
+      "id": "bench-delta-08",
+      "title": "Delta Stream 重连 移动端优化 ds-05-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 省电模式。 文档建议限制 chunk 数量，保留 heartbeat window，并让 流式重连 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-delta-09",
+      "title": "Delta Stream 重连 近重复样本 ds-05-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 流式重连、heartbeat window、连接续传，但编号是 ds-05-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-sqlite-00",
+      "title": "SQLite 清理策略 SQLite Cleanup 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "SQLite 清理策略 的标准做法同时要求 vacuum window 与 存储清理 保持一致。 这份指南给出 sq-06-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-sqlite-01",
+      "title": "杂项记录 sq-06-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 SQLite 清理策略、存储清理 和 vacuum window，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-sqlite-02",
+      "title": "压缩整理 实战 sq-06-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "压缩整理 是团队内部对 存储清理 的另一种叫法。 实战笔记会同时出现 vacuum window、磁盘占用 和 SQLite Cleanup。"
+    },
+    {
+      "id": "bench-sqlite-03",
+      "title": "SQLite 清理策略 边界命中 sq-06-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "SQLite 清理策略 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 SQLite 清理策略 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 SQLite 清理策略 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 SQLite 清理策略 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 SQLite 清理策略 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 SQLite 清理策略 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 SQLite 清理策略 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 SQLite 清理策略 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 sq-06-k03 在边界 chunk 里必须保留 vacuum window 与 存储清理，否则 磁盘占用 指标会失真。\n\n补充说明继续讨论 压缩整理、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 压缩整理、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 压缩整理、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 压缩整理、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 压缩整理、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-sqlite-04",
+      "title": "SQLite Cleanup bilingual memo sq-06-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers SQLite Cleanup, vacuum window, 存储清理, and the mobile tradeoff named 磁盘占用."
+    },
+    {
+      "id": "bench-sqlite-05",
+      "title": "SQLite 清理策略 噪声对照 sq-06-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 存储清理 和 vacuum window。"
+    },
+    {
+      "id": "bench-sqlite-06",
+      "title": "SQLite 清理策略 邻近主题 sq-06-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 存储清理 相邻的话题，会多次出现 vacuum window，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-sqlite-07",
+      "title": "SQLite 清理策略 编号案例 sq-06-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 sq-06-k07 记录了 存储清理 的线上故障。 只有这份文档同时给出了编号、vacuum window 和恢复步骤。"
+    },
+    {
+      "id": "bench-sqlite-08",
+      "title": "SQLite 清理策略 移动端优化 sq-06-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 磁盘占用。 文档建议限制 chunk 数量，保留 vacuum window，并让 存储清理 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-sqlite-09",
+      "title": "SQLite 清理策略 近重复样本 sq-06-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 存储清理、vacuum window、压缩整理，但编号是 sq-06-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-image-00",
+      "title": "图片上传压缩 Image Upload Compression 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "图片上传压缩 的标准做法同时要求 upload budget 与 分辨率压缩 保持一致。 这份指南给出 im-07-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-image-01",
+      "title": "杂项记录 im-07-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 图片上传压缩、分辨率压缩 和 upload budget，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-image-02",
+      "title": "体积收敛 实战 im-07-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "体积收敛 是团队内部对 分辨率压缩 的另一种叫法。 实战笔记会同时出现 upload budget、弱网耗时 和 Image Upload Compression。"
+    },
+    {
+      "id": "bench-image-03",
+      "title": "图片上传压缩 边界命中 im-07-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "图片上传压缩 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 图片上传压缩 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 图片上传压缩 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 图片上传压缩 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 图片上传压缩 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 图片上传压缩 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 图片上传压缩 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 图片上传压缩 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 im-07-k03 在边界 chunk 里必须保留 upload budget 与 分辨率压缩，否则 弱网耗时 指标会失真。\n\n补充说明继续讨论 体积收敛、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 体积收敛、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 体积收敛、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 体积收敛、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 体积收敛、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-image-04",
+      "title": "Image Upload Compression bilingual memo im-07-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers Image Upload Compression, upload budget, 分辨率压缩, and the mobile tradeoff named 弱网耗时."
+    },
+    {
+      "id": "bench-image-05",
+      "title": "图片上传压缩 噪声对照 im-07-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 分辨率压缩 和 upload budget。"
+    },
+    {
+      "id": "bench-image-06",
+      "title": "图片上传压缩 邻近主题 im-07-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 分辨率压缩 相邻的话题，会多次出现 upload budget，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-image-07",
+      "title": "图片上传压缩 编号案例 im-07-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 im-07-k07 记录了 分辨率压缩 的线上故障。 只有这份文档同时给出了编号、upload budget 和恢复步骤。"
+    },
+    {
+      "id": "bench-image-08",
+      "title": "图片上传压缩 移动端优化 im-07-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 弱网耗时。 文档建议限制 chunk 数量，保留 upload budget，并让 分辨率压缩 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-image-09",
+      "title": "图片上传压缩 近重复样本 im-07-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 分辨率压缩、upload budget、体积收敛，但编号是 im-07-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-token-00",
+      "title": "Token 预算规划 Token Budget Plan 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "Token 预算规划 的标准做法同时要求 context budget 与 提示词预算 保持一致。 这份指南给出 tk-08-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-token-01",
+      "title": "杂项记录 tk-08-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 Token 预算规划、提示词预算 和 context budget，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-token-02",
+      "title": "上下文配额 实战 tk-08-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "上下文配额 是团队内部对 提示词预算 的另一种叫法。 实战笔记会同时出现 context budget、响应时延 和 Token Budget Plan。"
+    },
+    {
+      "id": "bench-token-03",
+      "title": "Token 预算规划 边界命中 tk-08-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "Token 预算规划 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Token 预算规划 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Token 预算规划 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Token 预算规划 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Token 预算规划 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Token 预算规划 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Token 预算规划 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 Token 预算规划 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 tk-08-k03 在边界 chunk 里必须保留 context budget 与 提示词预算，否则 响应时延 指标会失真。\n\n补充说明继续讨论 上下文配额、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 上下文配额、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 上下文配额、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 上下文配额、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 上下文配额、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-token-04",
+      "title": "Token Budget Plan bilingual memo tk-08-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers Token Budget Plan, context budget, 提示词预算, and the mobile tradeoff named 响应时延."
+    },
+    {
+      "id": "bench-token-05",
+      "title": "Token 预算规划 噪声对照 tk-08-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 提示词预算 和 context budget。"
+    },
+    {
+      "id": "bench-token-06",
+      "title": "Token 预算规划 邻近主题 tk-08-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 提示词预算 相邻的话题，会多次出现 context budget，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-token-07",
+      "title": "Token 预算规划 编号案例 tk-08-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 tk-08-k07 记录了 提示词预算 的线上故障。 只有这份文档同时给出了编号、context budget 和恢复步骤。"
+    },
+    {
+      "id": "bench-token-08",
+      "title": "Token 预算规划 移动端优化 tk-08-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 响应时延。 文档建议限制 chunk 数量，保留 context budget，并让 提示词预算 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-token-09",
+      "title": "Token 预算规划 近重复样本 tk-08-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 提示词预算、context budget、上下文配额，但编号是 tk-08-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-sync-00",
+      "title": "后台同步重试 Background Sync Retry 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "后台同步重试 的标准做法同时要求 retry ladder 与 断点同步 保持一致。 这份指南给出 sy-09-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-sync-01",
+      "title": "杂项记录 sy-09-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 后台同步重试、断点同步 和 retry ladder，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-sync-02",
+      "title": "重试阶梯 实战 sy-09-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "重试阶梯 是团队内部对 断点同步 的另一种叫法。 实战笔记会同时出现 retry ladder、电量约束 和 Background Sync Retry。"
+    },
+    {
+      "id": "bench-sync-03",
+      "title": "后台同步重试 边界命中 sy-09-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "后台同步重试 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 后台同步重试 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 后台同步重试 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 后台同步重试 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 后台同步重试 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 后台同步重试 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 后台同步重试 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 后台同步重试 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 sy-09-k03 在边界 chunk 里必须保留 retry ladder 与 断点同步，否则 电量约束 指标会失真。\n\n补充说明继续讨论 重试阶梯、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 重试阶梯、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 重试阶梯、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 重试阶梯、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 重试阶梯、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-sync-04",
+      "title": "Background Sync Retry bilingual memo sy-09-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers Background Sync Retry, retry ladder, 断点同步, and the mobile tradeoff named 电量约束."
+    },
+    {
+      "id": "bench-sync-05",
+      "title": "后台同步重试 噪声对照 sy-09-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 断点同步 和 retry ladder。"
+    },
+    {
+      "id": "bench-sync-06",
+      "title": "后台同步重试 邻近主题 sy-09-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 断点同步 相邻的话题，会多次出现 retry ladder，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-sync-07",
+      "title": "后台同步重试 编号案例 sy-09-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 sy-09-k07 记录了 断点同步 的线上故障。 只有这份文档同时给出了编号、retry ladder 和恢复步骤。"
+    },
+    {
+      "id": "bench-sync-08",
+      "title": "后台同步重试 移动端优化 sy-09-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 电量约束。 文档建议限制 chunk 数量，保留 retry ladder，并让 断点同步 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-sync-09",
+      "title": "后台同步重试 近重复样本 sy-09-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 断点同步、retry ladder、重试阶梯，但编号是 sy-09-k09，不应盖过真正的主文档。"
+    },
+    {
+      "id": "bench-audio-00",
+      "title": "音频转写清洗 Audio Transcript Cleanup 指南",
+      "sourceLabel": "benchmark-fixture",
+      "body": "音频转写清洗 的标准做法同时要求 segment merge 与 转写纠错 保持一致。 这份指南给出 au-10-k00 的默认流程，并说明如何避免噪声词把真正命中挤出前列。"
+    },
+    {
+      "id": "bench-audio-01",
+      "title": "杂项记录 au-10-k01",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这里只在正文里顺手提到 音频转写清洗、转写纠错 和 segment merge，但标题并不表达真实主题，用来模拟正文误命中。"
+    },
+    {
+      "id": "bench-audio-02",
+      "title": "片段归并 实战 au-10-k02",
+      "sourceLabel": "benchmark-fixture",
+      "body": "片段归并 是团队内部对 转写纠错 的另一种叫法。 实战笔记会同时出现 segment merge、端侧内存 和 Audio Transcript Cleanup。"
+    },
+    {
+      "id": "bench-audio-03",
+      "title": "音频转写清洗 边界命中 au-10-k03",
+      "sourceLabel": "benchmark-fixture",
+      "body": "音频转写清洗 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 音频转写清洗 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 音频转写清洗 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 音频转写清洗 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 音频转写清洗 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 音频转写清洗 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 音频转写清洗 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。 音频转写清洗 的背景记录强调移动端需要平衡准确率与耗时，常见讨论会反复提到性能、缓存、稳定性。\n\n关键规则：编号 au-10-k03 在边界 chunk 里必须保留 segment merge 与 转写纠错，否则 端侧内存 指标会失真。\n\n补充说明继续讨论 片段归并、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 片段归并、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 片段归并、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 片段归并、排序权重和噪声词干扰，保证 overlap 命中可以复现。 补充说明继续讨论 片段归并、排序权重和噪声词干扰，保证 overlap 命中可以复现。"
+    },
+    {
+      "id": "bench-audio-04",
+      "title": "Audio Transcript Cleanup bilingual memo au-10-k04",
+      "sourceLabel": "benchmark-fixture",
+      "body": "This memo mixes English and Chinese. It covers Audio Transcript Cleanup, segment merge, 转写纠错, and the mobile tradeoff named 端侧内存."
+    },
+    {
+      "id": "bench-audio-05",
+      "title": "音频转写清洗 噪声对照 au-10-k05",
+      "sourceLabel": "benchmark-fixture",
+      "body": "缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 缓存 性能 稳定性 体验 真正的区分信息只有 转写纠错 和 segment merge。"
+    },
+    {
+      "id": "bench-audio-06",
+      "title": "音频转写清洗 邻近主题 au-10-k06",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这份文档讨论与 转写纠错 相邻的话题，会多次出现 segment merge，但结论转向了别的处理路径，不应稳定排第一。"
+    },
+    {
+      "id": "bench-audio-07",
+      "title": "音频转写清洗 编号案例 au-10-k07",
+      "sourceLabel": "benchmark-fixture",
+      "body": "排障案例 au-10-k07 记录了 转写纠错 的线上故障。 只有这份文档同时给出了编号、segment merge 和恢复步骤。"
+    },
+    {
+      "id": "bench-audio-08",
+      "title": "音频转写清洗 移动端优化 au-10-k08",
+      "sourceLabel": "benchmark-fixture",
+      "body": "移动端优化专门关注 端侧内存。 文档建议限制 chunk 数量，保留 segment merge，并让 转写纠错 的检索优先命中标题。"
+    },
+    {
+      "id": "bench-audio-09",
+      "title": "音频转写清洗 近重复样本 au-10-k09",
+      "sourceLabel": "benchmark-fixture",
+      "body": "这是近重复样本，用于观察排序稳定性。正文包含 转写纠错、segment merge、片段归并，但编号是 au-10-k09，不应盖过真正的主文档。"
+    }
+  ],
+  "queries": [
+    {
+      "query": "OpenRouter 配置 模型路由",
+      "expectedDocumentId": "bench-openrouter-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "路由缓存 首屏延迟",
+      "expectedDocumentId": "bench-openrouter-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "or-01-k03 offline cache",
+      "expectedDocumentId": "bench-openrouter-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "OpenRouter Routing 模型路由",
+      "expectedDocumentId": "bench-openrouter-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "首屏延迟 模型路由",
+      "expectedDocumentId": "bench-openrouter-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "Android 通知权限 通知权限",
+      "expectedDocumentId": "bench-notify-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "提醒授权 后台保活",
+      "expectedDocumentId": "bench-notify-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "nt-02-k03 permission gate",
+      "expectedDocumentId": "bench-notify-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "Android Notification Permission 通知权限",
+      "expectedDocumentId": "bench-notify-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "后台保活 通知权限",
+      "expectedDocumentId": "bench-notify-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "Compose 列表性能 滚动卡顿",
+      "expectedDocumentId": "bench-compose-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "列表预取 掉帧控制",
+      "expectedDocumentId": "bench-compose-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "cp-03-k03 lazy list",
+      "expectedDocumentId": "bench-compose-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "Compose List Performance 滚动卡顿",
+      "expectedDocumentId": "bench-compose-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "掉帧控制 滚动卡顿",
+      "expectedDocumentId": "bench-compose-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "本地 RAG 检索 分块重叠",
+      "expectedDocumentId": "bench-rag-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "段落续接 索引体积",
+      "expectedDocumentId": "bench-rag-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "rg-04-k03 semantic overlap",
+      "expectedDocumentId": "bench-rag-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "Local RAG Retrieval 分块重叠",
+      "expectedDocumentId": "bench-rag-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "索引体积 分块重叠",
+      "expectedDocumentId": "bench-rag-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "Delta Stream 重连 流式重连",
+      "expectedDocumentId": "bench-delta-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "连接续传 省电模式",
+      "expectedDocumentId": "bench-delta-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "ds-05-k03 heartbeat window",
+      "expectedDocumentId": "bench-delta-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "Delta Stream Recovery 流式重连",
+      "expectedDocumentId": "bench-delta-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "省电模式 流式重连",
+      "expectedDocumentId": "bench-delta-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "SQLite 清理策略 存储清理",
+      "expectedDocumentId": "bench-sqlite-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "压缩整理 磁盘占用",
+      "expectedDocumentId": "bench-sqlite-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "sq-06-k03 vacuum window",
+      "expectedDocumentId": "bench-sqlite-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "SQLite Cleanup 存储清理",
+      "expectedDocumentId": "bench-sqlite-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "磁盘占用 存储清理",
+      "expectedDocumentId": "bench-sqlite-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "图片上传压缩 分辨率压缩",
+      "expectedDocumentId": "bench-image-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "体积收敛 弱网耗时",
+      "expectedDocumentId": "bench-image-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "im-07-k03 upload budget",
+      "expectedDocumentId": "bench-image-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "Image Upload Compression 分辨率压缩",
+      "expectedDocumentId": "bench-image-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "弱网耗时 分辨率压缩",
+      "expectedDocumentId": "bench-image-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "Token 预算规划 提示词预算",
+      "expectedDocumentId": "bench-token-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "上下文配额 响应时延",
+      "expectedDocumentId": "bench-token-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "tk-08-k03 context budget",
+      "expectedDocumentId": "bench-token-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "Token Budget Plan 提示词预算",
+      "expectedDocumentId": "bench-token-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "响应时延 提示词预算",
+      "expectedDocumentId": "bench-token-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "后台同步重试 断点同步",
+      "expectedDocumentId": "bench-sync-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "重试阶梯 电量约束",
+      "expectedDocumentId": "bench-sync-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "sy-09-k03 retry ladder",
+      "expectedDocumentId": "bench-sync-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "Background Sync Retry 断点同步",
+      "expectedDocumentId": "bench-sync-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "电量约束 断点同步",
+      "expectedDocumentId": "bench-sync-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    },
+    {
+      "query": "音频转写清洗 转写纠错",
+      "expectedDocumentId": "bench-audio-00",
+      "minimumRank": 1,
+      "weight": 1.2,
+      "tag": "title_exact"
+    },
+    {
+      "query": "片段归并 端侧内存",
+      "expectedDocumentId": "bench-audio-02",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "synonym"
+    },
+    {
+      "query": "au-10-k03 segment merge",
+      "expectedDocumentId": "bench-audio-03",
+      "minimumRank": 1,
+      "weight": 1.1,
+      "tag": "boundary"
+    },
+    {
+      "query": "Audio Transcript Cleanup 转写纠错",
+      "expectedDocumentId": "bench-audio-04",
+      "minimumRank": 3,
+      "weight": 0.9,
+      "tag": "bilingual"
+    },
+    {
+      "query": "端侧内存 转写纠错",
+      "expectedDocumentId": "bench-audio-08",
+      "minimumRank": 3,
+      "weight": 1.0,
+      "tag": "mobile"
+    }
+  ]
+}
