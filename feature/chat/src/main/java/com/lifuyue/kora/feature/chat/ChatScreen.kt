@@ -571,9 +571,27 @@ private fun ChatSuggestionChip(
     isLightTheme: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val chipBackground =
+        if (isLightTheme) {
+            Color.White
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+    val iconTint =
+        if (isLightTheme) {
+            Color(0xFF6A717D)
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    val textColor =
+        if (isLightTheme) {
+            Color(0xFF2A2D33)
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
     Surface(
         modifier = modifier.wrapContentWidth(),
-        color = if (isLightTheme) Color.White else Color(0xFF1A1A1C),
+        color = chipBackground,
         shape = RoundedCornerShape(26.dp),
     ) {
         Row(
@@ -584,12 +602,12 @@ private fun ChatSuggestionChip(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = if (isLightTheme) Color(0xFF6A717D) else Color(0xFFC7C7C7),
+                tint = iconTint,
                 modifier = Modifier.size(18.dp),
             )
             Text(
                 label,
-                color = if (isLightTheme) Color(0xFF2A2D33) else Color(0xFFD5D5D5),
+                color = textColor,
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -609,9 +627,10 @@ private fun ChatGeminiComposer(
     onOpenQuickSettings: () -> Unit,
     onToggleAttachmentActions: () -> Unit,
 ) {
-    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val colorScheme = MaterialTheme.colorScheme
+    val isLightTheme = colorScheme.background.luminance() > 0.5f
     Surface(
-        color = if (isLightTheme) Color(0xFFFCFCFD) else Color(0xFF252628),
+        color = if (isLightTheme) Color(0xFFFCFCFD) else colorScheme.surfaceVariant,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp, bottomStart = 34.dp, bottomEnd = 34.dp),
         modifier =
             Modifier
@@ -724,12 +743,13 @@ private fun GeminiComposerIconButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val colorScheme = MaterialTheme.colorScheme
+    val isLightTheme = colorScheme.background.luminance() > 0.5f
     val containerColor =
         if (isLightTheme) {
             Color(0xFFF0F2F5)
         } else {
-            Color.White.copy(alpha = 0.06f)
+            colorScheme.surfaceContainerHigh
         }
     IconButton(
         onClick = onClick,
@@ -738,12 +758,12 @@ private fun GeminiComposerIconButton(
             modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(containerColor.copy(alpha = if (enabled) 1f else 0.45f)),
+                .background(containerColor.copy(alpha = if (enabled) 1f else 0.6f)),
     ) {
         Icon(
             icon,
             contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.4f),
+            tint = colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.55f),
             modifier = Modifier.size(21.dp),
         )
     }
@@ -756,6 +776,7 @@ private fun GeminiComposerPainterButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     IconButton(
         onClick = onClick,
         modifier =
@@ -763,17 +784,17 @@ private fun GeminiComposerPainterButton(
                 .size(44.dp)
                 .clip(CircleShape)
                 .background(
-                    if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
+                    if (colorScheme.background.luminance() > 0.5f) {
                         Color(0xFFF0F2F5)
                     } else {
-                        Color.White.copy(alpha = 0.06f)
+                        colorScheme.surfaceContainerHigh
                     },
                 ),
     ) {
         Icon(
             painter = painter,
             contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = colorScheme.onSurface,
             modifier = Modifier.size(21.dp),
         )
     }
@@ -786,7 +807,12 @@ private fun SpeechInputComposer(
     onStop: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Card(
+        colors =
+            CardDefaults.cardColors(
+                containerColor = colorScheme.surfaceVariant,
+            ),
         modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_SPEECH_STATUS),
     ) {
         Column(
@@ -802,9 +828,14 @@ private fun SpeechInputComposer(
                         SpeechInputStatus.Idle -> appString("chat_speech_start")
                     },
                     style = MaterialTheme.typography.titleMedium,
+                    color = colorScheme.onSurface,
                 )
             if (state.transcript.isNotBlank()) {
-                Text(text = state.transcript, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = state.transcript,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurface,
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (state.status) {
