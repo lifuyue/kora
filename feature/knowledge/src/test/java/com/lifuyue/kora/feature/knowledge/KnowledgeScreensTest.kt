@@ -1,8 +1,14 @@
 package com.lifuyue.kora.feature.knowledge
 
 import android.content.Context
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -52,6 +58,99 @@ class KnowledgeScreensTest {
 
         composeRule.onNodeWithTag("knowledge_overview_summary_card").assertIsDisplayed()
         composeRule.onNodeWithText("Architecture Notes").fetchSemanticsNode()
+    }
+
+    @Test
+    fun localKnowledgePagesUseLightThemeBackgroundInsteadOfSurface() {
+        assertPageBackgroundUsesThemeBackground(
+            pageTag = KNOWLEDGE_LOCAL_OVERVIEW_PAGE_TAG,
+            backgroundColor = Color(0xFFF7F8FC),
+            surfaceColor = Color(0xFFE7D7B8),
+        ) {
+            LocalKnowledgeOverviewScreen(
+                state = KnowledgeOverviewUiState(datasetCount = 1, status = KnowledgeLoadState.Content),
+                onOpenLibrary = {},
+                onOpenRecentDocument = {},
+            )
+        }
+
+        assertPageBackgroundUsesThemeBackground(
+            pageTag = KNOWLEDGE_LOCAL_LIBRARY_PAGE_TAG,
+            backgroundColor = Color(0xFFF7F8FC),
+            surfaceColor = Color(0xFFE7D7B8),
+        ) {
+            LocalKnowledgeLibraryScreen(
+                state = LocalKnowledgeLibraryUiState(status = KnowledgeLoadState.Empty),
+                onBack = {},
+                onQueryChanged = {},
+                onTitleChanged = {},
+                onSourceChanged = {},
+                onTextChanged = {},
+                onImport = {},
+                onOpenDocument = {},
+                onDeleteDocument = {},
+                onToggleEnabled = { _, _ -> },
+            )
+        }
+
+        assertPageBackgroundUsesThemeBackground(
+            pageTag = KNOWLEDGE_LOCAL_DOCUMENT_PAGE_TAG,
+            backgroundColor = Color(0xFFF7F8FC),
+            surfaceColor = Color(0xFFE7D7B8),
+        ) {
+            LocalKnowledgeDocumentScreen(
+                state = LocalKnowledgeDocumentUiState(sourceLabel = "Manual import"),
+                onBack = {},
+            )
+        }
+    }
+
+    @Test
+    fun localKnowledgePagesUseDarkThemeBackgroundInsteadOfSurface() {
+        assertPageBackgroundUsesThemeBackground(
+            pageTag = KNOWLEDGE_LOCAL_OVERVIEW_PAGE_TAG,
+            backgroundColor = Color(0xFF050608),
+            surfaceColor = Color(0xFF3B2F4A),
+            darkTheme = true,
+        ) {
+            LocalKnowledgeOverviewScreen(
+                state = KnowledgeOverviewUiState(datasetCount = 1, status = KnowledgeLoadState.Content),
+                onOpenLibrary = {},
+                onOpenRecentDocument = {},
+            )
+        }
+
+        assertPageBackgroundUsesThemeBackground(
+            pageTag = KNOWLEDGE_LOCAL_LIBRARY_PAGE_TAG,
+            backgroundColor = Color(0xFF050608),
+            surfaceColor = Color(0xFF3B2F4A),
+            darkTheme = true,
+        ) {
+            LocalKnowledgeLibraryScreen(
+                state = LocalKnowledgeLibraryUiState(status = KnowledgeLoadState.Empty),
+                onBack = {},
+                onQueryChanged = {},
+                onTitleChanged = {},
+                onSourceChanged = {},
+                onTextChanged = {},
+                onImport = {},
+                onOpenDocument = {},
+                onDeleteDocument = {},
+                onToggleEnabled = { _, _ -> },
+            )
+        }
+
+        assertPageBackgroundUsesThemeBackground(
+            pageTag = KNOWLEDGE_LOCAL_DOCUMENT_PAGE_TAG,
+            backgroundColor = Color(0xFF050608),
+            surfaceColor = Color(0xFF3B2F4A),
+            darkTheme = true,
+        ) {
+            LocalKnowledgeDocumentScreen(
+                state = LocalKnowledgeDocumentUiState(sourceLabel = "Manual import"),
+                onBack = {},
+            )
+        }
     }
 
     @Test
@@ -396,5 +495,36 @@ class KnowledgeScreensTest {
         }
 
         composeRule.onNodeWithText("Q&A").assertExists()
+    }
+
+    private fun assertPageBackgroundUsesThemeBackground(
+        pageTag: String,
+        backgroundColor: Color,
+        surfaceColor: Color,
+        darkTheme: Boolean = false,
+        content: @androidx.compose.runtime.Composable () -> Unit,
+    ) {
+        composeRule.setContent {
+            val colorScheme =
+                if (darkTheme) {
+                    darkColorScheme(
+                        background = backgroundColor,
+                        surface = surfaceColor,
+                    )
+                } else {
+                    lightColorScheme(
+                        background = backgroundColor,
+                        surface = surfaceColor,
+                    )
+                }
+            MaterialTheme(colorScheme = colorScheme) {
+                content()
+            }
+        }
+
+        val pixelMap = composeRule.onNodeWithTag(pageTag).captureToImage().toPixelMap()
+        val centerPixel = pixelMap[pixelMap.width / 2, pixelMap.height / 2]
+        assertTrue("Expected page background $backgroundColor but was $centerPixel", centerPixel == backgroundColor)
+        assertTrue("Page should not use surface color $surfaceColor", centerPixel != surfaceColor)
     }
 }

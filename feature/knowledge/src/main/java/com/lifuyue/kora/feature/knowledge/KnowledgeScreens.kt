@@ -36,7 +36,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -61,8 +60,9 @@ fun KnowledgeOverviewScreen(
     onReturnToChat: (() -> Unit)? = null,
     onOpenDrawer: () -> Unit = {},
 ) {
+    val pageBackground = knowledgePageBackgroundColor()
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = pageBackground,
         topBar = {
             KoraGeminiTopBar(
                 title = stringResource(R.string.knowledge_overview_title),
@@ -70,7 +70,10 @@ fun KnowledgeOverviewScreen(
             )
         },
     ) { innerPadding ->
-        KnowledgePageContainer(innerPadding = innerPadding) {
+        KnowledgePageContainer(
+            innerPadding = innerPadding,
+            testTag = KNOWLEDGE_OVERVIEW_PAGE_TAG,
+        ) {
             Column(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -128,8 +131,9 @@ fun LocalKnowledgeOverviewScreen(
     onReturnToChat: (() -> Unit)? = null,
     onOpenDrawer: () -> Unit = {},
 ) {
+    val pageBackground = knowledgePageBackgroundColor()
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = pageBackground,
         topBar = {
             KoraGeminiTopBar(
                 title = stringResource(R.string.knowledge_local_overview_title),
@@ -137,7 +141,10 @@ fun LocalKnowledgeOverviewScreen(
             )
         },
     ) { innerPadding ->
-        KnowledgePageContainer(innerPadding = innerPadding) {
+        KnowledgePageContainer(
+            innerPadding = innerPadding,
+            testTag = KNOWLEDGE_LOCAL_OVERVIEW_PAGE_TAG,
+        ) {
             Column(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -220,6 +227,7 @@ fun LocalKnowledgeLibraryScreen(
     onToggleEnabled: (String, Boolean) -> Unit,
     onOpenDrawer: () -> Unit = {},
 ) {
+    val pageBackground = knowledgePageBackgroundColor()
     var showImportSheet by rememberSaveable { mutableStateOf(false) }
 
     if (showImportSheet) {
@@ -241,7 +249,7 @@ fun LocalKnowledgeLibraryScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = pageBackground,
         topBar = {
             KoraGeminiTopBar(
                 title = stringResource(R.string.knowledge_local_library_title),
@@ -260,67 +268,72 @@ fun LocalKnowledgeLibraryScreen(
             }
         },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        KnowledgePageContainer(
+            innerPadding = innerPadding,
+            testTag = KNOWLEDGE_LOCAL_LIBRARY_PAGE_TAG,
         ) {
-            TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = onQueryChanged,
-                label = { Text(stringResource(R.string.knowledge_local_query_label)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            when (state.status) {
-                KnowledgeLoadState.Empty ->
-                    Text(stringResource(R.string.knowledge_local_empty), style = MaterialTheme.typography.bodyMedium)
-                else ->
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(state.items, key = { it.documentId }) { item ->
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            Text(item.title, style = MaterialTheme.typography.titleMedium)
-                                            Text(item.sourceLabel, style = MaterialTheme.typography.bodySmall)
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
+                OutlinedTextField(
+                    value = state.query,
+                    onValueChange = onQueryChanged,
+                    label = { Text(stringResource(R.string.knowledge_local_query_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                when (state.status) {
+                    KnowledgeLoadState.Empty ->
+                        Text(stringResource(R.string.knowledge_local_empty), style = MaterialTheme.typography.bodyMedium)
+                    else ->
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(state.items, key = { it.documentId }) { item ->
+                                Card(modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text(item.title, style = MaterialTheme.typography.titleMedium)
+                                                Text(item.sourceLabel, style = MaterialTheme.typography.bodySmall)
+                                            }
+                                            Switch(
+                                                checked = item.isEnabled,
+                                                onCheckedChange = { enabled -> onToggleEnabled(item.documentId, enabled) },
+                                            )
                                         }
-                                        Switch(
-                                            checked = item.isEnabled,
-                                            onCheckedChange = { enabled -> onToggleEnabled(item.documentId, enabled) },
-                                        )
-                                    }
-                                    Text(item.previewText, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        localKnowledgeIndexStatusLabel(item),
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                    Text(
-                                        stringResource(R.string.knowledge_local_chunk_count, item.chunkCount),
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                    item.indexErrorMessage?.takeIf { item.indexStatus == com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Failed }?.let { error ->
+                                        Text(item.previewText, style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            error,
+                                            localKnowledgeIndexStatusLabel(item),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.error,
                                         )
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(onClick = { onOpenDocument(item.documentId) }) {
-                                            Text(stringResource(R.string.knowledge_local_view_chunks))
+                                        Text(
+                                            stringResource(R.string.knowledge_local_chunk_count, item.chunkCount),
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                        item.indexErrorMessage?.takeIf { item.indexStatus == com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Failed }?.let { error ->
+                                            Text(
+                                                error,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
                                         }
-                                        TextButton(onClick = { onDeleteDocument(item.documentId) }) {
-                                            Text(stringResource(R.string.knowledge_delete))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            TextButton(onClick = { onOpenDocument(item.documentId) }) {
+                                                Text(stringResource(R.string.knowledge_local_view_chunks))
+                                            }
+                                            TextButton(onClick = { onDeleteDocument(item.documentId) }) {
+                                                Text(stringResource(R.string.knowledge_delete))
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
+                }
             }
         }
     }
@@ -387,8 +400,9 @@ fun LocalKnowledgeDocumentScreen(
     onBack: () -> Unit,
     onOpenDrawer: () -> Unit = {},
 ) {
+    val pageBackground = knowledgePageBackgroundColor()
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = pageBackground,
         topBar = {
             KoraGeminiTopBar(
                 title = state.title.ifBlank { stringResource(R.string.knowledge_local_document_title) },
@@ -396,22 +410,27 @@ fun LocalKnowledgeDocumentScreen(
             )
         },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        KnowledgePageContainer(
+            innerPadding = innerPadding,
+            testTag = KNOWLEDGE_LOCAL_DOCUMENT_PAGE_TAG,
         ) {
-            TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
-            Text(state.sourceLabel, style = MaterialTheme.typography.bodySmall)
-            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            if (state.chunks.isEmpty()) {
-                Text(stringResource(R.string.knowledge_local_document_empty), style = MaterialTheme.typography.bodyMedium)
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.chunks, key = { it.dataId }) { item ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(item.question, style = MaterialTheme.typography.titleSmall)
-                                Text(item.answer, style = MaterialTheme.typography.bodyMedium)
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                TextButton(onClick = onBack) { Text(stringResource(R.string.knowledge_back)) }
+                Text(state.sourceLabel, style = MaterialTheme.typography.bodySmall)
+                state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (state.chunks.isEmpty()) {
+                    Text(stringResource(R.string.knowledge_local_document_empty), style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(state.chunks, key = { it.dataId }) { item ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(item.question, style = MaterialTheme.typography.titleSmall)
+                                    Text(item.answer, style = MaterialTheme.typography.bodyMedium)
+                                }
                             }
                         }
                     }
@@ -995,6 +1014,7 @@ private fun searchResultScoreLabel(item: SearchResultUiModel): String? {
 @Composable
 private fun KnowledgePageContainer(
     innerPadding: PaddingValues,
+    testTag: String? = null,
     content: @Composable () -> Unit,
 ) {
     Box(
@@ -1002,20 +1022,17 @@ private fun KnowledgePageContainer(
             Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(knowledgePageBackgroundBrush()),
+                .background(knowledgePageBackgroundColor())
+                .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
     ) {
         content()
     }
 }
 
 @Composable
-private fun knowledgePageBackgroundBrush(): Brush =
-    Brush.verticalGradient(
-        colors =
-            listOf(
-                MaterialTheme.colorScheme.surface,
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                MaterialTheme.colorScheme.secondary.copy(alpha = 0.035f),
-                MaterialTheme.colorScheme.surface,
-            ),
-    )
+private fun knowledgePageBackgroundColor() = MaterialTheme.colorScheme.background
+
+internal const val KNOWLEDGE_OVERVIEW_PAGE_TAG = "knowledge_overview_page"
+internal const val KNOWLEDGE_LOCAL_OVERVIEW_PAGE_TAG = "knowledge_local_overview_page"
+internal const val KNOWLEDGE_LOCAL_LIBRARY_PAGE_TAG = "knowledge_local_library_page"
+internal const val KNOWLEDGE_LOCAL_DOCUMENT_PAGE_TAG = "knowledge_local_document_page"
