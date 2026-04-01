@@ -29,4 +29,7 @@ interface LocalKnowledgeDocumentDao {
 
     @Query("DELETE FROM local_knowledge_documents WHERE documentId = :documentId")
     fun delete(documentId: String)
+
+    @Query("DELETE FROM local_knowledge_documents")
+    fun clearAll()
 }

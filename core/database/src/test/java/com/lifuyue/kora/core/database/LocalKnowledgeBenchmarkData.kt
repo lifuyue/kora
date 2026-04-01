@@ -49,14 +49,18 @@ internal fun LocalKnowledgeStore.seedBenchmarkData(
     benchmarkData: LocalKnowledgeBenchmarkData,
     nowBase: Long = 10_000L,
 ) {
-    benchmarkData.documents.forEachIndexed { index, document ->
-        importText(
-            title = document.title,
-            text = document.body,
-            sourceLabel = document.sourceLabel,
-            now = nowBase + index,
-        )
-    }
+    seedLocalKnowledge(
+        LocalKnowledgeSeedPayload(
+            documents = benchmarkData.documents.map { document ->
+                LocalKnowledgeSeedDocument(
+                    title = document.title,
+                    sourceLabel = document.sourceLabel,
+                    body = document.body,
+                )
+            },
+        ),
+        nowBase = nowBase,
+    )
 }
 
 private fun JsonObject.toBenchmarkDocument(): LocalKnowledgeBenchmarkDocument =

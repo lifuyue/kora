@@ -29,6 +29,7 @@
 - 位置: `app/*AcceptanceTest`, `core/testing/src/consumer*`
 - 目标: 覆盖少量高价值端到端链路
 - 原则: 数量少，但必须稳定
+- 设备脚本链路: `make seed` 负责把测试知识库导入已安装 debug Kora；`make seed-e2e` 负责自动探测环境、执行导入并校验状态文件成功
 
 ## Current Coverage Shape
 - `feature/chat` 测试最密集，是当前产品主链路
@@ -48,6 +49,14 @@
 2. 相关 feature 全量 `testDebugUnitTest`
 3. `assembleDebug`
 4. 必要时再做一条模拟器链路确认
+5. 涉及已安装 App 本地知识库导入时，执行 `make seed-e2e`
+
+## Device Seed E2E
+- 前提: 已连接单个设备或显式传 `SERIAL`，设备可安装 debug APK，且 `run-as com.lifuyue.kora` 可用
+- `make seed`: 生成 fixture、安装 debug APK、推送 payload、触发 debug 导入并等待状态文件成功
+- `make seed-e2e`: 在 `make seed` 前自动记录设备 serial、Android 版本、`pm path`、`run-as` 可用性、payload/status 路径、receiver/action，并将结果写入 `build/seed-e2e/last-run.json`
+- 当前成功标准停留在脚本与状态文件层，不覆盖 UI 自动化；验收要求 `state=success`、`imported > 0`、`ready == imported`
+- 排障优先级: 先看脚本 stderr，再看 `build/seed-e2e/last-run.json`，最后看设备内状态文件
 
 ## Immediate Improvement Targets
 - 聊天发送与流式解析的 contract 测试继续前置

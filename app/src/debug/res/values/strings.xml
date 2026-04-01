@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="debug_seed_notification_channel_name">调试知识库导入</string>
+    <string name="debug_seed_notification_title">Kora 正在导入调试知识库</string>
+    <string name="debug_seed_notification_body">请保持应用安装，脚本会在导入完成后返回结果。</string>
+</resources>

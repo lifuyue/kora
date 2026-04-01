@@ -174,6 +174,12 @@ class LocalKnowledgeStore private constructor(
         documentDao.delete(documentId)
     }
 
+    fun clearLocalKnowledge() {
+        postingDao.clearAll()
+        chunkDao.clearAll()
+        documentDao.clearAll()
+    }
+
     fun search(
         query: String,
         limit: Int = 4,
