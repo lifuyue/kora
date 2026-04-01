@@ -15,17 +15,26 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
@@ -211,6 +220,26 @@ fun LocalKnowledgeLibraryScreen(
     onToggleEnabled: (String, Boolean) -> Unit,
     onOpenDrawer: () -> Unit = {},
 ) {
+    var showImportSheet by rememberSaveable { mutableStateOf(false) }
+
+    if (showImportSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showImportSheet = false },
+            modifier = Modifier.testTag("knowledge_local_import_sheet"),
+        ) {
+            LocalKnowledgeImportSheet(
+                state = state,
+                onTitleChanged = onTitleChanged,
+                onSourceChanged = onSourceChanged,
+                onTextChanged = onTextChanged,
+                onImport = {
+                    onImport()
+                    showImportSheet = false
+                },
+            )
+        }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
@@ -218,6 +247,17 @@ fun LocalKnowledgeLibraryScreen(
                 title = stringResource(R.string.knowledge_local_library_title),
                 onOpenDrawer = onOpenDrawer,
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showImportSheet = true },
+                modifier = Modifier.testTag("knowledge_local_import_fab"),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.knowledge_local_import_action),
+                )
+            }
         },
     ) { innerPadding ->
         Column(
@@ -231,33 +271,6 @@ fun LocalKnowledgeLibraryScreen(
                 label = { Text(stringResource(R.string.knowledge_local_query_label)) },
                 modifier = Modifier.fillMaxWidth(),
             )
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.knowledge_local_import_title), style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(
-                        value = state.draftTitle,
-                        onValueChange = onTitleChanged,
-                        label = { Text(stringResource(R.string.knowledge_local_import_name_label)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = state.draftSource,
-                        onValueChange = onSourceChanged,
-                        label = { Text(stringResource(R.string.knowledge_local_import_source_label)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = state.draftText,
-                        onValueChange = onTextChanged,
-                        label = { Text(stringResource(R.string.knowledge_local_import_text_label)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 5,
-                    )
-                    Button(onClick = onImport) {
-                        Text(stringResource(R.string.knowledge_local_import_action))
-                    }
-                }
-            }
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             when (state.status) {
                 KnowledgeLoadState.Empty ->
@@ -309,6 +322,60 @@ fun LocalKnowledgeLibraryScreen(
                         }
                     }
             }
+        }
+    }
+}
+
+@Composable
+private fun LocalKnowledgeImportSheet(
+    state: LocalKnowledgeLibraryUiState,
+    onTitleChanged: (String) -> Unit,
+    onSourceChanged: (String) -> Unit,
+    onTextChanged: (String) -> Unit,
+    onImport: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.knowledge_local_import_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = stringResource(R.string.knowledge_local_recent_supporting),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = state.draftTitle,
+            onValueChange = onTitleChanged,
+            label = { Text(stringResource(R.string.knowledge_local_import_name_label)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = state.draftSource,
+            onValueChange = onSourceChanged,
+            label = { Text(stringResource(R.string.knowledge_local_import_source_label)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = state.draftText,
+            onValueChange = onTextChanged,
+            label = { Text(stringResource(R.string.knowledge_local_import_text_label)) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 5,
+        )
+        Button(
+            onClick = onImport,
+            modifier = Modifier.fillMaxWidth().testTag("knowledge_local_import_submit"),
+        ) {
+            Text(stringResource(R.string.knowledge_local_import_action))
         }
     }
 }
