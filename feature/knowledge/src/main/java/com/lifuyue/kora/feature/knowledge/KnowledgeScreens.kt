@@ -1,8 +1,11 @@
 package com.lifuyue.kora.feature.knowledge
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,14 +27,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifuyue.kora.core.common.ui.KoraGeminiTopBar
+import com.lifuyue.kora.core.common.ui.KoraSectionCard
 import com.lifuyue.kora.core.common.ui.KoraWorkspaceHeroCard
 import com.lifuyue.kora.core.common.ui.KoraWorkspaceSectionTitle
+import com.lifuyue.kora.core.common.ui.WorkspaceMetaPill
 import java.text.DateFormat
 import java.text.NumberFormat
 import java.util.Date
@@ -46,6 +53,7 @@ fun KnowledgeOverviewScreen(
     onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             KoraGeminiTopBar(
                 title = stringResource(R.string.knowledge_overview_title),
@@ -53,44 +61,48 @@ fun KnowledgeOverviewScreen(
             )
         },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            KoraWorkspaceHeroCard(
-                title = stringResource(R.string.knowledge_overview_workspace_title),
-                subtitle =
-                    stringResource(
-                        R.string.knowledge_overview_current_app,
-                        state.selectedAppId ?: stringResource(R.string.knowledge_overview_no_app_selected),
-                    ),
-                eyebrow = stringResource(R.string.knowledge_overview_workspace_eyebrow),
-                meta = stringResource(R.string.knowledge_overview_workspace_meta),
-                modifier = Modifier.testTag("knowledge_overview_summary_card"),
-            )
-            KoraWorkspaceSectionTitle(
-                title =
-                    pluralStringResource(
-                        R.plurals.knowledge_overview_dataset_count,
-                        state.datasetCount,
-                        state.datasetCount,
-                    ),
-                supportingText = stringResource(R.string.knowledge_overview_open_datasets),
-            )
-            if (onReturnToChat != null) {
-                TextButton(onClick = onReturnToChat) {
-                    Text(stringResource(R.string.knowledge_return_to_chat))
+        KnowledgePageContainer(innerPadding = innerPadding) {
+            Column(
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                KoraWorkspaceHeroCard(
+                    title = stringResource(R.string.knowledge_overview_workspace_title),
+                    subtitle =
+                        stringResource(
+                            R.string.knowledge_overview_current_app,
+                            state.selectedAppId ?: stringResource(R.string.knowledge_overview_no_app_selected),
+                        ),
+                    eyebrow = stringResource(R.string.knowledge_overview_workspace_eyebrow),
+                    meta = stringResource(R.string.knowledge_overview_workspace_meta),
+                    modifier = Modifier.testTag("knowledge_overview_summary_card"),
+                )
+                KoraSectionCard {
+                    KoraWorkspaceSectionTitle(
+                        title =
+                            pluralStringResource(
+                                R.plurals.knowledge_overview_dataset_count,
+                                state.datasetCount,
+                                state.datasetCount,
+                            ),
+                        supportingText = stringResource(R.string.knowledge_overview_open_datasets),
+                    )
+                    if (onReturnToChat != null) {
+                        TextButton(onClick = onReturnToChat) {
+                            Text(stringResource(R.string.knowledge_return_to_chat))
+                        }
+                    }
+                    Button(onClick = onOpenDatasets) { Text(stringResource(R.string.knowledge_overview_open_datasets)) }
                 }
-            }
-            Button(onClick = onOpenDatasets) { Text(stringResource(R.string.knowledge_overview_open_datasets)) }
-            state.recentDatasets.forEach { item ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { onOpenRecentDataset(item.datasetId) },
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(item.name, style = MaterialTheme.typography.titleMedium)
-                        Text(item.intro.ifBlank { knowledgeTypeLabel(item.type) }, style = MaterialTheme.typography.bodyMedium)
-                        Text(datasetSummaryLabel(item.type, item.status), style = MaterialTheme.typography.bodySmall)
+                state.recentDatasets.forEach { item ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable { onOpenRecentDataset(item.datasetId) },
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(item.name, style = MaterialTheme.typography.titleMedium)
+                            Text(item.intro.ifBlank { knowledgeTypeLabel(item.type) }, style = MaterialTheme.typography.bodyMedium)
+                            Text(datasetSummaryLabel(item.type, item.status), style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }
@@ -108,6 +120,7 @@ fun LocalKnowledgeOverviewScreen(
     onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             KoraGeminiTopBar(
                 title = stringResource(R.string.knowledge_local_overview_title),
@@ -115,33 +128,55 @@ fun LocalKnowledgeOverviewScreen(
             )
         },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            KoraWorkspaceHeroCard(
-                title = stringResource(R.string.knowledge_local_workspace_title),
-                subtitle = stringResource(R.string.knowledge_local_workspace_subtitle),
-                eyebrow = stringResource(R.string.knowledge_local_workspace_eyebrow),
-                meta = stringResource(R.string.knowledge_local_workspace_meta, state.datasetCount),
-                modifier = Modifier.testTag("knowledge_local_summary_card"),
-            )
-            if (onReturnToChat != null) {
-                TextButton(onClick = onReturnToChat) {
-                    Text(stringResource(R.string.knowledge_return_to_chat))
+        KnowledgePageContainer(innerPadding = innerPadding) {
+            Column(
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().testTag("knowledge_local_summary_card"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.knowledge_local_workspace_eyebrow).uppercase(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = stringResource(R.string.knowledge_local_workspace_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = stringResource(R.string.knowledge_local_workspace_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    WorkspaceMetaPill(text = stringResource(R.string.knowledge_local_workspace_meta, state.datasetCount))
                 }
-            }
-            Button(onClick = onOpenLibrary) { Text(stringResource(R.string.knowledge_local_open_library)) }
-            if (state.recentDatasets.isEmpty()) {
-                Text(
-                    stringResource(R.string.knowledge_local_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            } else {
-                KoraWorkspaceSectionTitle(
-                    title = stringResource(R.string.knowledge_local_recent_title),
-                    supportingText = stringResource(R.string.knowledge_local_recent_supporting),
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    KoraWorkspaceSectionTitle(
+                        title = stringResource(R.string.knowledge_local_recent_title),
+                        supportingText = stringResource(R.string.knowledge_local_recent_supporting),
+                    )
+                    if (onReturnToChat != null) {
+                        TextButton(onClick = onReturnToChat) {
+                            Text(stringResource(R.string.knowledge_return_to_chat))
+                        }
+                    }
+                    Button(onClick = onOpenLibrary) { Text(stringResource(R.string.knowledge_local_open_library)) }
+                    if (state.recentDatasets.isEmpty()) {
+                        Text(
+                            stringResource(R.string.knowledge_local_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 state.recentDatasets.forEach { item ->
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { onOpenRecentDocument(item.datasetId) },
@@ -177,6 +212,7 @@ fun LocalKnowledgeLibraryScreen(
     onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             KoraGeminiTopBar(
                 title = stringResource(R.string.knowledge_local_library_title),
@@ -285,6 +321,7 @@ fun LocalKnowledgeDocumentScreen(
     onOpenDrawer: () -> Unit = {},
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             KoraGeminiTopBar(
                 title = state.title.ifBlank { stringResource(R.string.knowledge_local_document_title) },
@@ -355,7 +392,9 @@ fun DatasetBrowserScreen(
     onOpenSearch: (String) -> Unit,
     onOpenDrawer: () -> Unit = {},
 ) {
-    Scaffold(topBar = {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
         KoraGeminiTopBar(
             title = stringResource(R.string.knowledge_dataset_browser_title),
             onOpenDrawer = onOpenDrawer,
@@ -476,7 +515,9 @@ fun CollectionManagementScreen(
     onOpenSearch: () -> Unit,
     onOpenDrawer: () -> Unit = {},
 ) {
-    Scaffold(topBar = {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
         KoraGeminiTopBar(
             title = state.datasetName.ifBlank { stringResource(R.string.knowledge_collections_title) },
             onOpenDrawer = onOpenDrawer,
@@ -617,7 +658,9 @@ fun ChunkViewerScreen(
     onLoadMore: () -> Unit,
     onOpenDrawer: () -> Unit = {},
 ) {
-    Scaffold(topBar = {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
         KoraGeminiTopBar(
             title = stringResource(R.string.knowledge_chunk_viewer_title),
             onOpenDrawer = onOpenDrawer,
@@ -776,7 +819,9 @@ fun SearchTestScreen(
     onOpenResult: (SearchResultUiModel) -> Unit,
     onOpenDrawer: () -> Unit = {},
 ) {
-    Scaffold(topBar = {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
         KoraGeminiTopBar(
             title = stringResource(R.string.knowledge_search_test_title),
             onOpenDrawer = onOpenDrawer,
@@ -879,3 +924,31 @@ private fun searchResultScoreLabel(item: SearchResultUiModel): String? {
         else -> stringResource(R.string.knowledge_score_summary, item.scoreType, formattedScore)
     }
 }
+
+@Composable
+private fun KnowledgePageContainer(
+    innerPadding: PaddingValues,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(knowledgePageBackgroundBrush()),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun knowledgePageBackgroundBrush(): Brush =
+    Brush.verticalGradient(
+        colors =
+            listOf(
+                MaterialTheme.colorScheme.surface,
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                MaterialTheme.colorScheme.secondary.copy(alpha = 0.035f),
+                MaterialTheme.colorScheme.surface,
+            ),
+    )
