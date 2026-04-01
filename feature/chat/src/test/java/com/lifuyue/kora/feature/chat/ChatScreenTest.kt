@@ -175,6 +175,58 @@ class ChatScreenTest {
     }
 
     @Test
+    @Config(qualifiers = "zh-rCN")
+    fun emptyChatSuggestionClickDispatchesKnowledgePrompt() {
+        var suggestedQuestion: String? = null
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+                onSuggestedQuestion = { suggestedQuestion = it },
+            )
+        }
+
+        val label = context.getString(R.string.chat_suggestion_knowledge_search)
+        composeRule.onNodeWithText(label).performClick()
+        composeRule.runOnIdle {
+            assertEquals(label, suggestedQuestion)
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "zh-rCN")
+    fun emptyChatSuggestionClickDispatchesGeneralPrompt() {
+        var suggestedQuestion: String? = null
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+                onSuggestedQuestion = { suggestedQuestion = it },
+            )
+        }
+
+        val label = context.getString(R.string.chat_suggestion_explain_concept)
+        composeRule.onNodeWithText(label).performClick()
+        composeRule.runOnIdle {
+            assertEquals(label, suggestedQuestion)
+        }
+    }
+
+    @Test
     fun menuButtonTriggersCallback() {
         var openedDrawer = false
 

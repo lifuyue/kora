@@ -357,6 +357,7 @@ fun ChatScreen(
             if (uiState.messages.isEmpty()) {
                 ChatGeminiEmptyState(
                     modifier = Modifier.padding(top = 48.dp).testTag("chat_workspace_header"),
+                    onSuggestionClick = onSuggestedQuestion,
                 )
             }
             if (uiState.errorMessage != null) {
@@ -523,6 +524,7 @@ private fun GeminiProfileAvatar(onClick: () -> Unit) {
 @Composable
 private fun ChatGeminiEmptyState(
     modifier: Modifier = Modifier,
+    onSuggestionClick: (String) -> Unit = {},
 ) {
     val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
     val primaryText = MaterialTheme.colorScheme.onSurface
@@ -557,6 +559,7 @@ private fun ChatGeminiEmptyState(
                     icon = icon,
                     label = label,
                     isLightTheme = isLightTheme,
+                    onClick = { onSuggestionClick(label) },
                     modifier = Modifier.testTag("${ChatTestTags.CHAT_SUGGESTION_PREFIX}$index"),
                 )
             }
@@ -569,6 +572,7 @@ private fun ChatSuggestionChip(
     icon: ImageVector,
     label: String,
     isLightTheme: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val chipBackground =
@@ -590,7 +594,7 @@ private fun ChatSuggestionChip(
             MaterialTheme.colorScheme.onSurface
         }
     Surface(
-        modifier = modifier.wrapContentWidth(),
+        modifier = modifier.wrapContentWidth().clickable(onClick = onClick),
         color = chipBackground,
         shape = RoundedCornerShape(26.dp),
     ) {
