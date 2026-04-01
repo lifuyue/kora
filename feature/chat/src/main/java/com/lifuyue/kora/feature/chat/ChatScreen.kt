@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,6 +42,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -1062,6 +1066,7 @@ private fun citationScoreLabel(citation: CitationItemUiModel): String? {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MessageCard(
     message: ChatMessageUiModel,
@@ -1082,7 +1087,65 @@ private fun MessageCard(
     val shouldShowThinkingPlaceholder =
         message.role == ChatRole.AI &&
             message.deliveryState == MessageDeliveryState.Streaming
-    Card(
+    if (message.role == ChatRole.Human) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .testTag(ChatTestTags.messageCard(message.messageId)),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Card(
+                modifier = Modifier.widthIn(max = UserMessageMaxWidth),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ),
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    MarkdownMessage(
+                        markdown = message.markdown,
+                        onCopyCode = onCopyCode,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (message.deliveryState != MessageDeliveryState.Sent) {
+                        Text(
+                            text =
+                                when (message.deliveryState) {
+                                    MessageDeliveryState.Streaming -> stringResource(R.string.chat_message_streaming)
+                                    MessageDeliveryState.Failed ->
+                                        message.errorMessage ?: stringResource(R.string.chat_message_failed)
+                                    MessageDeliveryState.Stopped ->
+                                        message.errorMessage ?: stringResource(R.string.chat_message_stopped)
+                                    MessageDeliveryState.Sent -> ""
+                                },
+                            style = MaterialTheme.typography.labelMedium,
+                            color =
+                                when (message.deliveryState) {
+                                    MessageDeliveryState.Failed -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.secondary
+                                },
+                            modifier = Modifier.testTag(ChatTestTags.messageError(message.messageId)),
+                        )
+                    }
+                }
+            }
+            TextButton(
+                onClick = onCopy,
+                modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+            ) {
+                Text(stringResource(R.string.chat_copy))
+            }
+        }
+        return
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -1090,19 +1153,8 @@ private fun MessageCard(
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text =
-                    stringResource(
-                        if (message.role == ChatRole.Human) {
-                            R.string.chat_message_role_you
-                        } else {
-                            R.string.chat_message_role_kora
-                        },
-                    ),
-                style = MaterialTheme.typography.titleSmall,
-            )
             if (shouldShowThinkingPlaceholder) {
                 Text(
                     text = stringResource(R.string.chat_message_streaming_placeholder),
@@ -1154,106 +1206,115 @@ private fun MessageCard(
                     modifier = Modifier.testTag(ChatTestTags.messageError(message.messageId)),
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            TextButton(
+                onClick = onCopy,
+                modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+            ) {
+                Text(stringResource(R.string.chat_copy))
+            }
+            if (message.deliveryState == MessageDeliveryState.Stopped) {
+                TextButton(onClick = onContinueGeneration) {
+                    Text(stringResource(R.string.chat_continue_generation))
+                }
+            }
+            TextButton(
+                onClick = onRegenerate,
+                modifier = Modifier.testTag(ChatTestTags.messageRegenerateAction(message.messageId)),
+            ) {
+                Text(stringResource(R.string.chat_regenerate))
+            }
+            TextButton(
+                onClick = {
+                    onFeedback(
+                        if (message.feedback == MessageFeedback.Upvote) {
+                            MessageFeedback.None
+                        } else {
+                            MessageFeedback.Upvote
+                        },
+                    )
+                },
+                modifier = Modifier.testTag(ChatTestTags.messageUpvoteAction(message.messageId)),
+            ) {
+                Text(
+                    stringResource(
+                        if (message.feedback == MessageFeedback.Upvote) {
+                            R.string.chat_cancel_upvote
+                        } else {
+                            R.string.chat_upvote
+                        },
+                    ),
+                )
+            }
+            TextButton(
+                onClick = {
+                    onFeedback(
+                        if (message.feedback == MessageFeedback.Downvote) {
+                            MessageFeedback.None
+                        } else {
+                            MessageFeedback.Downvote
+                        },
+                    )
+                },
+                modifier = Modifier.testTag(ChatTestTags.messageDownvoteAction(message.messageId)),
+            ) {
+                Text(
+                    stringResource(
+                        if (message.feedback == MessageFeedback.Downvote) {
+                            R.string.chat_cancel_downvote
+                        } else {
+                            R.string.chat_downvote
+                        },
+                    ),
+                )
+            }
+            TextButton(
+                onClick = { onPlayMessage(message.messageId, message.markdown) },
+                modifier = Modifier.testTag(ChatTestTags.messageTtsAction(message.messageId)),
+            ) {
+                Text(appString("chat_tts_play"))
+            }
+            if (ttsPlaybackState.messageId == message.messageId && ttsPlaybackState.status == TtsPlaybackStatus.Playing) {
                 TextButton(
-                    onClick = onCopy,
-                    modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+                    onClick = onPausePlayback,
+                    modifier = Modifier.testTag(ChatTestTags.messageTtsPauseAction(message.messageId)),
                 ) {
-                    Text(stringResource(R.string.chat_copy))
+                    Text(appString("chat_tts_pause"))
                 }
-                if (message.role == ChatRole.AI) {
-                    if (message.deliveryState == MessageDeliveryState.Stopped) {
-                        TextButton(onClick = onContinueGeneration) {
-                            Text(stringResource(R.string.chat_continue_generation))
-                        }
-                    }
-                    TextButton(
-                        onClick = onRegenerate,
-                        modifier = Modifier.testTag(ChatTestTags.messageRegenerateAction(message.messageId)),
-                    ) {
-                        Text(stringResource(R.string.chat_regenerate))
-                    }
-                    TextButton(
-                        onClick = {
-                            onFeedback(
-                                if (message.feedback == MessageFeedback.Upvote) {
-                                    MessageFeedback.None
-                                } else {
-                                    MessageFeedback.Upvote
-                                },
-                            )
-                        },
-                        modifier = Modifier.testTag(ChatTestTags.messageUpvoteAction(message.messageId)),
-                    ) {
-                        Text(
-                            stringResource(
-                                if (message.feedback == MessageFeedback.Upvote) {
-                                    R.string.chat_cancel_upvote
-                                } else {
-                                    R.string.chat_upvote
-                                },
-                            ),
-                        )
-                    }
-                    TextButton(
-                        onClick = {
-                            onFeedback(
-                                if (message.feedback == MessageFeedback.Downvote) {
-                                    MessageFeedback.None
-                                } else {
-                                    MessageFeedback.Downvote
-                                },
-                            )
-                        },
-                        modifier = Modifier.testTag(ChatTestTags.messageDownvoteAction(message.messageId)),
-                    ) {
-                        Text(
-                            stringResource(
-                                if (message.feedback == MessageFeedback.Downvote) {
-                                    R.string.chat_cancel_downvote
-                                } else {
-                                    R.string.chat_downvote
-                                },
-                            ),
-                        )
-                    }
-                    TextButton(
-                        onClick = { onPlayMessage(message.messageId, message.markdown) },
-                        modifier = Modifier.testTag(ChatTestTags.messageTtsAction(message.messageId)),
-                    ) {
-                        Text(appString("chat_tts_play"))
-                    }
-                    if (ttsPlaybackState.messageId == message.messageId && ttsPlaybackState.status == TtsPlaybackStatus.Playing) {
-                        TextButton(
-                            onClick = onPausePlayback,
-                            modifier = Modifier.testTag(ChatTestTags.messageTtsPauseAction(message.messageId)),
-                        ) {
-                            Text(appString("chat_tts_pause"))
-                        }
-                        TextButton(
-                            onClick = onStopPlayback,
-                            modifier = Modifier.testTag(ChatTestTags.messageTtsStopAction(message.messageId)),
-                        ) {
-                            Text(appString("chat_tts_stop"))
-                        }
-                    }
+                TextButton(
+                    onClick = onStopPlayback,
+                    modifier = Modifier.testTag(ChatTestTags.messageTtsStopAction(message.messageId)),
+                ) {
+                    Text(appString("chat_tts_stop"))
                 }
             }
-            if (message.citations.isNotEmpty()) {
-                OutlinedButton(
-                    onClick = { onOpenCitation(message.citations.first()) },
-                    modifier = Modifier.testTag(ChatTestTags.citationSummary(message.messageId)),
-                ) {
-                    Text(stringResource(R.string.chat_citations_title, message.citations.size))
-                }
+        }
+        if (message.citations.isNotEmpty()) {
+            TextButton(
+                onClick = { onOpenCitation(message.citations.first()) },
+                modifier = Modifier.testTag(ChatTestTags.citationSummary(message.messageId)),
+            ) {
+                Text(stringResource(R.string.chat_citations_title, message.citations.size))
             }
-            if (message.suggestedQuestions.isNotEmpty()) {
-                Text(stringResource(R.string.chat_suggested_questions), style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    message.suggestedQuestions.forEach { question ->
-                        OutlinedButton(onClick = { onSuggestedQuestion(question) }) {
-                            Text(question)
-                        }
+        }
+        if (message.suggestedQuestions.isNotEmpty()) {
+            Text(
+                stringResource(R.string.chat_suggested_questions),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                message.suggestedQuestions.forEach { question ->
+                    TextButton(onClick = { onSuggestedQuestion(question) }) {
+                        Text(question)
                     }
                 }
             }
@@ -1261,6 +1322,7 @@ private fun MessageCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun InteractiveCard(
     message: ChatMessageUiModel,
@@ -1280,15 +1342,10 @@ private fun InteractiveCard(
                 InteractiveCardKind.UserSelect -> true
                 else -> card.fields.all { !it.required || !fieldValues[it.id].isNullOrBlank() }
             }
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.medium,
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier.testTag(ChatTestTags.interactiveCard(messageId)),
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(12.dp),
-        ) {
             Text(
                 text = card.kind.name,
                 style = MaterialTheme.typography.labelLarge,
@@ -1298,19 +1355,20 @@ private fun InteractiveCard(
                 Text(selected, style = MaterialTheme.typography.bodyMedium)
             }
             if (card.options.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.wrapContentWidth(Alignment.Start),
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                        card.options.forEach { option ->
-                            OutlinedButton(
-                                onClick = { onSubmit(message, option) },
-                                enabled = canEdit,
-                                modifier = Modifier.testTag(ChatTestTags.interactiveOption(messageId, option)),
-                            ) {
-                                Text(option)
-                            }
+                    card.options.forEach { option ->
+                        TextButton(
+                            onClick = { onSubmit(message, option) },
+                            enabled = canEdit,
+                            modifier = Modifier.testTag(ChatTestTags.interactiveOption(messageId, option)),
+                        ) {
+                            Text(option)
                         }
+                    }
                 }
             }
             if (card.fields.isNotEmpty()) {
@@ -1333,7 +1391,7 @@ private fun InteractiveCard(
                 Text(card.selectedOption.orEmpty(), style = MaterialTheme.typography.bodyMedium)
             }
             if (card.kind != InteractiveCardKind.UserSelect) {
-                Button(
+                TextButton(
                     onClick = { onSubmit(message, interactiveFieldValuesToJson(fieldValues)) },
                     enabled = canSubmit,
                     modifier = Modifier.testTag(ChatTestTags.interactiveSubmit(messageId)),
@@ -1341,7 +1399,6 @@ private fun InteractiveCard(
                     Text(stringResource(R.string.chat_send))
                 }
             }
-        }
     }
 }
 
@@ -1354,3 +1411,4 @@ private fun interactiveFieldValuesToJson(values: Map<String, String>): String =
                 ),
         ),
     ).toString()
+private val UserMessageMaxWidth = 320.dp
