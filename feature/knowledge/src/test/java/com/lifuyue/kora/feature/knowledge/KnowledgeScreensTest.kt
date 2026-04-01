@@ -212,6 +212,8 @@ class KnowledgeScreensTest {
         composeRule.onNodeWithTag("knowledge_local_import_fab").assertIsDisplayed()
         composeRule.onAllNodesWithText("Import text reference").assertCountEquals(0)
         composeRule.onNodeWithText("Release Notes").assertExists()
+        composeRule.onNodeWithTag(KNOWLEDGE_LOCAL_LIBRARY_ITEM_META_ROW_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("Chunks: 2").assertExists()
         composeRule.onNodeWithText("View snippets").assertExists()
         composeRule.onNodeWithText("Delete").assertExists()
     }

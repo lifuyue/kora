@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -310,24 +311,37 @@ fun LocalKnowledgeLibraryScreen(
                                             localKnowledgeIndexStatusLabel(item),
                                             style = MaterialTheme.typography.bodySmall,
                                         )
-                                        Text(
-                                            stringResource(R.string.knowledge_local_chunk_count, item.chunkCount),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
+                                        Row(
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag(KNOWLEDGE_LOCAL_LIBRARY_ITEM_META_ROW_TAG),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(
+                                                stringResource(R.string.knowledge_local_chunk_count, item.chunkCount),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                TextButton(onClick = { onOpenDocument(item.documentId) }) {
+                                                    Text(stringResource(R.string.knowledge_local_view_chunks))
+                                                }
+                                                TextButton(onClick = { onDeleteDocument(item.documentId) }) {
+                                                    Text(stringResource(R.string.knowledge_delete))
+                                                }
+                                            }
+                                        }
                                         item.indexErrorMessage?.takeIf { item.indexStatus == com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Failed }?.let { error ->
                                             Text(
                                                 error,
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.error,
                                             )
-                                        }
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            TextButton(onClick = { onOpenDocument(item.documentId) }) {
-                                                Text(stringResource(R.string.knowledge_local_view_chunks))
-                                            }
-                                            TextButton(onClick = { onDeleteDocument(item.documentId) }) {
-                                                Text(stringResource(R.string.knowledge_delete))
-                                            }
                                         }
                                     }
                                 }
@@ -1036,3 +1050,4 @@ internal const val KNOWLEDGE_OVERVIEW_PAGE_TAG = "knowledge_overview_page"
 internal const val KNOWLEDGE_LOCAL_OVERVIEW_PAGE_TAG = "knowledge_local_overview_page"
 internal const val KNOWLEDGE_LOCAL_LIBRARY_PAGE_TAG = "knowledge_local_library_page"
 internal const val KNOWLEDGE_LOCAL_DOCUMENT_PAGE_TAG = "knowledge_local_document_page"
+internal const val KNOWLEDGE_LOCAL_LIBRARY_ITEM_META_ROW_TAG = "knowledge_local_library_item_meta_row"
