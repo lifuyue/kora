@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +36,25 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
+internal data class ChatDrawerColors(
+    val drawerBackground: Color,
+    val searchBackground: Color,
+    val primaryText: Color,
+    val secondaryText: Color,
+    val iconBadge: Color,
+    val dividerColor: Color,
+)
+
+internal fun chatDrawerColors(colorScheme: ColorScheme): ChatDrawerColors =
+    ChatDrawerColors(
+        drawerBackground = colorScheme.surfaceContainerHigh,
+        searchBackground = colorScheme.surfaceContainer,
+        primaryText = colorScheme.onSurface,
+        secondaryText = colorScheme.onSurfaceVariant,
+        iconBadge = colorScheme.onSurface.copy(alpha = 0.08f),
+        dividerColor = colorScheme.onSurfaceVariant.copy(alpha = 0.12f),
+    )
+
 @Composable
 fun ChatDrawerContent(
     uiState: ConversationListUiState,
@@ -45,14 +65,16 @@ fun ChatDrawerContent(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val drawerColors = chatDrawerColors(MaterialTheme.colorScheme)
+
     Surface(
         modifier =
             modifier
                 .fillMaxHeight()
                 .fillMaxWidth(0.84f)
                 .testTag(ChatTestTags.CHAT_DRAWER),
-        color = Color(0xFF292A2D),
-        contentColor = Color.White,
+        color = drawerColors.drawerBackground,
+        contentColor = drawerColors.primaryText,
         shape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp),
     ) {
         Column(
@@ -62,34 +84,43 @@ fun ChatDrawerContent(
             DrawerSearchField(
                 value = uiState.query,
                 onValueChange = onQueryChanged,
+                backgroundColor = drawerColors.searchBackground,
+                primaryText = drawerColors.primaryText,
+                secondaryText = drawerColors.secondaryText,
             )
             DrawerActionRow(
                 icon = Icons.Filled.Add,
                 title = stringResource(R.string.chat_drawer_new_conversation),
                 tag = ChatTestTags.CHAT_DRAWER_NEW_CHAT,
                 onClick = onNewConversation,
+                primaryText = drawerColors.primaryText,
+                iconBadge = drawerColors.iconBadge,
             )
-            DrawerSectionHeader(title = stringResource(R.string.chat_drawer_my_content))
+            DrawerSectionHeader(title = stringResource(R.string.chat_drawer_my_content), color = drawerColors.primaryText)
             DrawerActionRow(
                 icon = Icons.Filled.Search,
                 title = stringResource(R.string.chat_drawer_knowledge),
                 tag = ChatTestTags.CHAT_DRAWER_KNOWLEDGE,
                 onClick = onOpenKnowledge,
+                primaryText = drawerColors.primaryText,
+                iconBadge = drawerColors.iconBadge,
             )
-            DrawerSectionHeader(title = stringResource(R.string.chat_drawer_gem_title))
+            DrawerSectionHeader(title = stringResource(R.string.chat_drawer_gem_title), color = drawerColors.primaryText)
             DrawerActionRow(
                 icon = Icons.Filled.Settings,
                 title = stringResource(R.string.chat_drawer_settings),
                 tag = ChatTestTags.CHAT_DRAWER_SETTINGS,
                 onClick = onOpenSettings,
+                primaryText = drawerColors.primaryText,
+                iconBadge = drawerColors.iconBadge,
             )
-            HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
-            DrawerSectionHeader(title = stringResource(R.string.chat_drawer_history_title))
+            HorizontalDivider(color = drawerColors.dividerColor)
+            DrawerSectionHeader(title = stringResource(R.string.chat_drawer_history_title), color = drawerColors.primaryText)
             if (uiState.items.isEmpty()) {
                 Text(
                     text = stringResource(R.string.chat_drawer_empty_history),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.58f),
+                    color = drawerColors.secondaryText,
                 )
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -97,6 +128,8 @@ fun ChatDrawerContent(
                         ConversationDrawerItem(
                             item = item,
                             onClick = { onOpenConversation(item.chatId) },
+                            primaryText = drawerColors.primaryText,
+                            secondaryText = drawerColors.secondaryText,
                         )
                     }
                 }
@@ -109,9 +142,12 @@ fun ChatDrawerContent(
 private fun DrawerSearchField(
     value: String,
     onValueChange: (String) -> Unit,
+    backgroundColor: Color,
+    primaryText: Color,
+    secondaryText: Color,
 ) {
     Surface(
-        color = Color(0xFF1F2023),
+        color = backgroundColor,
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -123,20 +159,20 @@ private fun DrawerSearchField(
             Icon(
                 imageVector = Icons.Filled.Search,
                 contentDescription = stringResource(R.string.chat_drawer_search_placeholder),
-                tint = Color.White.copy(alpha = 0.7f),
+                tint = secondaryText,
             )
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_DRAWER_SEARCH),
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = primaryText),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 decorationBox = { innerField ->
                     if (value.isBlank()) {
                         Text(
                             stringResource(R.string.chat_drawer_search_placeholder),
-                            color = Color.White.copy(alpha = 0.48f),
+                            color = secondaryText,
                             style = MaterialTheme.typography.bodyLarge,
                         )
                     }
@@ -148,11 +184,11 @@ private fun DrawerSearchField(
 }
 
 @Composable
-private fun DrawerSectionHeader(title: String) {
+private fun DrawerSectionHeader(title: String, color: Color) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
-        color = Color.White.copy(alpha = 0.92f),
+        color = color,
         fontWeight = FontWeight.SemiBold,
     )
 }
@@ -163,6 +199,8 @@ private fun DrawerActionRow(
     title: String,
     tag: String,
     onClick: () -> Unit,
+    primaryText: Color,
+    iconBadge: Color,
 ) {
     Row(
         modifier =
@@ -184,12 +222,12 @@ private fun DrawerActionRow(
                     Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.06f)),
+                        .background(iconBadge),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = Color.White)
+                Icon(icon, contentDescription = null, tint = primaryText)
             }
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = primaryText)
         }
     }
 }
@@ -198,6 +236,8 @@ private fun DrawerActionRow(
 private fun ConversationDrawerItem(
     item: ConversationListItemUiModel,
     onClick: () -> Unit,
+    primaryText: Color,
+    secondaryText: Color,
 ) {
     Column(
         modifier =
@@ -211,7 +251,7 @@ private fun ConversationDrawerItem(
         Text(
             text = item.title,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.White.copy(alpha = 0.92f),
+            color = primaryText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -219,7 +259,7 @@ private fun ConversationDrawerItem(
             Text(
                 text = item.preview,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.48f),
+                color = secondaryText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

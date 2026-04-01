@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.graphics.luminance
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import io.noties.markwon.AbstractMarkwonPlugin
@@ -194,19 +196,21 @@ fun MarkdownMessage(
     modifier: Modifier = Modifier,
 ) {
     val nodes = remember(markdown) { parseMarkdownRenderNodes(markdown) }
+    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() <= 0.5f
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier,
     ) {
         nodes.forEach { node ->
             when (node) {
-                is MarkdownRenderNode.MarkdownText -> MarkdownTextBlock(node.markdown)
+                is MarkdownRenderNode.MarkdownText -> MarkdownTextBlock(node.markdown, isDarkTheme = isDarkTheme)
                 is MarkdownRenderNode.CodeBlock -> {
                     CodeFenceCard(
                         language = node.language,
                         code = node.code,
                         isMermaidFallback = node.isMermaidFallback,
                         onCopyCode = onCopyCode,
+                        isDarkTheme = isDarkTheme,
                     )
                 }
                 is MarkdownRenderNode.Image -> MarkdownImage(node)
@@ -228,9 +232,19 @@ fun MarkdownText(
 private fun MarkdownTextBlock(
     markdown: String,
     modifier: Modifier = Modifier,
+    isDarkTheme: Boolean = MaterialTheme.colorScheme.background.luminance() <= 0.5f,
 ) {
     val context = LocalContext.current
-    val markwon = remember(context) { createMarkdownRenderer(context) }
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val linkColor = MaterialTheme.colorScheme.primary
+    val codeTextColor = if (isDarkTheme) Color(0xFFD8DEE9) else Color(0xFF0F172A)
+    val markwon = remember(context, isDarkTheme, linkColor, codeTextColor) {
+        createMarkdownRenderer(
+            context = context,
+            linkColor = linkColor.toArgb(),
+            codeTextColor = codeTextColor.toArgb(),
+        )
+    }
     AndroidView(
         factory = { textViewContext ->
             TextView(textViewContext).apply {
@@ -242,6 +256,8 @@ private fun MarkdownTextBlock(
                 textView = textView,
                 markdown = markdown,
                 markwon = markwon,
+                textColor = textColor.toArgb(),
+                linkColor = linkColor.toArgb(),
             )
         },
         modifier = modifier.fillMaxWidth(),
@@ -252,23 +268,31 @@ internal fun configureMarkdownTextView(
     textView: TextView,
     markdown: String,
     markwon: Markwon = createMarkdownRenderer(textView.context),
+    textColor: Int = AndroidColor.BLACK,
+    linkColor: Int = AndroidColor.BLUE,
 ) {
     textView.linksClickable = true
     textView.movementMethod = LinkMovementMethod.getInstance()
     textView.highlightColor = AndroidColor.TRANSPARENT
+    textView.setTextColor(textColor)
+    textView.setLinkTextColor(linkColor)
     markwon.setMarkdown(textView, markdown)
 }
 
-internal fun createMarkdownRenderer(context: android.content.Context): Markwon =
+internal fun createMarkdownRenderer(
+    context: android.content.Context,
+    linkColor: Int = 0xFF0B57D0.toInt(),
+    codeTextColor: Int = 0xFF0F172A.toInt(),
+): Markwon =
     Markwon
         .builder(context)
         .usePlugin(
             object : AbstractMarkwonPlugin() {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
                     builder
-                        .linkColor(0xFF0B57D0.toInt())
+                        .linkColor(linkColor)
                         .isLinkUnderlined(true)
-                        .codeTextColor(0xFF0F172A.toInt())
+                        .codeTextColor(codeTextColor)
                 }
             },
         ).build()
@@ -301,6 +325,7 @@ private fun MarkdownImage(node: MarkdownRenderNode.Image) {
 
 @Composable
 private fun LatexBlock(node: MarkdownRenderNode.Latex) {
+    val textColor = MaterialTheme.colorScheme.onSurface
     Box(
         modifier =
             Modifier
@@ -319,6 +344,7 @@ private fun LatexBlock(node: MarkdownRenderNode.Latex) {
         LatexWebView(
             source = node.source,
             displayMode = node.displayMode,
+            textColor = textColor,
         )
     }
 }
@@ -328,8 +354,9 @@ private fun LatexBlock(node: MarkdownRenderNode.Latex) {
 private fun LatexWebView(
     source: String,
     displayMode: Boolean,
+    textColor: Color,
 ) {
-    val html = remember(source, displayMode) { buildKatexHtml(source, displayMode) }
+    val html = remember(source, displayMode, textColor) { buildKatexHtml(source, displayMode, textColor) }
     AndroidView(
         factory = { context ->
             runCatching {
@@ -368,6 +395,7 @@ private fun LatexWebView(
 private fun buildKatexHtml(
     source: String,
     displayMode: Boolean,
+    textColor: Color,
 ): String {
     val escapedSource = escapeHtml(source)
     val dollar = "${'$'}"
@@ -380,6 +408,7 @@ private fun buildKatexHtml(
         }
     val katexDisplayDelimiter = dollar + dollar
     val padding = if (displayMode) "8px 0" else "2px 0"
+    val textColorHex = String.format("#%06X", 0xFFFFFF and textColor.toArgb())
     return """
         <!DOCTYPE html>
         <html>
@@ -396,7 +425,7 @@ private fun buildKatexHtml(
               margin: 0;
               padding: $padding;
               background: transparent;
-              color: #111827;
+              color: $textColorHex;
               font-size: 15px;
               overflow: hidden;
             }
@@ -453,6 +482,7 @@ private fun escapeHtml(source: String): String =
 internal fun buildHighlightedCode(
     language: String,
     code: String,
+    isDarkTheme: Boolean = false,
 ): AnnotatedString {
     val normalizedLanguage = language.lowercase()
     val keywordRegex =
@@ -479,21 +509,21 @@ internal fun buildHighlightedCode(
         append(code)
         keywordRegex?.findAll(code)?.forEach {
             addStyle(
-                style = SpanStyle(color = Color(0xFF7C3AED)),
+                style = SpanStyle(color = if (isDarkTheme) Color(0xFFC4B5FD) else Color(0xFF7C3AED)),
                 start = it.range.first,
                 end = it.range.last + 1,
             )
         }
         stringRegex.findAll(code).forEach {
             addStyle(
-                style = SpanStyle(color = Color(0xFF0F766E)),
+                style = SpanStyle(color = if (isDarkTheme) Color(0xFF5EEAD4) else Color(0xFF0F766E)),
                 start = it.range.first,
                 end = it.range.last + 1,
             )
         }
         commentRegex.findAll(code).forEach {
             addStyle(
-                style = SpanStyle(color = Color(0xFF6B7280)),
+                style = SpanStyle(color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF6B7280)),
                 start = it.range.first,
                 end = it.range.last + 1,
             )
@@ -507,6 +537,7 @@ private fun CodeFenceCard(
     code: String,
     isMermaidFallback: Boolean,
     onCopyCode: (String) -> Unit,
+    isDarkTheme: Boolean,
 ) {
     Card(
         modifier =
@@ -539,7 +570,7 @@ private fun CodeFenceCard(
                 ) {
                     SelectionContainer {
                         Text(
-                            text = buildHighlightedCode(language = language, code = code),
+                            text = buildHighlightedCode(language = language, code = code, isDarkTheme = isDarkTheme),
                             style = MaterialTheme.typography.bodyMedium,
                             fontFamily = FontFamily.Monospace,
                             modifier = Modifier.padding(12.dp),

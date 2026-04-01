@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,6 +42,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -525,11 +529,11 @@ private fun ChatGeminiEmptyState(
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val suggestionItems: List<Pair<ImageVector, String>> =
         listOf(
-            Icons.Filled.Search to stringResource(R.string.chat_suggestion_image),
-            Icons.Filled.Search to stringResource(R.string.chat_suggestion_music),
-            Icons.Filled.Add to stringResource(R.string.chat_suggestion_video),
-            Icons.Filled.Person to stringResource(R.string.chat_suggestion_study),
-            Icons.Filled.Search to stringResource(R.string.chat_suggestion_energy),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_knowledge_search),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_knowledge_summary),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_knowledge_answer),
+            Icons.Filled.Person to stringResource(R.string.chat_suggestion_explain_concept),
+            Icons.Filled.Search to stringResource(R.string.chat_suggestion_daily_reply),
         )
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -567,9 +571,27 @@ private fun ChatSuggestionChip(
     isLightTheme: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val chipBackground =
+        if (isLightTheme) {
+            Color.White
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+    val iconTint =
+        if (isLightTheme) {
+            Color(0xFF6A717D)
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    val textColor =
+        if (isLightTheme) {
+            Color(0xFF2A2D33)
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
     Surface(
         modifier = modifier.wrapContentWidth(),
-        color = if (isLightTheme) Color.White else Color(0xFF1A1A1C),
+        color = chipBackground,
         shape = RoundedCornerShape(26.dp),
     ) {
         Row(
@@ -580,12 +602,12 @@ private fun ChatSuggestionChip(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = if (isLightTheme) Color(0xFF6A717D) else Color(0xFFC7C7C7),
+                tint = iconTint,
                 modifier = Modifier.size(18.dp),
             )
             Text(
                 label,
-                color = if (isLightTheme) Color(0xFF2A2D33) else Color(0xFFD5D5D5),
+                color = textColor,
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -605,9 +627,10 @@ private fun ChatGeminiComposer(
     onOpenQuickSettings: () -> Unit,
     onToggleAttachmentActions: () -> Unit,
 ) {
-    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val colorScheme = MaterialTheme.colorScheme
+    val isLightTheme = colorScheme.background.luminance() > 0.5f
     Surface(
-        color = if (isLightTheme) Color(0xFFFCFCFD) else Color(0xFF252628),
+        color = if (isLightTheme) Color(0xFFFCFCFD) else colorScheme.surfaceVariant,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp, bottomStart = 34.dp, bottomEnd = 34.dp),
         modifier =
             Modifier
@@ -720,12 +743,13 @@ private fun GeminiComposerIconButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val colorScheme = MaterialTheme.colorScheme
+    val isLightTheme = colorScheme.background.luminance() > 0.5f
     val containerColor =
         if (isLightTheme) {
             Color(0xFFF0F2F5)
         } else {
-            Color.White.copy(alpha = 0.06f)
+            colorScheme.surfaceContainerHigh
         }
     IconButton(
         onClick = onClick,
@@ -734,12 +758,12 @@ private fun GeminiComposerIconButton(
             modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(containerColor.copy(alpha = if (enabled) 1f else 0.45f)),
+                .background(containerColor.copy(alpha = if (enabled) 1f else 0.6f)),
     ) {
         Icon(
             icon,
             contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.4f),
+            tint = colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.55f),
             modifier = Modifier.size(21.dp),
         )
     }
@@ -752,6 +776,7 @@ private fun GeminiComposerPainterButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     IconButton(
         onClick = onClick,
         modifier =
@@ -759,17 +784,17 @@ private fun GeminiComposerPainterButton(
                 .size(44.dp)
                 .clip(CircleShape)
                 .background(
-                    if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
+                    if (colorScheme.background.luminance() > 0.5f) {
                         Color(0xFFF0F2F5)
                     } else {
-                        Color.White.copy(alpha = 0.06f)
+                        colorScheme.surfaceContainerHigh
                     },
                 ),
     ) {
         Icon(
             painter = painter,
             contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = colorScheme.onSurface,
             modifier = Modifier.size(21.dp),
         )
     }
@@ -782,7 +807,12 @@ private fun SpeechInputComposer(
     onStop: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Card(
+        colors =
+            CardDefaults.cardColors(
+                containerColor = colorScheme.surfaceVariant,
+            ),
         modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_SPEECH_STATUS),
     ) {
         Column(
@@ -798,9 +828,14 @@ private fun SpeechInputComposer(
                         SpeechInputStatus.Idle -> appString("chat_speech_start")
                     },
                     style = MaterialTheme.typography.titleMedium,
+                    color = colorScheme.onSurface,
                 )
             if (state.transcript.isNotBlank()) {
-                Text(text = state.transcript, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = state.transcript,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurface,
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (state.status) {
@@ -1062,6 +1097,7 @@ private fun citationScoreLabel(citation: CitationItemUiModel): String? {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MessageCard(
     message: ChatMessageUiModel,
@@ -1082,7 +1118,65 @@ private fun MessageCard(
     val shouldShowThinkingPlaceholder =
         message.role == ChatRole.AI &&
             message.deliveryState == MessageDeliveryState.Streaming
-    Card(
+    if (message.role == ChatRole.Human) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .testTag(ChatTestTags.messageCard(message.messageId)),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Card(
+                modifier = Modifier.widthIn(max = UserMessageMaxWidth),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ),
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    MarkdownMessage(
+                        markdown = message.markdown,
+                        onCopyCode = onCopyCode,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (message.deliveryState != MessageDeliveryState.Sent) {
+                        Text(
+                            text =
+                                when (message.deliveryState) {
+                                    MessageDeliveryState.Streaming -> stringResource(R.string.chat_message_streaming)
+                                    MessageDeliveryState.Failed ->
+                                        message.errorMessage ?: stringResource(R.string.chat_message_failed)
+                                    MessageDeliveryState.Stopped ->
+                                        message.errorMessage ?: stringResource(R.string.chat_message_stopped)
+                                    MessageDeliveryState.Sent -> ""
+                                },
+                            style = MaterialTheme.typography.labelMedium,
+                            color =
+                                when (message.deliveryState) {
+                                    MessageDeliveryState.Failed -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.secondary
+                                },
+                            modifier = Modifier.testTag(ChatTestTags.messageError(message.messageId)),
+                        )
+                    }
+                }
+            }
+            TextButton(
+                onClick = onCopy,
+                modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+            ) {
+                Text(stringResource(R.string.chat_copy))
+            }
+        }
+        return
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -1090,19 +1184,8 @@ private fun MessageCard(
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text =
-                    stringResource(
-                        if (message.role == ChatRole.Human) {
-                            R.string.chat_message_role_you
-                        } else {
-                            R.string.chat_message_role_kora
-                        },
-                    ),
-                style = MaterialTheme.typography.titleSmall,
-            )
             if (shouldShowThinkingPlaceholder) {
                 Text(
                     text = stringResource(R.string.chat_message_streaming_placeholder),
@@ -1154,106 +1237,115 @@ private fun MessageCard(
                     modifier = Modifier.testTag(ChatTestTags.messageError(message.messageId)),
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            TextButton(
+                onClick = onCopy,
+                modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+            ) {
+                Text(stringResource(R.string.chat_copy))
+            }
+            if (message.deliveryState == MessageDeliveryState.Stopped) {
+                TextButton(onClick = onContinueGeneration) {
+                    Text(stringResource(R.string.chat_continue_generation))
+                }
+            }
+            TextButton(
+                onClick = onRegenerate,
+                modifier = Modifier.testTag(ChatTestTags.messageRegenerateAction(message.messageId)),
+            ) {
+                Text(stringResource(R.string.chat_regenerate))
+            }
+            TextButton(
+                onClick = {
+                    onFeedback(
+                        if (message.feedback == MessageFeedback.Upvote) {
+                            MessageFeedback.None
+                        } else {
+                            MessageFeedback.Upvote
+                        },
+                    )
+                },
+                modifier = Modifier.testTag(ChatTestTags.messageUpvoteAction(message.messageId)),
+            ) {
+                Text(
+                    stringResource(
+                        if (message.feedback == MessageFeedback.Upvote) {
+                            R.string.chat_cancel_upvote
+                        } else {
+                            R.string.chat_upvote
+                        },
+                    ),
+                )
+            }
+            TextButton(
+                onClick = {
+                    onFeedback(
+                        if (message.feedback == MessageFeedback.Downvote) {
+                            MessageFeedback.None
+                        } else {
+                            MessageFeedback.Downvote
+                        },
+                    )
+                },
+                modifier = Modifier.testTag(ChatTestTags.messageDownvoteAction(message.messageId)),
+            ) {
+                Text(
+                    stringResource(
+                        if (message.feedback == MessageFeedback.Downvote) {
+                            R.string.chat_cancel_downvote
+                        } else {
+                            R.string.chat_downvote
+                        },
+                    ),
+                )
+            }
+            TextButton(
+                onClick = { onPlayMessage(message.messageId, message.markdown) },
+                modifier = Modifier.testTag(ChatTestTags.messageTtsAction(message.messageId)),
+            ) {
+                Text(appString("chat_tts_play"))
+            }
+            if (ttsPlaybackState.messageId == message.messageId && ttsPlaybackState.status == TtsPlaybackStatus.Playing) {
                 TextButton(
-                    onClick = onCopy,
-                    modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+                    onClick = onPausePlayback,
+                    modifier = Modifier.testTag(ChatTestTags.messageTtsPauseAction(message.messageId)),
                 ) {
-                    Text(stringResource(R.string.chat_copy))
+                    Text(appString("chat_tts_pause"))
                 }
-                if (message.role == ChatRole.AI) {
-                    if (message.deliveryState == MessageDeliveryState.Stopped) {
-                        TextButton(onClick = onContinueGeneration) {
-                            Text(stringResource(R.string.chat_continue_generation))
-                        }
-                    }
-                    TextButton(
-                        onClick = onRegenerate,
-                        modifier = Modifier.testTag(ChatTestTags.messageRegenerateAction(message.messageId)),
-                    ) {
-                        Text(stringResource(R.string.chat_regenerate))
-                    }
-                    TextButton(
-                        onClick = {
-                            onFeedback(
-                                if (message.feedback == MessageFeedback.Upvote) {
-                                    MessageFeedback.None
-                                } else {
-                                    MessageFeedback.Upvote
-                                },
-                            )
-                        },
-                        modifier = Modifier.testTag(ChatTestTags.messageUpvoteAction(message.messageId)),
-                    ) {
-                        Text(
-                            stringResource(
-                                if (message.feedback == MessageFeedback.Upvote) {
-                                    R.string.chat_cancel_upvote
-                                } else {
-                                    R.string.chat_upvote
-                                },
-                            ),
-                        )
-                    }
-                    TextButton(
-                        onClick = {
-                            onFeedback(
-                                if (message.feedback == MessageFeedback.Downvote) {
-                                    MessageFeedback.None
-                                } else {
-                                    MessageFeedback.Downvote
-                                },
-                            )
-                        },
-                        modifier = Modifier.testTag(ChatTestTags.messageDownvoteAction(message.messageId)),
-                    ) {
-                        Text(
-                            stringResource(
-                                if (message.feedback == MessageFeedback.Downvote) {
-                                    R.string.chat_cancel_downvote
-                                } else {
-                                    R.string.chat_downvote
-                                },
-                            ),
-                        )
-                    }
-                    TextButton(
-                        onClick = { onPlayMessage(message.messageId, message.markdown) },
-                        modifier = Modifier.testTag(ChatTestTags.messageTtsAction(message.messageId)),
-                    ) {
-                        Text(appString("chat_tts_play"))
-                    }
-                    if (ttsPlaybackState.messageId == message.messageId && ttsPlaybackState.status == TtsPlaybackStatus.Playing) {
-                        TextButton(
-                            onClick = onPausePlayback,
-                            modifier = Modifier.testTag(ChatTestTags.messageTtsPauseAction(message.messageId)),
-                        ) {
-                            Text(appString("chat_tts_pause"))
-                        }
-                        TextButton(
-                            onClick = onStopPlayback,
-                            modifier = Modifier.testTag(ChatTestTags.messageTtsStopAction(message.messageId)),
-                        ) {
-                            Text(appString("chat_tts_stop"))
-                        }
-                    }
+                TextButton(
+                    onClick = onStopPlayback,
+                    modifier = Modifier.testTag(ChatTestTags.messageTtsStopAction(message.messageId)),
+                ) {
+                    Text(appString("chat_tts_stop"))
                 }
             }
-            if (message.citations.isNotEmpty()) {
-                OutlinedButton(
-                    onClick = { onOpenCitation(message.citations.first()) },
-                    modifier = Modifier.testTag(ChatTestTags.citationSummary(message.messageId)),
-                ) {
-                    Text(stringResource(R.string.chat_citations_title, message.citations.size))
-                }
+        }
+        if (message.citations.isNotEmpty()) {
+            TextButton(
+                onClick = { onOpenCitation(message.citations.first()) },
+                modifier = Modifier.testTag(ChatTestTags.citationSummary(message.messageId)),
+            ) {
+                Text(stringResource(R.string.chat_citations_title, message.citations.size))
             }
-            if (message.suggestedQuestions.isNotEmpty()) {
-                Text(stringResource(R.string.chat_suggested_questions), style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    message.suggestedQuestions.forEach { question ->
-                        OutlinedButton(onClick = { onSuggestedQuestion(question) }) {
-                            Text(question)
-                        }
+        }
+        if (message.suggestedQuestions.isNotEmpty()) {
+            Text(
+                stringResource(R.string.chat_suggested_questions),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                message.suggestedQuestions.forEach { question ->
+                    TextButton(onClick = { onSuggestedQuestion(question) }) {
+                        Text(question)
                     }
                 }
             }
@@ -1261,6 +1353,7 @@ private fun MessageCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun InteractiveCard(
     message: ChatMessageUiModel,
@@ -1280,15 +1373,10 @@ private fun InteractiveCard(
                 InteractiveCardKind.UserSelect -> true
                 else -> card.fields.all { !it.required || !fieldValues[it.id].isNullOrBlank() }
             }
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.medium,
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier.testTag(ChatTestTags.interactiveCard(messageId)),
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(12.dp),
-        ) {
             Text(
                 text = card.kind.name,
                 style = MaterialTheme.typography.labelLarge,
@@ -1298,19 +1386,20 @@ private fun InteractiveCard(
                 Text(selected, style = MaterialTheme.typography.bodyMedium)
             }
             if (card.options.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.wrapContentWidth(Alignment.Start),
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                        card.options.forEach { option ->
-                            OutlinedButton(
-                                onClick = { onSubmit(message, option) },
-                                enabled = canEdit,
-                                modifier = Modifier.testTag(ChatTestTags.interactiveOption(messageId, option)),
-                            ) {
-                                Text(option)
-                            }
+                    card.options.forEach { option ->
+                        TextButton(
+                            onClick = { onSubmit(message, option) },
+                            enabled = canEdit,
+                            modifier = Modifier.testTag(ChatTestTags.interactiveOption(messageId, option)),
+                        ) {
+                            Text(option)
                         }
+                    }
                 }
             }
             if (card.fields.isNotEmpty()) {
@@ -1333,7 +1422,7 @@ private fun InteractiveCard(
                 Text(card.selectedOption.orEmpty(), style = MaterialTheme.typography.bodyMedium)
             }
             if (card.kind != InteractiveCardKind.UserSelect) {
-                Button(
+                TextButton(
                     onClick = { onSubmit(message, interactiveFieldValuesToJson(fieldValues)) },
                     enabled = canSubmit,
                     modifier = Modifier.testTag(ChatTestTags.interactiveSubmit(messageId)),
@@ -1341,7 +1430,6 @@ private fun InteractiveCard(
                     Text(stringResource(R.string.chat_send))
                 }
             }
-        }
     }
 }
 
@@ -1354,3 +1442,4 @@ private fun interactiveFieldValuesToJson(values: Map<String, String>): String =
                 ),
         ),
     ).toString()
+private val UserMessageMaxWidth = 320.dp

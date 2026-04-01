@@ -113,7 +113,9 @@ class ChatScreenTest {
     }
 
     @Test
+    @Config(qualifiers = "zh-rCN")
     fun emptyChatShowsGeminiLandingLayout() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             ChatScreen(
                 uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
@@ -130,7 +132,46 @@ class ChatScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.CHAT_MENU_BUTTON).assertIsDisplayed()
         composeRule.onNodeWithTag("chat_workspace_header").assertIsDisplayed()
         composeRule.onNodeWithText("Kora").assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_greeting)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_knowledge_search)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_knowledge_summary)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_knowledge_answer)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_explain_concept)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_daily_reply)).assertExists()
+        composeRule.onNodeWithText("富悦，你好").assertDoesNotExist()
+        composeRule.onNodeWithText("制作图片").assertDoesNotExist()
+        composeRule.onNodeWithText("创作音乐").assertDoesNotExist()
+        composeRule.onNodeWithText("创作视频").assertDoesNotExist()
         composeRule.onNodeWithTag("${ChatTestTags.CHAT_SUGGESTION_PREFIX}0").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun emptyChatUsesUpdatedEnglishGreetingAndSuggestions() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
+                onInputChanged = {},
+                onSend = {},
+                onBack = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onFeedback = { _, _ -> },
+                onRegenerate = { _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.chat_greeting)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_knowledge_search)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_knowledge_summary)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_knowledge_answer)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_explain_concept)).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.chat_suggestion_daily_reply)).assertExists()
+        composeRule.onNodeWithText("Hi, Fuyue").assertDoesNotExist()
+        composeRule.onNodeWithText("Create images").assertDoesNotExist()
+        composeRule.onNodeWithText("Make music").assertDoesNotExist()
+        composeRule.onNodeWithText("Create video").assertDoesNotExist()
     }
 
     @Test
