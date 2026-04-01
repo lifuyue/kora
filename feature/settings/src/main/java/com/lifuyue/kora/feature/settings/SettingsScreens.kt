@@ -41,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -474,15 +473,11 @@ fun ChatSettingsSheetContent(
     onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val containerColor =
-        if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
-            Color(0xFF2C2D31)
-        } else {
-            Color(0xFF18191C)
-        }
-    val cardColor = Color(0xFF212225)
-    val primaryText = Color(0xFFF4F4F6)
-    val secondaryText = Color(0xFFB5B8C2)
+    val colorScheme = MaterialTheme.colorScheme
+    val containerColor = colorScheme.surfaceContainerHigh
+    val cardColor = colorScheme.surfaceContainer
+    val primaryText = colorScheme.onSurface
+    val secondaryText = colorScheme.onSurfaceVariant
 
     Surface(
         modifier = modifier.fillMaxWidth().testTag("chat_settings_sheet"),
@@ -497,8 +492,9 @@ fun ChatSettingsSheetContent(
             ChatSettingsAccountHeader(
                 titleColor = primaryText,
                 subtitleColor = secondaryText,
-                buttonContainerColor = Color(0xFF3A3D45),
-                buttonContentColor = Color(0xFFDCE4FF),
+                avatarBackgroundColor = colorScheme.surface,
+                buttonContainerColor = colorScheme.surface,
+                buttonContentColor = primaryText,
                 onOpenConnection = onOpenConnection,
             )
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -778,6 +774,7 @@ private fun AudioEngineOption(
 private fun ChatSettingsAccountHeader(
     titleColor: Color,
     subtitleColor: Color,
+    avatarBackgroundColor: Color,
     buttonContainerColor: Color,
     buttonContentColor: Color,
     onOpenConnection: () -> Unit,
@@ -805,7 +802,7 @@ private fun ChatSettingsAccountHeader(
                     .size(84.dp)
                     .clip(CircleShape)
                     .border(3.dp, Brush.sweepGradient(gradientColors), CircleShape)
-                    .background(Color(0xFF121212), CircleShape),
+                    .background(avatarBackgroundColor, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -869,19 +866,19 @@ private fun ChatSettingsSheetEntry(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFFF4F4F6),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = summary,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFB5B8C2),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Spacer(modifier = Modifier.size(4.dp))
             Text(
                 text = stringResource(R.string.settings_sheet_item_chevron),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color(0xFFB5B8C2),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

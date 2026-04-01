@@ -2,6 +2,8 @@ package com.lifuyue.kora.feature.settings
 
 import android.content.Context
 import android.text.format.Formatter
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -306,6 +308,33 @@ class SettingsScreensTest {
         composeRule.onNodeWithText("local@kora.app").assertIsDisplayed()
         composeRule.onNodeWithTag("chat-settings-theme").assertExists()
         composeRule.onNodeWithText("https://fastgpt.example.com").assertIsDisplayed()
+    }
+
+    @Test
+    fun chatSettingsSheetAlsoRendersInDarkTheme() {
+        composeRule.setContent {
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                ChatSettingsSheetContent(
+                    state =
+                        SettingsOverviewUiState(
+                            serverBaseUrl = "https://fastgpt.example.com",
+                            themeMode = ThemeMode.DARK,
+                            selectedLanguageTag = "en",
+                        ),
+                    onOpenConnection = {},
+                    onOpenTheme = {},
+                    onOpenChatPreferences = {},
+                    onOpenAudio = {},
+                    onOpenLanguage = {},
+                    onOpenCache = {},
+                    onOpenAbout = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("chat_settings_sheet").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat-settings-about").assertExists()
+        composeRule.onNodeWithText("local@kora.app").assertIsDisplayed()
     }
 
     @Test
