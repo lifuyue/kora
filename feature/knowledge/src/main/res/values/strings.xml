@@ -120,6 +120,9 @@
     <string name="knowledge_local_manual_source">手动导入</string>
     <string name="knowledge_local_error_validation">标题和内容不能为空</string>
     <string name="knowledge_local_error_import_failed">导入失败</string>
+    <string name="knowledge_local_status_indexing">状态：正在建立索引</string>
+    <string name="knowledge_local_status_ready">状态：可检索</string>
+    <string name="knowledge_local_status_failed">状态：索引失败</string>
     <string name="knowledge_local_chunk_count">分片数量：%1$d</string>
     <string name="knowledge_local_view_chunks">查看片段</string>
     <string name="knowledge_local_document_title">资料片段</string>

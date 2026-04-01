@@ -246,9 +246,20 @@ fun LocalKnowledgeLibraryScreen(
                                     }
                                     Text(item.previewText, style = MaterialTheme.typography.bodyMedium)
                                     Text(
+                                        localKnowledgeIndexStatusLabel(item),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
                                         stringResource(R.string.knowledge_local_chunk_count, item.chunkCount),
                                         style = MaterialTheme.typography.bodySmall,
                                     )
+                                    item.indexErrorMessage?.takeIf { item.indexStatus == com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Failed }?.let { error ->
+                                        Text(
+                                            error,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         TextButton(onClick = { onOpenDocument(item.documentId) }) {
                                             Text(stringResource(R.string.knowledge_local_view_chunks))
@@ -305,6 +316,17 @@ fun LocalKnowledgeDocumentScreen(
         }
     }
 }
+
+@Composable
+private fun localKnowledgeIndexStatusLabel(item: LocalKnowledgeDocumentUiModel): String =
+    when (item.indexStatus) {
+        com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Indexing ->
+            stringResource(R.string.knowledge_local_status_indexing)
+        com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Ready ->
+            stringResource(R.string.knowledge_local_status_ready)
+        com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Failed ->
+            stringResource(R.string.knowledge_local_status_failed)
+    }
 
 @Composable
 internal fun KnowledgeAdaptivePlaceholder() {

@@ -121,6 +121,9 @@
     <string name="knowledge_local_manual_source">Manual import</string>
     <string name="knowledge_local_error_validation">Title and content are required</string>
     <string name="knowledge_local_error_import_failed">Failed to import</string>
+    <string name="knowledge_local_status_indexing">Status: indexing</string>
+    <string name="knowledge_local_status_ready">Status: ready</string>
+    <string name="knowledge_local_status_failed">Status: indexing failed</string>
     <string name="knowledge_local_chunk_count">Chunks: %1$d</string>
     <string name="knowledge_local_view_chunks">View snippets</string>
     <string name="knowledge_local_document_title">Reference snippets</string>

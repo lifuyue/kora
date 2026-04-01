@@ -51,6 +51,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -82,6 +83,8 @@ import java.io.File
 import java.time.Instant
 
 private const val AUTO_CONVERSATION_TITLE_LIMIT = 40
+private const val LOCAL_REFERENCE_SNIPPET_LIMIT = 300
+private const val LOCAL_REFERENCE_PROMPT_LIMIT = 4
 private val WHITESPACE_REGEX = "\\s+".toRegex()
 
 typealias RoomBackedChatRepository = RoomChatRepository
@@ -109,6 +112,14 @@ class RoomChatRepository
         private val chatBootstrapByChatId = linkedMapOf<String, ChatBootstrap>()
         private var localId = 0L
         private var lastCreatedAt = 0L
+
+        fun cancelBackgroundWork() {
+            streamingJobs.values.forEach(Job::cancel)
+            restoringJobs.values.forEach(Job::cancel)
+            streamingJobs.clear()
+            restoringJobs.clear()
+            scope.cancel()
+        }
 
         override suspend fun bootstrapChat(
             appId: String,
@@ -487,10 +498,11 @@ class RoomChatRepository
                     )
                 val localHits =
                     if (isOpenAiMode(appId)) {
-                        localKnowledgeStore?.search(prompt).orEmpty()
+                        searchLocalKnowledge(prompt)
                     } else {
                         emptyList()
                     }
+                val localReferences = localHits.map(LocalKnowledgeHit::toAssistantLocalReference)
                 val humanMessage =
                     newMessageEntity(
                         dataId = nextId("human"),
@@ -535,11 +547,13 @@ class RoomChatRepository
                                 chatId = resolvedChatId,
                                 currentUserMessage = currentUserMessage,
                                 localHits = localHits,
+                                localReferences = localReferences,
                             )
                         } else {
                             null
                         },
-                    localCitations = localHits.map(LocalKnowledgeHit::toCitationPayload),
+                    localCitations = localReferences.map(AssistantLocalReference::toCitationPayload),
+                    localReferences = localReferences,
                 )
                 resolvedChatId
             }
@@ -590,7 +604,13 @@ class RoomChatRepository
                     )
                 messageDao.upsert(assistantMessage)
                 updateConversationPreview(chatId, context.getString(R.string.chat_repository_continue_preview))
-                val localHits = if (isOpenAiMode(appId)) localKnowledgeStore?.search(prompt).orEmpty() else emptyList()
+                val localHits =
+                    if (isOpenAiMode(appId)) {
+                        searchLocalKnowledge(prompt)
+                    } else {
+                        emptyList()
+                    }
+                val localReferences = localHits.map(LocalKnowledgeHit::toAssistantLocalReference)
                 startStreaming(
                     appId = appId,
                     chatId = chatId,
@@ -602,11 +622,13 @@ class RoomChatRepository
                                 chatId = chatId,
                                 currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt)),
                                 localHits = localHits,
+                                localReferences = localReferences,
                             )
                         } else {
                             null
                         },
-                    localCitations = localHits.map(LocalKnowledgeHit::toCitationPayload),
+                    localCitations = localReferences.map(AssistantLocalReference::toCitationPayload),
+                    localReferences = localReferences,
                 )
                 chatId
             }
@@ -642,7 +664,13 @@ class RoomChatRepository
                     )
                 messageDao.upsert(assistantMessage)
                 updateConversationPreview(chatId, context.getString(R.string.chat_repository_regenerate_preview))
-                val localHits = if (isOpenAiMode(appId)) localKnowledgeStore?.search(prompt).orEmpty() else emptyList()
+                val localHits =
+                    if (isOpenAiMode(appId)) {
+                        searchLocalKnowledge(prompt)
+                    } else {
+                        emptyList()
+                    }
+                val localReferences = localHits.map(LocalKnowledgeHit::toAssistantLocalReference)
                 startStreaming(
                     appId = appId,
                     chatId = chatId,
@@ -654,11 +682,13 @@ class RoomChatRepository
                                 chatId = chatId,
                                 currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt)),
                                 localHits = localHits,
+                                localReferences = localReferences,
                             )
                         } else {
                             null
                         },
-                    localCitations = localHits.map(LocalKnowledgeHit::toCitationPayload),
+                    localCitations = localReferences.map(AssistantLocalReference::toCitationPayload),
+                    localReferences = localReferences,
                 )
                 chatId
             }
@@ -799,7 +829,13 @@ class RoomChatRepository
                 messageDao.upsertAll(listOf(humanMessage, assistantMessage))
                 updateConversationPreview(chatId, displayValue)
             }
-            val localHits = if (isOpenAiMode(appId)) localKnowledgeStore?.search(displayValue).orEmpty() else emptyList()
+            val localHits =
+                if (isOpenAiMode(appId)) {
+                    searchLocalKnowledge(displayValue)
+                } else {
+                    emptyList()
+                }
+            val localReferences = localHits.map(LocalKnowledgeHit::toAssistantLocalReference)
             startStreaming(
                 appId = appId,
                 chatId = chatId,
@@ -817,11 +853,13 @@ class RoomChatRepository
                             chatId = chatId,
                             currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(displayValue)),
                             localHits = localHits,
+                            localReferences = localReferences,
                         )
                     } else {
                         null
                     },
-                localCitations = localHits.map(LocalKnowledgeHit::toCitationPayload),
+                localCitations = localReferences.map(AssistantLocalReference::toCitationPayload),
+                localReferences = localReferences,
                 onSuccess = {
                     interactiveDraftDao.deleteByChatId(chatId)
                     updateInteractiveMessageState(
@@ -844,8 +882,14 @@ class RoomChatRepository
             restoringJobs[chatId] =
                 scope.launch {
                     try {
-                        if (messageDao.getMessagesForChat(chatId).isEmpty()) {
-                            restoreMessages(appId = appId, chatId = chatId)
+                        runCatching {
+                            if (messageDao.getMessagesForChat(chatId).isEmpty()) {
+                                restoreMessages(appId = appId, chatId = chatId)
+                            }
+                        }.onFailure { error ->
+                            if (error is CancellationException) {
+                                throw error
+                            }
                         }
                     } finally {
                         restoringJobs.remove(chatId)
@@ -861,6 +905,7 @@ class RoomChatRepository
             userMessage: ChatCompletionMessageParam? = null,
             openAiMessages: List<ChatCompletionMessageParam>? = null,
             localCitations: List<CitationPayload> = emptyList(),
+            localReferences: List<AssistantLocalReference> = emptyList(),
             onSuccess: suspend () -> Unit = {},
         ) {
             streamingJobs.remove(chatId)?.cancel()
@@ -879,6 +924,7 @@ class RoomChatRepository
                                         chatId = chatId,
                                         prompt = prompt,
                                         attempt = 1,
+                                        localReferences = localReferences,
                                     ),
                                 )
                             for (step in plannedSteps) {
@@ -1305,6 +1351,7 @@ class RoomChatRepository
             chatId: String,
             currentUserMessage: ChatCompletionMessageParam,
             localHits: List<LocalKnowledgeHit>,
+            localReferences: List<AssistantLocalReference>,
         ): List<ChatCompletionMessageParam> {
             val history =
                 messageDao.getMessagesForChat(chatId)
@@ -1325,17 +1372,21 @@ class RoomChatRepository
                         }
                     }
             val localContextMessage =
-                localHits.takeIf { it.isNotEmpty() }?.let { hits ->
+                localReferences.takeIf { it.isNotEmpty() }?.let { references ->
+                    val promptReferences = localHits.toPromptReferences(references)
                     ChatCompletionMessageParam(
                         role = "system",
                         content =
                             JsonPrimitive(
                                 buildString {
-                                    appendLine("Use the following local references when relevant.")
-                                    hits.forEachIndexed { index, hit ->
-                                        appendLine("[${index + 1}] ${hit.title} (${hit.sourceLabel})")
-                                        appendLine(hit.snippet)
+                                    appendLine("The user has local knowledge documents. Excerpts below are ranked by relevance (most relevant first).")
+                                    appendLine("When using information from these references, cite the source by number, for example [1].")
+                                    appendLine("If references conflict, prefer higher-ranked ones.")
+                                    promptReferences.forEachIndexed { index, promptReference ->
                                         appendLine()
+                                        appendLine("---")
+                                        appendLine("[${index + 1}] \"${promptReference.reference.title}\" (${promptReference.reference.sourceLabel}) - Relevance: ${promptReference.relevanceLabel}")
+                                        appendLine(promptReference.reference.snippet)
                                     }
                                 }.trim(),
                             ),
@@ -1347,6 +1398,12 @@ class RoomChatRepository
                 add(currentUserMessage)
             }
         }
+
+        private fun searchLocalKnowledge(prompt: String): List<LocalKnowledgeHit> =
+            localKnowledgeStore
+                ?.search(prompt, limit = LOCAL_REFERENCE_PROMPT_LIMIT)
+                .orEmpty()
+                .take(LOCAL_REFERENCE_PROMPT_LIMIT)
 
         private suspend fun <T> onIo(block: suspend () -> T): T = withContext(ioDispatcher) { block() }
     }
@@ -1997,7 +2054,16 @@ private fun CitationPayload.toUiModel(): CitationItemUiModel =
         score = score,
     )
 
-private fun LocalKnowledgeHit.toCitationPayload(): CitationPayload =
+private fun LocalKnowledgeHit.toAssistantLocalReference(): AssistantLocalReference =
+    AssistantLocalReference(
+        documentId = documentId,
+        chunkId = chunkId,
+        title = title,
+        sourceLabel = sourceLabel,
+        snippet = snippet.toPromptSnippet(),
+    )
+
+private fun AssistantLocalReference.toCitationPayload(): CitationPayload =
     CitationPayload(
         datasetId = documentId,
         collectionId = null,
@@ -2006,7 +2072,7 @@ private fun LocalKnowledgeHit.toCitationPayload(): CitationPayload =
         sourceName = sourceLabel,
         snippet = snippet,
         scoreType = "local",
-        score = score,
+        score = null,
     )
 
 private fun CitationDto.toPayload(): CitationPayload =
@@ -2032,6 +2098,39 @@ private fun JsonArray.extractCitations(): List<CitationDto> {
         }
     }
     return result.values.toList()
+}
+
+private fun String.toPromptSnippet(limit: Int = LOCAL_REFERENCE_SNIPPET_LIMIT): String {
+    val compact = trim().replace(WHITESPACE_REGEX, " ")
+    if (compact.length <= limit) {
+        return compact
+    }
+    return compact.take(limit).trimEnd() + "..."
+}
+
+private data class PromptLocalReference(
+    val reference: AssistantLocalReference,
+    val relevanceLabel: String,
+)
+
+private fun List<LocalKnowledgeHit>.toPromptReferences(
+    references: List<AssistantLocalReference>,
+): List<PromptLocalReference> {
+    if (isEmpty() || references.isEmpty()) {
+        return emptyList()
+    }
+    val maxScore = maxOf(1.0, maxOfOrNull { it.score } ?: 1.0)
+    return zip(references).mapIndexed { index, (hit, reference) ->
+        PromptLocalReference(
+            reference = reference,
+            relevanceLabel =
+                when {
+                    index == 0 || hit.score >= maxScore * 0.8 -> "High"
+                    hit.score >= maxScore * 0.45 -> "Medium"
+                    else -> "Low"
+                },
+        )
+    }
 }
 
 private fun JsonElement.collectCitationCandidates(): List<CitationDto> =

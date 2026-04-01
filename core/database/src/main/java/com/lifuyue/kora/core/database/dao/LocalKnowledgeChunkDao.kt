@@ -23,4 +23,10 @@ interface LocalKnowledgeChunkDao {
 
     @Query("SELECT * FROM local_knowledge_chunks")
     fun getAllChunks(): List<LocalKnowledgeChunkEntity>
+
+    @Query("SELECT * FROM local_knowledge_chunks WHERE chunkId IN (:chunkIds)")
+    fun getChunksByIds(chunkIds: List<String>): List<LocalKnowledgeChunkEntity>
+
+    @Query("SELECT AVG(tokenCount) FROM local_knowledge_chunks WHERE documentId IN (:documentIds)")
+    fun getAverageTokenCountForDocuments(documentIds: List<String>): Double?
 }

@@ -16,6 +16,7 @@ import com.lifuyue.kora.core.network.createRetrofit
 import com.lifuyue.kora.core.testing.MainDispatcherRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -59,6 +60,8 @@ class RoomChatRepositoryTest {
             LocalKnowledgeStore(
                 documentDao = database.localKnowledgeDocumentDao(),
                 chunkDao = database.localKnowledgeChunkDao(),
+                postingDao = database.localKnowledgePostingDao(),
+                ioDispatcher = mainDispatcherRule.dispatcher,
             )
         server = MockWebServer()
         server.start()
@@ -95,6 +98,9 @@ class RoomChatRepositoryTest {
 
     @After
     fun tearDown() {
+        if (::repository.isInitialized) {
+            repository.cancelBackgroundWork()
+        }
         if (::server.isInitialized) {
             server.shutdown()
         }
@@ -178,6 +184,7 @@ class RoomChatRepositoryTest {
                 sourceLabel = "manual",
                 now = 1L,
             )
+            waitUntilLocalKnowledgeReady()
             connectionProvider.update(
                 connectionProvider.getSnapshot().copy(
                     connectionType = ConnectionType.OPENAI_COMPATIBLE,
@@ -209,6 +216,82 @@ class RoomChatRepositoryTest {
             assertEquals("OpenAI 模式", messages.last().markdown)
             assertTrue(messages.last().citations.isNotEmpty())
         }
+
+    @Test
+    fun responsePlannerReceivesTrimmedDedupedLocalReferences() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            localKnowledgeStore.importText(
+                title = "部署巡检：模型路由 offline cache",
+                text = "这里记录部署巡检的通用前言。".repeat(30) + "关键规则：de-04-k21 使用 offline cache 做模型路由，并保留首条摘要。",
+                sourceLabel = "manual",
+                now = 2L,
+            )
+            waitUntilLocalKnowledgeReady()
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+
+            val capturedRequests = mutableListOf<AssistantResponseRequest>()
+            val plannedRepository =
+                RoomChatRepository(
+                    api = createRetrofit(server.url("/").toString(), OkHttpClient()).create(FastGptApi::class.java),
+                    sseStreamClient = SseStreamClient(okHttpClient = OkHttpClient(), baseUrlProvider = connectionProvider),
+                    conversationDao = database.conversationDao(),
+                    conversationFolderDao = database.conversationFolderDao(),
+                    conversationTagDao = database.conversationTagDao(),
+                    interactiveDraftDao = database.interactiveDraftDao(),
+                    messageDao = database.messageDao(),
+                    context = ApplicationProvider.getApplicationContext(),
+                    json = NetworkJson.default,
+                    ioDispatcher = mainDispatcherRule.dispatcher,
+                    responsePlanner =
+                        AssistantResponsePlanner { request ->
+                            capturedRequests += request
+                            listOf(
+                                AssistantResponseStep(
+                                    markdownDelta = request.localReferences.firstOrNull()?.title ?: "missing",
+                                ),
+                            )
+                        },
+                    connectionSnapshotProvider = connectionProvider,
+                    localKnowledgeStore = localKnowledgeStore,
+                )
+
+            val chatId = plannedRepository.sendMessage(
+                appId = DIRECT_OPENAI_APP_ID,
+                chatId = null,
+                text = "de-04-k21 offline cache",
+            )
+            advanceUntilIdle()
+
+            val request = capturedRequests.single()
+            assertEquals(1, request.localReferences.size)
+            assertEquals("部署巡检：模型路由 offline cache", request.localReferences.single().title)
+            assertTrue(request.localReferences.single().snippet.length <= 223)
+
+            val messages = plannedRepository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals("部署巡检：模型路由 offline cache", messages.last().markdown)
+
+            plannedRepository.cancelBackgroundWork()
+        }
+
+    private suspend fun waitUntilLocalKnowledgeReady() {
+        repeat(50) {
+            val ready = localKnowledgeStore.observeDocuments().first().all {
+                it.indexStatus == com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus.Ready
+            }
+            if (ready) {
+                return
+            }
+            delay(20)
+        }
+        throw AssertionError("Local knowledge indexing did not finish in time")
+    }
 
     @Test
     fun openAiStreamIgnoresJsonNullContentAndDoesNotExposeReasoning() =
@@ -475,6 +558,7 @@ class RoomChatRepositoryTest {
 
                 assertTrue(messages.isEmpty())
             } finally {
+                strictRepository.cancelBackgroundWork()
                 strictDatabase.close()
             }
         }

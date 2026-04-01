@@ -8,20 +8,41 @@ import androidx.lifecycle.viewModelScope
 import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.database.LocalKnowledgeStore
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import dagger.Module
+import dagger.Provides
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Qualifier
 import javax.inject.Inject
+import javax.inject.Singleton
+
+@Qualifier
+annotation class KnowledgeIoDispatcher
+
+@Module
+@InstallIn(SingletonComponent::class)
+object KnowledgeDispatchersModule {
+    @Provides
+    @Singleton
+    @KnowledgeIoDispatcher
+    fun provideKnowledgeIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+}
 
 @HiltViewModel
 class KnowledgeOverviewViewModel
@@ -85,39 +106,55 @@ class LocalKnowledgeOverviewViewModel
     }
 
 @HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
 class LocalKnowledgeLibraryViewModel
     @Inject
     constructor(
         private val localKnowledgeStore: LocalKnowledgeStore,
         private val strings: KnowledgeStrings,
+        @KnowledgeIoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val meta = MutableStateFlow(LocalKnowledgeLibraryUiState())
 
         val uiState: StateFlow<LocalKnowledgeLibraryUiState> =
-            combine(meta, localKnowledgeStore.observeDocuments()) { state, documents ->
-                val filtered =
-                    documents.filter { item ->
-                        state.query.isBlank() ||
-                            item.title.contains(state.query, ignoreCase = true) ||
-                            item.previewText.contains(state.query, ignoreCase = true) ||
-                            item.sourceLabel.contains(state.query, ignoreCase = true)
-                    }
-                state.copy(
-                    items =
-                        filtered.map { item ->
-                            LocalKnowledgeDocumentUiModel(
-                                documentId = item.documentId,
-                                title = item.title,
-                                sourceLabel = item.sourceLabel,
-                                previewText = item.previewText,
-                                chunkCount = item.chunkCount,
-                                isEnabled = item.isEnabled,
-                                updatedAt = item.updatedAt,
-                            )
-                        },
-                    status = if (filtered.isEmpty()) KnowledgeLoadState.Empty else KnowledgeLoadState.Content,
-                )
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocalKnowledgeLibraryUiState())
+            combine(meta, localKnowledgeStore.observeDocuments()) { state, documents -> state to documents }
+                .mapLatest { (state, documents) ->
+                    val visibleDocuments =
+                        if (state.query.isBlank()) {
+                            documents
+                        } else {
+                            withContext(ioDispatcher) {
+                                val documentsById = documents.associateBy { it.documentId }
+                                localKnowledgeStore
+                                    .search(state.query, limit = 20)
+                                    .map { it.documentId }
+                                    .distinct()
+                                    .mapNotNull(documentsById::get)
+                            }
+                        }
+                    state.copy(
+                        items =
+                            visibleDocuments.map { item ->
+                                LocalKnowledgeDocumentUiModel(
+                                    documentId = item.documentId,
+                                    title = item.title,
+                                    sourceLabel = item.sourceLabel,
+                                    previewText = item.previewText,
+                                    chunkCount = item.chunkCount,
+                                    isEnabled = item.isEnabled,
+                                    indexStatus = item.indexStatus,
+                                    indexErrorMessage = item.indexErrorMessage,
+                                    updatedAt = item.updatedAt,
+                                )
+                            },
+                        status =
+                            when {
+                                documents.isEmpty() -> KnowledgeLoadState.Empty
+                                visibleDocuments.isEmpty() -> KnowledgeLoadState.Empty
+                                else -> KnowledgeLoadState.Content
+                            },
+                    )
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocalKnowledgeLibraryUiState())
 
         fun updateQuery(value: String) {
             meta.update { it.copy(query = value) }
@@ -145,12 +182,12 @@ class LocalKnowledgeLibraryViewModel
             }
             viewModelScope.launch {
                 runCatching {
-                    withContext(Dispatchers.IO) {
+                    withContext(ioDispatcher) {
                         localKnowledgeStore.importText(
-                        title = title,
-                        text = text,
-                        sourceLabel = snapshot.draftSource.trim().ifBlank { strings.localManualImportSource() },
-                    )
+                            title = title,
+                            text = text,
+                            sourceLabel = snapshot.draftSource.trim().ifBlank { strings.localManualImportSource() },
+                        )
                     }
                 }.onSuccess {
                     meta.update { it.copy(draftTitle = "", draftSource = "", draftText = "", errorMessage = null) }
@@ -161,7 +198,7 @@ class LocalKnowledgeLibraryViewModel
         }
 
         fun deleteDocument(documentId: String) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 localKnowledgeStore.deleteDocument(documentId)
             }
         }
@@ -170,7 +207,7 @@ class LocalKnowledgeLibraryViewModel
             documentId: String,
             enabled: Boolean,
         ) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(ioDispatcher) {
                 localKnowledgeStore.setEnabled(documentId, enabled)
             }
         }

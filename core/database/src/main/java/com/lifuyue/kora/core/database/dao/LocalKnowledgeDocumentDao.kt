@@ -24,6 +24,9 @@ interface LocalKnowledgeDocumentDao {
     @Query("SELECT * FROM local_knowledge_documents WHERE documentId = :documentId LIMIT 1")
     fun getDocument(documentId: String): LocalKnowledgeDocumentEntity?
 
+    @Query("SELECT * FROM local_knowledge_documents WHERE documentId IN (:documentIds)")
+    fun getDocumentsByIds(documentIds: List<String>): List<LocalKnowledgeDocumentEntity>
+
     @Query("DELETE FROM local_knowledge_documents WHERE documentId = :documentId")
     fun delete(documentId: String)
 }
