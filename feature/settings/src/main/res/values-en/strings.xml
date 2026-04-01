@@ -39,25 +39,13 @@
 
     <string name="settings_current_app_title">Current app</string>
     <string name="settings_theme_title">Theme</string>
-    <string name="settings_theme_dynamic_color">Dynamic color</string>
-    <string name="settings_theme_oled">OLED dark enhancement</string>
     <string name="settings_theme_mode_light">Light</string>
     <string name="settings_theme_mode_dark">Dark</string>
-    <string name="settings_theme_mode_system">Follow system</string>
-    <string name="settings_theme_mode_oled_dark">OLED dark</string>
 
-    <string name="settings_chat_preferences_title">Chat preferences</string>
-    <string name="settings_chat_preferences_summary">Streaming, scrolling, text size, and citations</string>
-    <string name="settings_chat_preferences_stream">Enable streaming output</string>
-    <string name="settings_chat_preferences_auto_scroll">Auto-scroll to bottom</string>
-    <string name="settings_chat_preferences_citations">Show citations by default</string>
-    <string name="settings_chat_preferences_font_scale">Text size %1$d%%</string>
     <string name="settings_quick_title">Quick chat settings</string>
     <string name="settings_quick_summary">Adjust common preferences without leaving the current conversation.</string>
     <string name="settings_quick_theme_title">Theme</string>
     <string name="settings_quick_language_title">Language</string>
-    <string name="settings_quick_voice_title">Voice preferences</string>
-    <string name="settings_quick_voice_summary">Speech-to-text engine: %1$s</string>
     <string name="settings_quick_open_full">Open full settings</string>
     <string name="settings_sheet_section_title">Settings and options</string>
     <string name="settings_sheet_account_email">local@kora.app</string>
@@ -66,8 +54,6 @@
     <string name="settings_sheet_account_summary">Manage settings and preferences on this device.</string>
     <string name="settings_sheet_account_manage">Manage connection</string>
     <string name="settings_sheet_item_chevron">›</string>
-    <string name="settings_audio_engine_system">System speech</string>
-    <string name="settings_audio_engine_whisper_app">Whisper app</string>
 
     <string name="settings_language_title">Language</string>
     <string name="settings_language_follow_system">Follow system</string>

@@ -7,7 +7,7 @@ phase: 3-advanced
 # Multimodal Input
 
 ## Overview
-输入区能力参考 Open WebUI `MessageInput/FilesOverlay`、`VoiceRecording` 等组件，但针对 Android 采用系统 picker + 本地预览。目标是把图片、文件和后续语音都统一挂到同一个发送草稿模型上。
+输入区能力参考 Open WebUI `MessageInput/FilesOverlay` 等组件，但针对 Android 采用系统 picker + 本地预览。目标是把图片和文件统一挂到同一个发送草稿模型上。
 
 ## Functional Requirements
 - [ ] FR-1: 支持从系统文件选择器、图片选择器和相机入口添加附件。
@@ -27,14 +27,13 @@ phase: 3-advanced
 
 ## Data Model
 - `AttachmentDraft(localUri, mimeType, kind, uploadStatus, uploadedRef?)`
-- `ChatComposerState(text, attachments, isRecording, canSend)`
+- `ChatComposerState(text, attachments, canSend)`
 - `UploadedAssetRef(name, url, key)`
 
 ## Architecture Notes
 上传链路与发送链路解耦：先把本地 URI 变成远端引用，再组装消息数组。`ChatViewModel` 只关心草稿状态，实际上传由 repository / upload manager 处理。
 
 ## Dependencies
-- [../../features/voice/speech-to-text.md](../voice/speech-to-text.md)
 - [../../ui/component-catalog.md](../../ui/component-catalog.md)
 
 ## Acceptance Criteria

@@ -1,13 +1,12 @@
 # Accessibility
 
 ## Core Rules
-- Text and interactive icons must meet contrast requirements in light, dark, and OLED themes.
+- Text and interactive icons must meet contrast requirements in light and dark themes.
 - All icon-only controls require content descriptions.
 - Every page must be fully navigable with TalkBack.
 
 ## Chat-Specific Rules
 - Streaming updates must announce message completion without spamming per-character accessibility events.
-- Voice input, recording, and playback states need explicit spoken labels.
 - Citation counts, message feedback state, and action menus must be semantically exposed.
 
 ## Motion and Focus

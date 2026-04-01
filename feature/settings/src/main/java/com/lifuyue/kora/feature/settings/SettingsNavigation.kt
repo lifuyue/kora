@@ -24,8 +24,6 @@ object SettingsRoutes {
     const val OVERVIEW = "settings"
     const val CONNECTION = "settings/connection"
     const val THEME = "settings/theme"
-    const val CHAT_PREFERENCES = "settings/chat-preferences"
-    const val AUDIO = "settings/audio"
     const val LANGUAGE = "settings/language"
     const val CACHE = "settings/cache"
     const val ABOUT = "settings/about"
@@ -48,8 +46,6 @@ fun NavGraphBuilder.settingsGraph(
                 }
             },
             onOpenTheme = { navController.navigate(SettingsRoutes.THEME) },
-            onOpenChatPreferences = { navController.navigate(SettingsRoutes.CHAT_PREFERENCES) },
-            onOpenAudio = { navController.navigate(SettingsRoutes.AUDIO) },
             onOpenLanguage = { navController.navigate(SettingsRoutes.LANGUAGE) },
             onOpenCache = { navController.navigate(SettingsRoutes.CACHE) },
             onOpenAbout = { navController.navigate(SettingsRoutes.ABOUT) },
@@ -65,12 +61,6 @@ fun NavGraphBuilder.settingsGraph(
     }
     composable(SettingsRoutes.THEME) {
         ThemeAppearanceRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
-    }
-    composable(SettingsRoutes.CHAT_PREFERENCES) {
-        ChatPreferencesRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
-    }
-    composable(SettingsRoutes.AUDIO) {
-        AudioSettingsRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
     }
     composable(SettingsRoutes.LANGUAGE) {
         LanguageSettingsRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
@@ -88,8 +78,6 @@ fun SettingsOverviewRoute(
     onOpenConnection: () -> Unit,
     onOpenCurrentApp: () -> Unit,
     onOpenTheme: () -> Unit,
-    onOpenChatPreferences: () -> Unit,
-    onOpenAudio: () -> Unit = {},
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -107,8 +95,6 @@ fun SettingsOverviewRoute(
                     onOpenConnection = onOpenConnection,
                     onOpenCurrentApp = onOpenCurrentApp,
                     onOpenTheme = onOpenTheme,
-                    onOpenChatPreferences = onOpenChatPreferences,
-                    onOpenAudio = onOpenAudio,
                     onOpenLanguage = onOpenLanguage,
                     onOpenCache = onOpenCache,
                     onOpenAbout = onOpenAbout,
@@ -123,8 +109,6 @@ fun SettingsOverviewRoute(
             onOpenConnection = onOpenConnection,
             onOpenCurrentApp = onOpenCurrentApp,
             onOpenTheme = onOpenTheme,
-            onOpenChatPreferences = onOpenChatPreferences,
-            onOpenAudio = onOpenAudio,
             onOpenLanguage = onOpenLanguage,
             onOpenCache = onOpenCache,
             onOpenAbout = onOpenAbout,
@@ -156,25 +140,6 @@ fun ConnectionConfigRoute(
 }
 
 @Composable
-fun AudioSettingsRoute(
-    viewModel: AudioSettingsViewModel = settingsViewModel(),
-    onBack: () -> Unit,
-    onOpenDrawer: () -> Unit = {},
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    AudioSettingsScreen(
-        state = uiState,
-        onSpeechToTextEngineChange = viewModel::updateSpeechToTextEngine,
-        onAutoSendTranscriptsChange = viewModel::updateAutoSendTranscripts,
-        onTextToSpeechEngineChange = viewModel::updateTextToSpeechEngine,
-        onSpeechRateChange = viewModel::updateSpeechRate,
-        onDefaultVoiceNameChange = viewModel::updateDefaultVoiceName,
-        onBack = onBack,
-        onOpenDrawer = onOpenDrawer,
-    )
-}
-
-@Composable
 fun ThemeAppearanceRoute(
     viewModel: ThemeAppearanceViewModel = settingsViewModel(),
     onBack: () -> Unit,
@@ -184,27 +149,6 @@ fun ThemeAppearanceRoute(
     ThemeAppearanceScreen(
         state = uiState,
         onThemeModeChange = viewModel::updateThemeMode,
-        onDynamicColorChange = viewModel::updateDynamicColorEnabled,
-        onOledChange = viewModel::updateOledEnabled,
-        onBack = onBack,
-        onOpenDrawer = onOpenDrawer,
-    )
-}
-
-@Composable
-fun ChatPreferencesRoute(
-    viewModel: ChatPreferencesViewModel =
-        settingsViewModel(),
-    onBack: (() -> Unit)? = null,
-    onOpenDrawer: () -> Unit = {},
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    ChatPreferencesScreen(
-        state = uiState,
-        onStreamEnabledChange = viewModel::updateStreamEnabled,
-        onAutoScrollChange = viewModel::updateAutoScroll,
-        onShowCitationsChange = viewModel::updateShowCitationsByDefault,
-        onFontSizeScaleChange = viewModel::updateFontSizeScale,
         onBack = onBack,
         onOpenDrawer = onOpenDrawer,
     )
@@ -270,8 +214,6 @@ fun ChatSettingsSheetRoute(
         state = uiState,
         onOpenConnection = { onOpenRoute(SettingsRoutes.CONNECTION) },
         onOpenTheme = { onOpenRoute(SettingsRoutes.THEME) },
-        onOpenChatPreferences = { onOpenRoute(SettingsRoutes.CHAT_PREFERENCES) },
-        onOpenAudio = { onOpenRoute(SettingsRoutes.AUDIO) },
         onOpenLanguage = { onOpenRoute(SettingsRoutes.LANGUAGE) },
         onOpenCache = { onOpenRoute(SettingsRoutes.CACHE) },
         onOpenAbout = { onOpenRoute(SettingsRoutes.ABOUT) },
@@ -310,10 +252,6 @@ private inline fun <reified T : ViewModel> settingsViewModel(): T {
                             SettingsOverviewViewModel(settingsConnectionFacade) as VM
                         ThemeAppearanceViewModel::class.java ->
                             ThemeAppearanceViewModel(settingsConnectionFacade) as VM
-                        ChatPreferencesViewModel::class.java ->
-                            ChatPreferencesViewModel(settingsConnectionFacade) as VM
-                        AudioSettingsViewModel::class.java ->
-                            AudioSettingsViewModel(settingsConnectionFacade) as VM
                         LanguageSettingsViewModel::class.java ->
                             LanguageSettingsViewModel(settingsConnectionFacade) as VM
                         CacheSettingsViewModel::class.java ->

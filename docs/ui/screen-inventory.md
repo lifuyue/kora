@@ -19,8 +19,6 @@
 |---|---|
 | `ConnectionConfigScreen` | full screen |
 | `ThemeAppearanceScreen` | full screen |
-| `ChatPreferencesScreen` | full screen |
-| `AudioConfigScreen` | full screen |
 | `LanguageScreen` | full screen |
 | `StorageCacheScreen` | full screen |
 | `AboutScreen` | full screen |

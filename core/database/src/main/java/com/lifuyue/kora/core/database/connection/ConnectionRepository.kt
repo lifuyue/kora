@@ -1,6 +1,5 @@
 package com.lifuyue.kora.core.database.connection
 
-import com.lifuyue.kora.core.common.AudioPreferences
 import com.lifuyue.kora.core.common.AppearancePreferences
 import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionSnapshot
@@ -9,8 +8,6 @@ import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.ConnectionValidationError
 import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.NetworkError
-import com.lifuyue.kora.core.common.SpeechToTextEngine
-import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
 import com.lifuyue.kora.core.database.store.ConnectionPreferences
@@ -77,12 +74,6 @@ class ConnectionRepository
             selectedAppId: String? = null,
             onboardingCompleted: Boolean,
             themeMode: ThemeMode = mutableSnapshot.value.appearancePreferences.themeMode,
-            dynamicColorEnabled: Boolean = mutableSnapshot.value.appearancePreferences.dynamicColorEnabled,
-            oledEnabled: Boolean = mutableSnapshot.value.appearancePreferences.oledEnabled,
-            streamEnabled: Boolean = mutableSnapshot.value.appearancePreferences.streamEnabled,
-            autoScroll: Boolean = mutableSnapshot.value.appearancePreferences.autoScroll,
-            fontSizeScale: Float = mutableSnapshot.value.appearancePreferences.fontSizeScale,
-            showCitationsByDefault: Boolean = mutableSnapshot.value.appearancePreferences.showCitationsByDefault,
             languageTag: String? = mutableSnapshot.value.appearancePreferences.languageTag,
         ) {
             val normalizedBaseUrl = normalizeBaseUrl(connectionType, serverBaseUrl)
@@ -102,12 +93,6 @@ class ConnectionRepository
             preferencesStore.updateSelectedAppId(resolvedSelectedAppId)
             preferencesStore.updateOnboardingCompleted(onboardingCompleted)
             preferencesStore.updateThemeMode(themeMode)
-            preferencesStore.updateDynamicColorEnabled(dynamicColorEnabled)
-            preferencesStore.updateOledEnabled(oledEnabled)
-            preferencesStore.updateStreamEnabled(streamEnabled)
-            preferencesStore.updateAutoScroll(autoScroll)
-            preferencesStore.updateFontSizeScale(fontSizeScale)
-            preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
             preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
 
@@ -122,81 +107,24 @@ class ConnectionRepository
                     appearancePreferences =
                         AppearancePreferences(
                             themeMode = themeMode,
-                            dynamicColorEnabled = dynamicColorEnabled,
-                            oledEnabled = oledEnabled,
-                            streamEnabled = streamEnabled,
-                            autoScroll = autoScroll,
-                            fontSizeScale = fontSizeScale,
-                            showCitationsByDefault = showCitationsByDefault,
                             languageTag = languageTag,
                         ),
-                    audioPreferences = mutableSnapshot.value.audioPreferences,
                 ),
             )
         }
 
         suspend fun updateAppearance(
             themeMode: ThemeMode,
-            dynamicColorEnabled: Boolean,
-            oledEnabled: Boolean,
-            streamEnabled: Boolean = mutableSnapshot.value.appearancePreferences.streamEnabled,
-            autoScroll: Boolean = mutableSnapshot.value.appearancePreferences.autoScroll,
-            fontSizeScale: Float = mutableSnapshot.value.appearancePreferences.fontSizeScale,
-            showCitationsByDefault: Boolean = mutableSnapshot.value.appearancePreferences.showCitationsByDefault,
             languageTag: String? = mutableSnapshot.value.appearancePreferences.languageTag,
         ) {
             preferencesStore.updateThemeMode(themeMode)
-            preferencesStore.updateDynamicColorEnabled(dynamicColorEnabled)
-            preferencesStore.updateOledEnabled(oledEnabled)
-            preferencesStore.updateStreamEnabled(streamEnabled)
-            preferencesStore.updateAutoScroll(autoScroll)
-            preferencesStore.updateFontSizeScale(fontSizeScale)
-            preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
             preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
-        }
-
-        suspend fun updateChatPreferences(
-            streamEnabled: Boolean,
-            autoScroll: Boolean,
-            fontSizeScale: Float,
-            showCitationsByDefault: Boolean,
-        ) {
-            preferencesStore.updateStreamEnabled(streamEnabled)
-            preferencesStore.updateAutoScroll(autoScroll)
-            preferencesStore.updateFontSizeScale(fontSizeScale)
-            preferencesStore.updateShowCitationsByDefault(showCitationsByDefault)
         }
 
         suspend fun updateLanguageTag(languageTag: String?) {
             preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
-        }
-
-        suspend fun updateAudioPreferences(
-            speechToTextEngine: SpeechToTextEngine,
-            autoSendTranscripts: Boolean,
-            textToSpeechEngine: TextToSpeechEngine,
-            speechRate: Float,
-            defaultVoiceName: String?,
-        ) {
-            preferencesStore.updateSpeechToTextEngine(speechToTextEngine)
-            preferencesStore.updateAutoSendTranscripts(autoSendTranscripts)
-            preferencesStore.updateTextToSpeechEngine(textToSpeechEngine)
-            preferencesStore.updateSpeechRate(speechRate)
-            preferencesStore.updateDefaultVoiceName(defaultVoiceName)
-            publishSnapshot(
-                mutableSnapshot.value.copy(
-                    audioPreferences =
-                        AudioPreferences(
-                            speechToTextEngine = speechToTextEngine,
-                            autoSendTranscripts = autoSendTranscripts,
-                            textToSpeechEngine = textToSpeechEngine,
-                            speechRate = speechRate,
-                            defaultVoiceName = defaultVoiceName,
-                        ),
-                ),
-            )
         }
 
         suspend fun updateOnboardingCompleted(onboardingCompleted: Boolean) {
@@ -351,21 +279,7 @@ class ConnectionRepository
                 appearancePreferences =
                     AppearancePreferences(
                         themeMode = preferences.themeMode,
-                        dynamicColorEnabled = preferences.dynamicColorEnabled,
-                        oledEnabled = preferences.oledEnabled,
-                        streamEnabled = preferences.streamEnabled,
-                        autoScroll = preferences.autoScroll,
-                        fontSizeScale = preferences.fontSizeScale,
-                        showCitationsByDefault = preferences.showCitationsByDefault,
                         languageTag = resolvedLanguageTag(preferences),
-                    ),
-                audioPreferences =
-                    AudioPreferences(
-                        speechToTextEngine = preferences.speechToTextEngine,
-                        autoSendTranscripts = preferences.autoSendTranscripts,
-                        textToSpeechEngine = preferences.textToSpeechEngine,
-                        speechRate = preferences.speechRate,
-                        defaultVoiceName = preferences.defaultVoiceName,
                     ),
             )
 

@@ -14,7 +14,6 @@
 | `MessageCard` | Message shell for user/assistant/system content | Must preserve clear role distinction |
 | `RenderedMarkdown` | Rich text rendering | Optimized for reading, copy, code, citations |
 | `AttachmentComposer` | Upload draft surface | Treated as part of the main composer, not a separate page |
-| `SpeechInputComposer` | Voice capture state | Must always expose explicit static state cues |
 
 ## Conversation
 | Component | Responsibility | Notes |

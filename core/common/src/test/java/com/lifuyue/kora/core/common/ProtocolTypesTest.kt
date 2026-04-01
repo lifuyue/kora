@@ -151,9 +151,7 @@ class ProtocolTypesTest {
     fun appearancePreferencesDefaultsMatchM3Behavior() {
         val preferences = AppearancePreferences()
 
-        assertEquals(ThemeMode.SYSTEM, preferences.themeMode)
-        assertEquals(false, preferences.dynamicColorEnabled)
-        assertEquals(false, preferences.oledEnabled)
+        assertEquals(ThemeMode.DARK, preferences.themeMode)
         assertNull(preferences.languageTag)
     }
 }

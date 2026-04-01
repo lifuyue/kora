@@ -1,24 +1,16 @@
 package com.lifuyue.kora.feature.chat
 
-import android.Manifest
 import android.net.Uri
-import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
-import androidx.core.content.ContextCompat
 import androidx.navigation.navArgument
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -214,16 +206,6 @@ private fun ChatRoute(
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val conversationBrowserUiState = conversationListViewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val recordAudioPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                viewModel.startSpeechInput()
-            } else {
-                viewModel.onSpeechPermissionDenied()
-            }
-        }
     val imagePickerLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
             if (!uris.isNullOrEmpty()) {
@@ -236,16 +218,6 @@ private fun ChatRoute(
                 viewModel.addAttachments(uris)
             }
         }
-    DisposableEffect(lifecycleOwner, viewModel) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_STOP) {
-                    viewModel.onHostStopped()
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
     val handleBack = {
         if (!navController.popBackStack()) {
             Unit
@@ -257,15 +229,6 @@ private fun ChatRoute(
         conversationBrowserUiState = conversationBrowserUiState.value,
         onBack = handleBack,
         onInputChanged = viewModel::updateInput,
-        onStartSpeechInput = {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                viewModel.startSpeechInput()
-            } else {
-                recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            }
-        },
-        onStopSpeechInput = viewModel::stopSpeechInput,
-        onCancelSpeechInput = viewModel::cancelSpeechInput,
         onSend = viewModel::send,
         onPickImage = {
             val state = uiState.value
@@ -288,9 +251,6 @@ private fun ChatRoute(
         onContinueGeneration = viewModel::continueGeneration,
         onFeedback = viewModel::updateFeedback,
         onRegenerate = viewModel::regenerate,
-        onPlayMessage = viewModel::playMessage,
-        onPausePlayback = viewModel::pausePlayback,
-        onStopPlayback = viewModel::stopPlayback,
         onOpenDrawer = onOpenDrawer,
         onOpenQuickSettings = onOpenQuickSettings,
         onSuggestedQuestion = {

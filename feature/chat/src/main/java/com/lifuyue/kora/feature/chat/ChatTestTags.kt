@@ -35,10 +35,6 @@ object ChatTestTags {
     const val CHAT_ATTACHMENT_FILE_PICK = "chat_attachment_pick_file"
     const val CHAT_ATTACHMENT_LIST = "chat_attachment_list"
     const val CHAT_ATTACHMENT_ITEM_PREFIX = "chat_attachment_item_"
-    const val CHAT_SPEECH_STATUS = "chat-speech-status"
-    const val CHAT_MIC_BUTTON = "chat-mic-button"
-    const val CHAT_SPEECH_STOP = "chat-speech-stop"
-    const val CHAT_SPEECH_CANCEL = "chat-speech-cancel"
     const val CHAT_LIST = "chat_list"
     const val CHAT_SKELETON = "chat_skeleton"
     const val AUTO_SCROLL_RESUME = "auto_scroll_resume"
@@ -55,12 +51,6 @@ object ChatTestTags {
     fun messageUpvoteAction(messageId: String): String = "message_upvote_$messageId"
 
     fun messageDownvoteAction(messageId: String): String = "message_downvote_$messageId"
-
-    fun messageTtsAction(messageId: String): String = "message_tts_$messageId"
-
-    fun messageTtsPauseAction(messageId: String): String = "message_tts_pause_$messageId"
-
-    fun messageTtsStopAction(messageId: String): String = "message_tts_stop_$messageId"
 
     fun messageError(messageId: String): String = "message_error_$messageId"
 

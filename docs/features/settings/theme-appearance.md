@@ -7,32 +7,22 @@ phase: 1-mvp
 # Theme Appearance
 
 ## Overview
-主题设置定义亮色、暗色、跟随系统、OLED 深色和动态取色开关，并驱动全局 Material 3 token。
+主题设置只保留亮色和暗色两种模式，并驱动全局 Material 3 token。
 
 ## Functional Requirements
-- [ ] FR-1: 支持亮色、暗色、跟随系统。
-- [ ] FR-2: 支持 OLED 深色增强模式。
-- [ ] FR-3: 支持动态取色开关。
-
-## Non-Functional Requirements
-- [ ] NFR-1: 切换主题时即时生效。
-- [ ] NFR-2: 颜色对比满足可访问性约束。
-
-## API Contract
-本功能不依赖远端接口。
+- [ ] FR-1: 支持亮色。
+- [ ] FR-2: 支持暗色。
+- [ ] FR-3: 切换后全局立即生效。
 
 ## UI Description
-页面显示主题模式选项卡、OLED 开关和动态取色开关，附带迷你预览卡片。
+页面仅显示浅色和深色两个可选项，不再提供跟随系统、OLED 深色或动态取色开关。
 
 ## Data Model
-- `AppearancePreferences(themeMode, oledEnabled, dynamicColorEnabled)`
+- `AppearancePreferences(themeMode, languageTag)`
 
 ## Architecture Notes
-设置写入 DataStore，由 `:app` 主题层消费；不要在 feature 层单独持有临时主题状态超过页面生命周期。
-
-## Dependencies
-- [../../ui/design-system.md](../../ui/design-system.md)
+设置写入 DataStore，由 `:app` 主题层消费；不保留额外主题增强开关。
 
 ## Acceptance Criteria
 - 主题切换后全局 UI 同步刷新。
-- 不支持动态取色的设备可优雅降级。
+- 代码库内不再存在 OLED 或动态取色的设置入口。

@@ -91,7 +91,6 @@ import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 internal enum class ChatComposerPrimaryAction {
-    Voice,
     Send,
     Stop,
 }
@@ -99,8 +98,7 @@ internal enum class ChatComposerPrimaryAction {
 internal fun chatComposerPrimaryAction(uiState: ChatUiState): ChatComposerPrimaryAction =
     when {
         uiState.canStopGeneration -> ChatComposerPrimaryAction.Stop
-        uiState.input.isNotBlank() || uiState.attachments.any { it.uploadStatus == AttachmentUploadStatus.Uploaded } -> ChatComposerPrimaryAction.Send
-        else -> ChatComposerPrimaryAction.Voice
+        else -> ChatComposerPrimaryAction.Send
     }
 
 internal fun shouldSubmitFromHardwareEnter(
@@ -117,9 +115,6 @@ fun ChatScreen(
     showConversationBrowser: Boolean = false,
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
-    onStartSpeechInput: () -> Unit = {},
-    onStopSpeechInput: () -> Unit = {},
-    onCancelSpeechInput: () -> Unit = {},
     onSend: () -> Unit,
     onPickImage: () -> Unit = {},
     onPickFile: () -> Unit = {},
@@ -130,9 +125,6 @@ fun ChatScreen(
     onContinueGeneration: () -> Unit,
     onFeedback: (ChatMessageUiModel, MessageFeedback) -> Unit,
     onRegenerate: (ChatMessageUiModel) -> Unit,
-    onPlayMessage: (String, String) -> Unit = { _, _ -> },
-    onPausePlayback: () -> Unit = {},
-    onStopPlayback: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
     onOpenConversationBrowser: () -> Unit = {},
     onDismissConversationBrowser: () -> Unit = {},
@@ -283,8 +275,6 @@ fun ChatScreen(
                 onInputChanged = onInputChanged,
                 onSend = onSend,
                 onStopGenerating = onStopGenerating,
-                onStartSpeechInput = onStartSpeechInput,
-                onStopSpeechInput = onStopSpeechInput,
                 onPickImage = onPickImage,
                 onPickFile = onPickFile,
                 onToggleAttachmentActions = {
@@ -343,10 +333,6 @@ fun ChatScreen(
                             onContinueGeneration = onContinueGeneration,
                             onRegenerate = { onRegenerate(message) },
                             onFeedback = { feedback -> onFeedback(message, feedback) },
-                            ttsPlaybackState = uiState.ttsPlaybackState,
-                            onPlayMessage = onPlayMessage,
-                            onPausePlayback = onPausePlayback,
-                            onStopPlayback = onStopPlayback,
                             onSuggestedQuestion = onSuggestedQuestion,
                             onOpenCitation = onOpenCitation,
                             onUpdateInteractiveDraft = onUpdateInteractiveDraft,
@@ -384,18 +370,6 @@ fun ChatScreen(
                     onRemoveAttachment = onRemoveAttachment,
                     onRetryAttachment = onRetryAttachment,
                     onCancelAttachmentUpload = onCancelAttachmentUpload,
-                )
-            }
-            if (
-                uiState.speechInputState.status != SpeechInputStatus.Idle ||
-                uiState.speechInputState.transcript.isNotBlank() ||
-                !uiState.speechInputState.errorMessage.isNullOrBlank()
-            ) {
-                SpeechInputComposer(
-                    state = uiState.speechInputState,
-                    onStart = onStartSpeechInput,
-                    onStop = onStopSpeechInput,
-                    onCancel = onCancelSpeechInput,
                 )
             }
             if (uiState.canStopGeneration) {
@@ -575,8 +549,6 @@ private fun ChatGeminiComposer(
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
     onStopGenerating: () -> Unit,
-    onStartSpeechInput: () -> Unit,
-    onStopSpeechInput: () -> Unit,
     onPickImage: () -> Unit,
     onPickFile: () -> Unit,
     onToggleAttachmentActions: () -> Unit,
@@ -661,22 +633,6 @@ private fun ChatGeminiComposer(
                             modifier = Modifier.testTag(ChatTestTags.CHAT_PRIMARY_ACTION_BUTTON),
                         )
                     }
-                    ChatComposerPrimaryAction.Voice -> {
-                        GeminiComposerPainterButton(
-                            painter = painterResource(id = android.R.drawable.ic_btn_speak_now),
-                            contentDescription = stringResource(R.string.chat_composer_voice),
-                            onClick = {
-                                if (uiState.speechInputState.status == SpeechInputStatus.Recording ||
-                                    uiState.speechInputState.status == SpeechInputStatus.Recognizing
-                                ) {
-                                    onStopSpeechInput()
-                                } else {
-                                    onStartSpeechInput()
-                                }
-                            },
-                            modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
-                        )
-                    }
                 }
             }
         }
@@ -714,114 +670,6 @@ private fun GeminiComposerIconButton(
             tint = colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.55f),
             modifier = Modifier.size(21.dp),
         )
-    }
-}
-
-@Composable
-private fun GeminiComposerPainterButton(
-    painter: androidx.compose.ui.graphics.painter.Painter,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    IconButton(
-        onClick = onClick,
-        modifier =
-            modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(
-                    if (colorScheme.background.luminance() > 0.5f) {
-                        Color(0xFFF0F2F5)
-                    } else {
-                        colorScheme.surfaceContainerHigh
-                    },
-                ),
-    ) {
-        Icon(
-            painter = painter,
-            contentDescription = contentDescription,
-            tint = colorScheme.onSurface,
-            modifier = Modifier.size(21.dp),
-        )
-    }
-}
-
-@Composable
-private fun SpeechInputComposer(
-    state: SpeechInputUiState,
-    onStart: () -> Unit,
-    onStop: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    Card(
-        colors =
-            CardDefaults.cardColors(
-                containerColor = colorScheme.surfaceVariant,
-            ),
-        modifier = Modifier.fillMaxWidth().testTag(ChatTestTags.CHAT_SPEECH_STATUS),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-                Text(
-                    text =
-                        when (state.status) {
-                        SpeechInputStatus.Recording -> appString("chat_speech_recording")
-                        SpeechInputStatus.Recognizing -> appString("chat_speech_recognizing")
-                        SpeechInputStatus.Error -> state.errorMessage ?: appString("chat_error_speech_failed")
-                        SpeechInputStatus.Idle -> appString("chat_speech_start")
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colorScheme.onSurface,
-                )
-            if (state.transcript.isNotBlank()) {
-                Text(
-                    text = state.transcript,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colorScheme.onSurface,
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                when (state.status) {
-                    SpeechInputStatus.Recording,
-                    SpeechInputStatus.Recognizing,
-                    -> {
-                        OutlinedButton(
-                            onClick = onStop,
-                            modifier = Modifier.testTag(ChatTestTags.CHAT_SPEECH_STOP),
-                        ) {
-                            Text(appString("chat_speech_stop"))
-                        }
-                        TextButton(
-                            onClick = onCancel,
-                            modifier = Modifier.testTag(ChatTestTags.CHAT_SPEECH_CANCEL),
-                        ) {
-                            Text(appString("chat_speech_cancel"))
-                        }
-                    }
-                    SpeechInputStatus.Error,
-                    SpeechInputStatus.Idle,
-                    -> {
-                        OutlinedButton(
-                            onClick = onStart,
-                            modifier = Modifier.testTag(ChatTestTags.CHAT_MIC_BUTTON),
-                        ) {
-                            Text(
-                                if (state.status == SpeechInputStatus.Error) {
-                                    appString("chat_speech_retry")
-                                } else {
-                                    appString("chat_speech_start")
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -1054,10 +902,6 @@ private fun MessageCard(
     onContinueGeneration: () -> Unit,
     onRegenerate: () -> Unit,
     onFeedback: (MessageFeedback) -> Unit,
-    ttsPlaybackState: TtsPlaybackUiState,
-    onPlayMessage: (String, String) -> Unit,
-    onPausePlayback: () -> Unit,
-    onStopPlayback: () -> Unit,
     onSuggestedQuestion: (String) -> Unit,
     onOpenCitation: (CitationItemUiModel) -> Unit,
     onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit,
@@ -1251,26 +1095,6 @@ private fun MessageCard(
                         },
                     ),
                 )
-            }
-            TextButton(
-                onClick = { onPlayMessage(message.messageId, message.markdown) },
-                modifier = Modifier.testTag(ChatTestTags.messageTtsAction(message.messageId)),
-            ) {
-                Text(appString("chat_tts_play"))
-            }
-            if (ttsPlaybackState.messageId == message.messageId && ttsPlaybackState.status == TtsPlaybackStatus.Playing) {
-                TextButton(
-                    onClick = onPausePlayback,
-                    modifier = Modifier.testTag(ChatTestTags.messageTtsPauseAction(message.messageId)),
-                ) {
-                    Text(appString("chat_tts_pause"))
-                }
-                TextButton(
-                    onClick = onStopPlayback,
-                    modifier = Modifier.testTag(ChatTestTags.messageTtsStopAction(message.messageId)),
-                ) {
-                    Text(appString("chat_tts_stop"))
-                }
             }
         }
         if (message.citations.isNotEmpty()) {

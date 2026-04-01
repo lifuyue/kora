@@ -10,8 +10,6 @@
 - Supported variants:
   - `light` as compatibility theme
   - `dark` as default design target
-  - `oled-dark` as enhanced variant for AMOLED devices
-  - `dynamic color` as optional enhancement, not the primary brand driver
 - Layout rhythm: 4dp grid with 8/12/16/24/32 spacing tiers.
 
 ## Color Tokens

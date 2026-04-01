@@ -30,21 +30,6 @@ enum class InteractiveCardStatus {
     Expired,
 }
 
-enum class SpeechInputStatus {
-    Idle,
-    Recording,
-    Recognizing,
-    Error,
-}
-
-enum class TtsPlaybackStatus {
-    Idle,
-    Playing,
-    Paused,
-    Stopped,
-    Error,
-}
-
 enum class ConversationExportFormat {
     Txt,
     Json,
@@ -100,21 +85,6 @@ data class InteractiveCardUiModel(
     val fields: List<InteractiveFieldUiModel> = emptyList(),
     val options: List<String> = emptyList(),
     val selectedOption: String? = null,
-)
-
-@Immutable
-data class SpeechInputUiState(
-    val status: SpeechInputStatus = SpeechInputStatus.Idle,
-    val transcript: String = "",
-    val errorMessage: String? = null,
-)
-
-@Immutable
-data class TtsPlaybackUiState(
-    val messageId: String? = null,
-    val status: TtsPlaybackStatus = TtsPlaybackStatus.Idle,
-    val progress: Float = 0f,
-    val errorMessage: String? = null,
 )
 
 @Immutable
@@ -255,8 +225,6 @@ data class ChatUiState(
     val attachments: List<AttachmentDraftUiModel> = emptyList(),
     val attachmentConfig: ChatAttachmentConfig = ChatAttachmentConfig(),
     val pendingInteractiveCard: InteractiveCardUiModel? = null,
-    val speechInputState: SpeechInputUiState = SpeechInputUiState(),
-    val ttsPlaybackState: TtsPlaybackUiState = TtsPlaybackUiState(),
     val shareExportState: ShareExportUiState = ShareExportUiState(),
 ) {
     val canStopGeneration: Boolean
@@ -266,8 +234,6 @@ data class ChatUiState(
         get() =
             !isSending &&
                 !canStopGeneration &&
-                speechInputState.status != SpeechInputStatus.Recording &&
-                speechInputState.status != SpeechInputStatus.Recognizing &&
                 (input.isNotBlank() || attachments.any { it.uploadStatus == AttachmentUploadStatus.Uploaded }) &&
                 attachments.none { it.uploadStatus == AttachmentUploadStatus.Uploading || it.uploadStatus == AttachmentUploadStatus.Failed }
 }
