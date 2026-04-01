@@ -17,7 +17,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -62,7 +61,6 @@ fun ChatDrawerContent(
     onNewConversation: () -> Unit,
     onOpenConversation: (String) -> Unit,
     onOpenKnowledge: () -> Unit,
-    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val drawerColors = chatDrawerColors(MaterialTheme.colorScheme)
@@ -102,15 +100,6 @@ fun ChatDrawerContent(
                 title = stringResource(R.string.chat_drawer_knowledge),
                 tag = ChatTestTags.CHAT_DRAWER_KNOWLEDGE,
                 onClick = onOpenKnowledge,
-                primaryText = drawerColors.primaryText,
-                iconBadge = drawerColors.iconBadge,
-            )
-            DrawerSectionHeader(title = stringResource(R.string.chat_drawer_gem_title), color = drawerColors.primaryText)
-            DrawerActionRow(
-                icon = Icons.Filled.Settings,
-                title = stringResource(R.string.chat_drawer_settings),
-                tag = ChatTestTags.CHAT_DRAWER_SETTINGS,
-                onClick = onOpenSettings,
                 primaryText = drawerColors.primaryText,
                 iconBadge = drawerColors.iconBadge,
             )

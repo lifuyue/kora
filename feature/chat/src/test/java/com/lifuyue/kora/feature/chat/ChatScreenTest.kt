@@ -197,7 +197,9 @@ class ChatScreenTest {
     }
 
     @Test
-    fun quickSettingsButtonIsPresentInGeminiComposer() {
+    fun settingsAvatarTriggersCallback() {
+        var openedSettings = false
+
         composeRule.setContent {
             ChatScreen(
                 uiState = ChatUiState(appId = "app-1", chatId = "chat-1"),
@@ -208,14 +210,17 @@ class ChatScreenTest {
                 onContinueGeneration = {},
                 onFeedback = { _, _ -> },
                 onRegenerate = { _ -> },
+                onOpenQuickSettings = { openedSettings = true },
             )
         }
 
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_SETTINGS_BUTTON).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_SETTINGS_BUTTON).performClick()
+        composeRule.runOnIdle { assertTrue(openedSettings) }
     }
 
     @Test
-    fun geminiComposerUsesThreePrimaryControlsAndAttachmentTriggerFileFlow() {
+    fun geminiComposerUsesAttachmentAndVoiceControls() {
         val context = ApplicationProvider.getApplicationContext<Context>()
 
         composeRule.setContent {
@@ -241,7 +246,7 @@ class ChatScreenTest {
         }
 
         composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON).assertExists()
-        composeRule.onNodeWithTag(ChatTestTags.CHAT_QUICK_SETTINGS_BUTTON).assertExists()
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_SETTINGS_BUTTON).assertExists()
         composeRule.onNodeWithTag(ChatTestTags.CHAT_MIC_BUTTON).assertExists()
         composeRule.onNodeWithText(context.chatString("chat_mode_fast")).assertDoesNotExist()
 

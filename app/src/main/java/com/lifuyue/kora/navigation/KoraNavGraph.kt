@@ -41,7 +41,7 @@ import com.lifuyue.kora.core.database.store.ShareLinkPayload
 import com.lifuyue.kora.feature.chat.ChatRoutes
 import com.lifuyue.kora.feature.chat.chatGraph
 import com.lifuyue.kora.feature.knowledge.KnowledgeRoutes
-import com.lifuyue.kora.feature.settings.ChatQuickSettingsRoute
+import com.lifuyue.kora.feature.settings.ChatSettingsSheetRoute
 import com.lifuyue.kora.feature.settings.SettingsRoutes
 import com.lifuyue.kora.feature.knowledge.knowledgeGraph
 import com.lifuyue.kora.feature.settings.settingsGraph
@@ -207,7 +207,7 @@ private fun OnboardingRoute(
 @Composable
 private fun KoraShell(snapshot: ConnectionSnapshot) {
     val navController = rememberNavController()
-    var showChatQuickSettings by rememberSaveable { mutableStateOf(false) }
+    var chatSettingsRoute by rememberSaveable { mutableStateOf<String?>(null) }
     val chatStartRoute = remember(snapshot.selectedAppId) { chatShellStartRoute(snapshot) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -258,14 +258,6 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
                             }
                         }
                     },
-                    onOpenSettings = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate(SettingsRoutes.OVERVIEW) {
-                                launchSingleTop = true
-                            }
-                        }
-                    },
                 )
             },
         ) {
@@ -273,12 +265,12 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
                 containerColor = MaterialTheme.colorScheme.background,
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
             ) { innerPadding ->
-                if (showChatQuickSettings) {
-                    androidx.compose.material3.ModalBottomSheet(onDismissRequest = { showChatQuickSettings = false }) {
-                        ChatQuickSettingsRoute(
-                            onOpenFullSettings = {
-                                showChatQuickSettings = false
-                                navController.navigate(SettingsRoutes.OVERVIEW) {
+                chatSettingsRoute?.let {
+                    androidx.compose.material3.ModalBottomSheet(onDismissRequest = { chatSettingsRoute = null }) {
+                        ChatSettingsSheetRoute(
+                            onOpenRoute = { route ->
+                                chatSettingsRoute = null
+                                navController.navigate(route) {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
@@ -314,7 +306,7 @@ private fun KoraShell(snapshot: ConnectionSnapshot) {
                     if (!snapshot.selectedAppId.isNullOrBlank()) {
                         chatGraph(
                             navController = navController,
-                            onOpenQuickSettings = { showChatQuickSettings = true },
+                            onOpenQuickSettings = { chatSettingsRoute = SettingsRoutes.OVERVIEW },
                             onOpenDrawer = { scope.launch { drawerState.open() } },
                         )
                     }

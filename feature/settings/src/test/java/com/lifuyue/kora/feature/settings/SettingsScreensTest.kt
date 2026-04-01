@@ -283,36 +283,29 @@ class SettingsScreensTest {
     }
 
     @Test
-    fun chatQuickSettingsShowsCommonControlsAndFullSettingsAction() {
+    fun chatSettingsSheetShowsAccountHeaderAndSettingsEntries() {
         composeRule.setContent {
-            ChatQuickSettingsContent(
-                themeState = ThemeAppearanceUiState(themeMode = ThemeMode.DARK),
-                chatPreferencesState =
-                    ChatPreferencesUiState(
-                        streamEnabled = true,
-                        autoScroll = true,
-                        showCitationsByDefault = false,
+            ChatSettingsSheetContent(
+                state =
+                    SettingsOverviewUiState(
+                        serverBaseUrl = "https://fastgpt.example.com",
+                        themeMode = ThemeMode.DARK,
+                        selectedLanguageTag = "zh-CN",
                     ),
-                languageState = LanguageSettingsUiState(selectedLanguageTag = "zh-CN"),
-                audioState =
-                    AudioSettingsUiState(
-                        speechToTextEngine = SpeechToTextEngine.WhisperApp,
-                        autoSendTranscripts = true,
-                    ),
-                onThemeModeChange = {},
-                onLanguageTagChange = {},
-                onStreamEnabledChange = {},
-                onShowCitationsChange = {},
-                onAutoSendTranscriptsChange = {},
-                onOpenFullSettings = {},
+                onOpenConnection = {},
+                onOpenTheme = {},
+                onOpenChatPreferences = {},
+                onOpenAudio = {},
+                onOpenLanguage = {},
+                onOpenCache = {},
+                onOpenAbout = {},
             )
         }
 
-        composeRule.onNodeWithTag("chat-quick-settings").assertIsDisplayed()
-        composeRule.onNodeWithTag("chat-quick-settings-stream").assertIsOn()
-        composeRule.onNodeWithTag("chat-quick-settings-citations").assertIsOff()
-        composeRule.onNodeWithTag("chat-quick-settings-audio-auto-send").assertIsOn()
-        composeRule.onNodeWithTag("chat-quick-settings-open-full").fetchSemanticsNode()
+        composeRule.onNodeWithTag("chat_settings_sheet").assertIsDisplayed()
+        composeRule.onNodeWithText("local@kora.app").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat-settings-theme").assertExists()
+        composeRule.onNodeWithText("https://fastgpt.example.com").assertIsDisplayed()
     }
 
     @Test

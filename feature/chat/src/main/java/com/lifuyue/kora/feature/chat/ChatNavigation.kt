@@ -8,10 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -214,13 +210,10 @@ private fun ChatRoute(
     onOpenQuickSettings: () -> Unit,
     onOpenDrawer: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel(),
-    appSelectorViewModel: AppSelectorViewModel = hiltViewModel(),
     conversationListViewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
-    val appSelectorUiState = appSelectorViewModel.uiState.collectAsStateWithLifecycle()
     val conversationBrowserUiState = conversationListViewModel.uiState.collectAsStateWithLifecycle()
-    var showAppSelector by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val recordAudioPermissionLauncher =
@@ -261,9 +254,7 @@ private fun ChatRoute(
     BackHandler(onBack = handleBack)
     ChatScreen(
         uiState = uiState.value,
-        appSelectorUiState = appSelectorUiState.value,
         conversationBrowserUiState = conversationBrowserUiState.value,
-        showAppSelector = showAppSelector,
         onBack = handleBack,
         onInputChanged = viewModel::updateInput,
         onStartSpeechInput = {
@@ -300,21 +291,8 @@ private fun ChatRoute(
         onPlayMessage = viewModel::playMessage,
         onPausePlayback = viewModel::pausePlayback,
         onStopPlayback = viewModel::stopPlayback,
-        onOpenAppSelector = { showAppSelector = true },
-        onDismissAppSelector = { showAppSelector = false },
         onOpenDrawer = onOpenDrawer,
         onOpenQuickSettings = onOpenQuickSettings,
-        onSwitchApp = { appId ->
-            showAppSelector = false
-            appSelectorViewModel.switchApp(appId) { selected ->
-                navController.navigate(ChatRoutes.newThread(selected)) {
-                    popUpTo(ChatRoutes.CONVERSATIONS) { inclusive = false }
-                }
-            }
-        },
-        onOpenAppDetail = {
-            navController.navigate(ChatRoutes.appDetail(uiState.value.appId, uiState.value.chatId))
-        },
         onSuggestedQuestion = {
             viewModel.updateInput(it)
             viewModel.send()

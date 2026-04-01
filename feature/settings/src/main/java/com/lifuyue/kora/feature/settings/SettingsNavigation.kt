@@ -261,28 +261,20 @@ fun AboutRoute(
 }
 
 @Composable
-fun ChatQuickSettingsRoute(
-    onOpenFullSettings: () -> Unit,
-    themeViewModel: ThemeAppearanceViewModel = settingsViewModel(),
-    chatPreferencesViewModel: ChatPreferencesViewModel = settingsViewModel(),
-    languageViewModel: LanguageSettingsViewModel = settingsViewModel(),
-    audioSettingsViewModel: AudioSettingsViewModel = settingsViewModel(),
+fun ChatSettingsSheetRoute(
+    onOpenRoute: (String) -> Unit,
+    viewModel: SettingsOverviewViewModel = settingsViewModel(),
 ) {
-    val themeState by themeViewModel.uiState.collectAsStateWithLifecycle()
-    val chatPreferencesState by chatPreferencesViewModel.uiState.collectAsStateWithLifecycle()
-    val languageState by languageViewModel.uiState.collectAsStateWithLifecycle()
-    val audioState by audioSettingsViewModel.uiState.collectAsStateWithLifecycle()
-    ChatQuickSettingsContent(
-        themeState = themeState,
-        chatPreferencesState = chatPreferencesState,
-        languageState = languageState,
-        audioState = audioState,
-        onThemeModeChange = themeViewModel::updateThemeMode,
-        onLanguageTagChange = languageViewModel::updateLanguageTag,
-        onStreamEnabledChange = chatPreferencesViewModel::updateStreamEnabled,
-        onShowCitationsChange = chatPreferencesViewModel::updateShowCitationsByDefault,
-        onAutoSendTranscriptsChange = audioSettingsViewModel::updateAutoSendTranscripts,
-        onOpenFullSettings = onOpenFullSettings,
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    ChatSettingsSheetContent(
+        state = uiState,
+        onOpenConnection = { onOpenRoute(SettingsRoutes.CONNECTION) },
+        onOpenTheme = { onOpenRoute(SettingsRoutes.THEME) },
+        onOpenChatPreferences = { onOpenRoute(SettingsRoutes.CHAT_PREFERENCES) },
+        onOpenAudio = { onOpenRoute(SettingsRoutes.AUDIO) },
+        onOpenLanguage = { onOpenRoute(SettingsRoutes.LANGUAGE) },
+        onOpenCache = { onOpenRoute(SettingsRoutes.CACHE) },
+        onOpenAbout = { onOpenRoute(SettingsRoutes.ABOUT) },
     )
 }
 
