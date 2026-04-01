@@ -22,7 +22,6 @@
     <string name="chat_input_placeholder">Ask Kora</string>
     <string name="chat_composer_add_attachment">Add attachment</string>
     <string name="chat_composer_add_image">Add image</string>
-    <string name="chat_composer_voice">Voice input</string>
     <string name="chat_drawer_search_placeholder">Search conversations</string>
     <string name="chat_drawer_new_conversation">Start new chat</string>
     <string name="chat_drawer_history_title">Conversations</string>

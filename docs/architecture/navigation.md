@@ -14,8 +14,6 @@
 - `knowledge/datasets/{datasetId}/search-test`
 - `settings`
 - `settings/connection`
-- `settings/chat-preferences`
-- `settings/audio`
 - `settings/language`
 - `settings/storage`
 - `settings/theme`

@@ -222,9 +222,6 @@ class ChatViewModel
         savedStateHandle: SavedStateHandle,
         @ApplicationContext private val context: Context,
         private val chatRepository: ChatRepository,
-        private val chatAudioPreferencesSource: ChatAudioPreferencesSource,
-        private val speechRecognitionEngine: SpeechRecognitionEngine,
-        private val ttsPlaybackController: TtsPlaybackController,
         private val conversationExportManager: ConversationExportManager,
         private val strings: ChatStrings,
     ) : ViewModel() {
@@ -234,13 +231,8 @@ class ChatViewModel
         private val metaState = MutableStateFlow(ChatMetaState())
         private val attachments = MutableStateFlow<List<AttachmentDraftUiModel>>(emptyList())
         private val attachmentConfig = MutableStateFlow(ChatAttachmentConfig())
-        private val speechInputState = MutableStateFlow(SpeechInputUiState())
         private val shareExportState = MutableStateFlow(ShareExportUiState())
         private val uploadJobs = linkedMapOf<String, Job>()
-        private var speechSession: SpeechRecognitionSession? = null
-        private var speechSessionToken = 0L
-        private var activeSpeechSessionId: Long? = null
-        private var speechDraftBeforeStart: String = ""
 
         init {
             viewModelScope.launch {
@@ -285,8 +277,6 @@ class ChatViewModel
                 observeMessages(),
                 attachments,
                 attachmentConfig,
-                speechInputState,
-                ttsPlaybackController.state,
                 shareExportState,
             ) { values ->
                 val currentInput = values[0] as String
@@ -294,9 +284,7 @@ class ChatViewModel
                 val messages = values[2] as List<ChatMessageUiModel>
                 val currentAttachments = values[3] as List<AttachmentDraftUiModel>
                 val currentAttachmentConfig = values[4] as ChatAttachmentConfig
-                val currentSpeechInputState = values[5] as SpeechInputUiState
-                val currentTtsPlaybackState = values[6] as TtsPlaybackUiState
-                val currentShareExportState = values[7] as ShareExportUiState
+                val currentShareExportState = values[5] as ShareExportUiState
                 val pendingInteractiveCard =
                     messages.lastOrNull { it.interactiveCard?.status == InteractiveCardStatus.Pending }?.interactiveCard
                 ChatUiState(
@@ -311,8 +299,6 @@ class ChatViewModel
                     attachments = currentAttachments,
                     attachmentConfig = currentAttachmentConfig,
                     pendingInteractiveCard = pendingInteractiveCard,
-                    speechInputState = currentSpeechInputState,
-                    ttsPlaybackState = currentTtsPlaybackState,
                     shareExportState = currentShareExportState,
                 )
             }.stateIn(
@@ -325,125 +311,12 @@ class ChatViewModel
                     isInitialLoading = metaState.value.isLoading,
                     attachments = attachments.value,
                     attachmentConfig = attachmentConfig.value,
-                    speechInputState = speechInputState.value,
-                    ttsPlaybackState = ttsPlaybackController.state.value,
                     shareExportState = shareExportState.value,
                 ),
             )
 
         fun updateInput(value: String) {
             input.value = value
-        }
-
-        fun startSpeechInput() {
-            if (speechInputState.value.status == SpeechInputStatus.Recording || speechInputState.value.status == SpeechInputStatus.Recognizing) {
-                return
-            }
-
-            val audioPreferences = chatAudioPreferencesSource.currentAudioPreferences()
-            speechDraftBeforeStart = input.value
-            val sessionId = ++speechSessionToken
-            activeSpeechSessionId = sessionId
-            speechInputState.value =
-                SpeechInputUiState(
-                    status = SpeechInputStatus.Recording,
-                    transcript = "",
-                    errorMessage = null,
-                )
-            val session =
-                speechRecognitionEngine.start(
-                    speechToTextEngine = audioPreferences.speechToTextEngine,
-                    onPartialTranscript = { transcript ->
-                        if (isCurrentSpeechSession(sessionId)) {
-                            input.value = transcript
-                            speechInputState.value =
-                                speechInputState.value.copy(
-                                    status = SpeechInputStatus.Recording,
-                                    transcript = transcript,
-                                    errorMessage = null,
-                                )
-                        }
-                    },
-                    onFinalTranscript = { transcript ->
-                        if (isCurrentSpeechSession(sessionId)) {
-                            handleSpeechFinalTranscript(
-                                transcript = transcript,
-                                autoSendTranscripts = audioPreferences.autoSendTranscripts,
-                                sessionId = sessionId,
-                            )
-                        }
-                    },
-                    onError = { error ->
-                        if (isCurrentSpeechSession(sessionId)) {
-                            handleSpeechError(error, sessionId)
-                        }
-                    },
-                )
-            if (isCurrentSpeechSession(sessionId)) {
-                speechSession = session
-            }
-        }
-
-        fun stopSpeechInput() {
-            if (speechInputState.value.status != SpeechInputStatus.Recording) {
-                return
-            }
-            speechInputState.value =
-                speechInputState.value.copy(
-                    status = SpeechInputStatus.Recognizing,
-                    errorMessage = null,
-                )
-            speechSession?.stop()
-        }
-
-        fun cancelSpeechInput() {
-            if (speechInputState.value.status == SpeechInputStatus.Idle) {
-                return
-            }
-            speechSession?.cancel()
-            finishSpeechSession()
-            input.value = speechDraftBeforeStart
-            speechInputState.value = SpeechInputUiState()
-        }
-
-        fun onSpeechPermissionDenied() {
-            finishSpeechSession()
-            input.value = speechDraftBeforeStart
-            speechInputState.value =
-                SpeechInputUiState(
-                    status = SpeechInputStatus.Error,
-                    transcript = speechDraftBeforeStart,
-                    errorMessage = strings.speechPermissionRequired(),
-                )
-        }
-
-        fun playMessage(
-            messageId: String,
-            text: String,
-        ) {
-            val currentMessageId = ttsPlaybackController.state.value.messageId
-            if (currentMessageId != null && currentMessageId != messageId) {
-                ttsPlaybackController.stop()
-            }
-            ttsPlaybackController.play(
-                TtsPlaybackRequest(
-                    messageId = messageId,
-                    text = text,
-                    audioPreferences = chatAudioPreferencesSource.currentAudioPreferences(),
-                ),
-            )
-        }
-
-        fun pausePlayback() {
-            ttsPlaybackController.pause()
-        }
-
-        fun stopPlayback() {
-            ttsPlaybackController.stop()
-        }
-
-        fun onHostStopped() {
-            ttsPlaybackController.stop()
         }
 
         fun selectShareRange(
@@ -509,57 +382,7 @@ class ChatViewModel
             }
         }
 
-        private fun isCurrentSpeechSession(sessionId: Long): Boolean = activeSpeechSessionId == sessionId
-
-        private fun finishSpeechSession(sessionId: Long? = null) {
-            if (sessionId == null || speechSessionToken == sessionId) {
-                speechSession = null
-                activeSpeechSessionId = null
-            }
-        }
-
-        private fun handleSpeechFinalTranscript(
-            transcript: String,
-            autoSendTranscripts: Boolean,
-            sessionId: Long,
-        ) {
-            input.value = transcript
-            speechInputState.value =
-                SpeechInputUiState(
-                    status = SpeechInputStatus.Idle,
-                    transcript = transcript,
-                    errorMessage = null,
-                )
-            finishSpeechSession(sessionId)
-            if (autoSendTranscripts && transcript.isNotBlank()) {
-                sendDraftFromSpeech()
-            }
-        }
-
-        private fun handleSpeechError(
-            error: SpeechRecognitionError,
-            sessionId: Long,
-        ) {
-            finishSpeechSession(sessionId)
-            input.value = speechDraftBeforeStart
-            speechInputState.value =
-                SpeechInputUiState(
-                    status = SpeechInputStatus.Error,
-                    transcript = speechDraftBeforeStart,
-                    errorMessage =
-                        when (error) {
-                            is SpeechRecognitionError.PermissionDenied -> strings.speechPermissionRequired()
-                            is SpeechRecognitionError.Unavailable -> strings.speechUnavailable()
-                            is SpeechRecognitionError.RecognitionFailed -> strings.speechFailed()
-                        },
-                )
-        }
-
-        private fun sendDraftFromSpeech() {
-            sendCurrentDraft(clearSpeechStateAfterSuccess = true)
-        }
-
-        private fun sendCurrentDraft(clearSpeechStateAfterSuccess: Boolean) {
+        private fun sendCurrentDraft() {
             val text = input.value.trim()
             val sendableAttachments = attachments.value.filter { it.uploadStatus == AttachmentUploadStatus.Uploaded && it.uploadedRef != null }
             if (
@@ -585,10 +408,6 @@ class ChatViewModel
                     input.value = ""
                     attachments.value = emptyList()
                     metaState.update { it.copy(isSending = false) }
-                    if (clearSpeechStateAfterSuccess) {
-                        speechInputState.value = SpeechInputUiState()
-                        speechDraftBeforeStart = ""
-                    }
                 }.onFailure { error ->
                     metaState.update {
                         it.copy(
@@ -676,7 +495,7 @@ class ChatViewModel
         }
 
         fun send() {
-            sendCurrentDraft(clearSpeechStateAfterSuccess = false)
+            sendCurrentDraft()
         }
 
         fun stopGeneration() {
@@ -967,12 +786,6 @@ class AppDetailViewModel
                                 initData?.fileSelectConfig?.takeIf { it.isNotEmpty() }?.let { config ->
                                     add(AppDetailSectionUiModel("附件", config.toDisplayItems()))
                                 }
-                                initData?.ttsConfig?.takeIf { it.isNotEmpty() }?.let { config ->
-                                    add(AppDetailSectionUiModel("语音播报", config.toDisplayItems()))
-                                }
-                                initData?.whisperConfig?.takeIf { it.isNotEmpty() }?.let { config ->
-                                    add(AppDetailSectionUiModel("语音输入", config.toDisplayItems()))
-                                }
                                 initData?.questionGuide?.let { config ->
                                     add(
                                         AppDetailSectionUiModel(
@@ -1034,12 +847,6 @@ open class ChatStrings
             context.chatString("chat_error_attachment_limit_reached", maxFiles)
 
         open fun attachmentUploadFailed(): String = context.chatString("chat_error_attachment_upload_failed")
-
-        open fun speechPermissionRequired(): String = context.appString("chat_error_speech_permission_required")
-
-        open fun speechUnavailable(): String = context.appString("chat_error_speech_unavailable")
-
-        open fun speechFailed(): String = context.appString("chat_error_speech_failed")
     }
 
 private fun JsonArray.toDisplayItems(): List<String> = mapNotNull { element -> element.toString().trim('"').takeIf { it.isNotBlank() } }

@@ -6,11 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.lifuyue.kora.core.common.ConnectionType
-import com.lifuyue.kora.core.common.SpeechToTextEngine
-import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,29 +41,12 @@ class ConnectionPreferencesStore internal constructor(
                     model = preferences[Keys.MODEL],
                     selectedAppId = preferences[Keys.SELECTED_APP_ID],
                     onboardingCompleted = preferences[Keys.ONBOARDING_COMPLETED] ?: false,
-                    streamEnabled = preferences[Keys.STREAM_ENABLED] ?: true,
-                    autoScroll = preferences[Keys.AUTO_SCROLL] ?: true,
-                    fontSizeScale = preferences[Keys.FONT_SIZE_SCALE] ?: 1f,
-                    showCitationsByDefault = preferences[Keys.SHOW_CITATIONS_BY_DEFAULT] ?: true,
                     themeMode =
                         preferences[Keys.THEME_MODE]
                             ?.let { storedMode -> ThemeMode.entries.firstOrNull { it.name == storedMode } }
-                            ?: ThemeMode.SYSTEM,
-                    dynamicColorEnabled = preferences[Keys.DYNAMIC_COLOR_ENABLED] ?: true,
-                    oledEnabled = preferences[Keys.OLED_ENABLED] ?: false,
+                            ?: ThemeMode.DARK,
                     languageInitialized = preferences[Keys.LANGUAGE_INITIALIZED] ?: false,
                     languageTag = preferences[Keys.LANGUAGE_TAG],
-                    speechToTextEngine =
-                        preferences[Keys.SPEECH_TO_TEXT_ENGINE]
-                            ?.let { storedEngine -> SpeechToTextEngine.entries.firstOrNull { it.name == storedEngine } }
-                            ?: SpeechToTextEngine.System,
-                    autoSendTranscripts = preferences[Keys.AUTO_SEND_TRANSCRIPTS] ?: false,
-                    textToSpeechEngine =
-                        preferences[Keys.TEXT_TO_SPEECH_ENGINE]
-                            ?.let { storedEngine -> TextToSpeechEngine.entries.firstOrNull { it.name == storedEngine } }
-                            ?: TextToSpeechEngine.System,
-                    speechRate = preferences[Keys.SPEECH_RATE] ?: 1f,
-                    defaultVoiceName = preferences[Keys.DEFAULT_VOICE_NAME],
                 )
             }
 
@@ -118,45 +98,9 @@ class ConnectionPreferencesStore internal constructor(
         }
     }
 
-    suspend fun updateStreamEnabled(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.STREAM_ENABLED] = value
-        }
-    }
-
-    suspend fun updateAutoScroll(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.AUTO_SCROLL] = value
-        }
-    }
-
-    suspend fun updateFontSizeScale(value: Float) {
-        dataStore.edit { preferences ->
-            preferences[Keys.FONT_SIZE_SCALE] = value
-        }
-    }
-
-    suspend fun updateShowCitationsByDefault(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.SHOW_CITATIONS_BY_DEFAULT] = value
-        }
-    }
-
     suspend fun updateThemeMode(value: ThemeMode) {
         dataStore.edit { preferences ->
             preferences[Keys.THEME_MODE] = value.name
-        }
-    }
-
-    suspend fun updateDynamicColorEnabled(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.DYNAMIC_COLOR_ENABLED] = value
-        }
-    }
-
-    suspend fun updateOledEnabled(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.OLED_ENABLED] = value
         }
     }
 
@@ -172,40 +116,6 @@ class ConnectionPreferencesStore internal constructor(
                 preferences.remove(Keys.LANGUAGE_TAG)
             } else {
                 preferences[Keys.LANGUAGE_TAG] = value
-            }
-        }
-    }
-
-    suspend fun updateSpeechToTextEngine(value: SpeechToTextEngine) {
-        dataStore.edit { preferences ->
-            preferences[Keys.SPEECH_TO_TEXT_ENGINE] = value.name
-        }
-    }
-
-    suspend fun updateAutoSendTranscripts(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.AUTO_SEND_TRANSCRIPTS] = value
-        }
-    }
-
-    suspend fun updateTextToSpeechEngine(value: TextToSpeechEngine) {
-        dataStore.edit { preferences ->
-            preferences[Keys.TEXT_TO_SPEECH_ENGINE] = value.name
-        }
-    }
-
-    suspend fun updateSpeechRate(value: Float) {
-        dataStore.edit { preferences ->
-            preferences[Keys.SPEECH_RATE] = value
-        }
-    }
-
-    suspend fun updateDefaultVoiceName(value: String?) {
-        dataStore.edit { preferences ->
-            if (value == null) {
-                preferences.remove(Keys.DEFAULT_VOICE_NAME)
-            } else {
-                preferences[Keys.DEFAULT_VOICE_NAME] = value
             }
         }
     }
@@ -240,20 +150,9 @@ class ConnectionPreferencesStore internal constructor(
         val MODEL = stringPreferencesKey("model")
         val SELECTED_APP_ID = stringPreferencesKey("selected_app_id")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
-        val STREAM_ENABLED = booleanPreferencesKey("stream_enabled")
-        val AUTO_SCROLL = booleanPreferencesKey("auto_scroll")
-        val FONT_SIZE_SCALE = floatPreferencesKey("font_size_scale")
-        val SHOW_CITATIONS_BY_DEFAULT = booleanPreferencesKey("show_citations_by_default")
         val THEME_MODE = stringPreferencesKey("theme_mode")
-        val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
-        val OLED_ENABLED = booleanPreferencesKey("oled_enabled")
         val LANGUAGE_INITIALIZED = booleanPreferencesKey("language_initialized")
         val LANGUAGE_TAG = stringPreferencesKey("language_tag")
-        val SPEECH_TO_TEXT_ENGINE = stringPreferencesKey("speech_to_text_engine")
-        val AUTO_SEND_TRANSCRIPTS = booleanPreferencesKey("auto_send_transcripts")
-        val TEXT_TO_SPEECH_ENGINE = stringPreferencesKey("text_to_speech_engine")
-        val SPEECH_RATE = floatPreferencesKey("speech_rate")
-        val DEFAULT_VOICE_NAME = stringPreferencesKey("default_voice_name")
     }
 
     private fun inferLegacyConnectionType(preferences: Preferences): ConnectionType =

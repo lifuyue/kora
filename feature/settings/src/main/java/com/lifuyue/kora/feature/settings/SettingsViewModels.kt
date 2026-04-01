@@ -2,11 +2,9 @@ package com.lifuyue.kora.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
+import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestResult
-import com.lifuyue.kora.core.common.SpeechToTextEngine
-import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -157,151 +155,14 @@ class ThemeAppearanceViewModel
                 .map { snapshot ->
                     ThemeAppearanceUiState(
                         themeMode = snapshot.appearancePreferences.themeMode,
-                        dynamicColorEnabled = snapshot.appearancePreferences.dynamicColorEnabled,
-                        oledEnabled = snapshot.appearancePreferences.oledEnabled,
                     )
                 }
                 .stateIn(viewModelScope, SharingStarted.Eagerly, ThemeAppearanceUiState())
 
         fun updateThemeMode(mode: ThemeMode) {
             viewModelScope.launch {
-                val current = connectionFacade.snapshot.value.appearancePreferences
                 connectionFacade.updateAppearance(
                     themeMode = mode,
-                    dynamicColorEnabled = if (mode == ThemeMode.SYSTEM) current.dynamicColorEnabled else false,
-                    oledEnabled = current.oledEnabled,
-                )
-            }
-        }
-
-        fun updateDynamicColorEnabled(enabled: Boolean) {
-            viewModelScope.launch {
-                val current = connectionFacade.snapshot.value.appearancePreferences
-                connectionFacade.updateAppearance(
-                    themeMode = current.themeMode,
-                    dynamicColorEnabled = enabled,
-                    oledEnabled = current.oledEnabled,
-                )
-            }
-        }
-
-        fun updateOledEnabled(enabled: Boolean) {
-            viewModelScope.launch {
-                val current = connectionFacade.snapshot.value.appearancePreferences
-                connectionFacade.updateAppearance(
-                    themeMode = current.themeMode,
-                    dynamicColorEnabled = current.dynamicColorEnabled,
-                    oledEnabled = enabled,
-                )
-            }
-        }
-    }
-
-@HiltViewModel
-class ChatPreferencesViewModel
-    @Inject
-    constructor(
-        private val connectionFacade: SettingsConnectionFacade,
-    ) : ViewModel() {
-        private val mutableState = MutableStateFlow(ChatPreferencesUiState())
-        val uiState: StateFlow<ChatPreferencesUiState> = mutableState.asStateFlow()
-
-        init {
-            viewModelScope.launch {
-                connectionFacade.snapshot.collect { snapshot ->
-                    mutableState.value =
-                        ChatPreferencesUiState(
-                            streamEnabled = snapshot.appearancePreferences.streamEnabled,
-                            autoScroll = snapshot.appearancePreferences.autoScroll,
-                            fontSizeScale = snapshot.appearancePreferences.fontSizeScale,
-                            showCitationsByDefault = snapshot.appearancePreferences.showCitationsByDefault,
-                        )
-                }
-            }
-        }
-
-        fun updateStreamEnabled(enabled: Boolean) {
-            updatePreferences(mutableState.value.copy(streamEnabled = enabled))
-        }
-
-        fun updateAutoScroll(enabled: Boolean) {
-            updatePreferences(mutableState.value.copy(autoScroll = enabled))
-        }
-
-        fun updateFontSizeScale(value: Float) {
-            updatePreferences(mutableState.value.copy(fontSizeScale = value))
-        }
-
-        fun updateShowCitationsByDefault(enabled: Boolean) {
-            updatePreferences(mutableState.value.copy(showCitationsByDefault = enabled))
-        }
-
-        private fun updatePreferences(nextState: ChatPreferencesUiState) {
-            mutableState.value = nextState
-            viewModelScope.launch {
-                connectionFacade.updateChatPreferences(
-                    streamEnabled = nextState.streamEnabled,
-                    autoScroll = nextState.autoScroll,
-                    fontSizeScale = nextState.fontSizeScale,
-                    showCitationsByDefault = nextState.showCitationsByDefault,
-                )
-            }
-        }
-    }
-
-@HiltViewModel
-class AudioSettingsViewModel
-    @Inject
-    constructor(
-        private val connectionFacade: SettingsConnectionFacade,
-    ) : ViewModel() {
-        private val mutableState = MutableStateFlow(AudioSettingsUiState())
-        val uiState: StateFlow<AudioSettingsUiState> = mutableState.asStateFlow()
-
-        init {
-            viewModelScope.launch {
-                connectionFacade.snapshot.collect { snapshot ->
-                    mutableState.value =
-                        AudioSettingsUiState(
-                            speechToTextEngine = snapshot.audioPreferences.speechToTextEngine,
-                            autoSendTranscripts = snapshot.audioPreferences.autoSendTranscripts,
-                            textToSpeechEngine = snapshot.audioPreferences.textToSpeechEngine,
-                            speechRate = snapshot.audioPreferences.speechRate,
-                            defaultVoiceName = snapshot.audioPreferences.defaultVoiceName,
-                        )
-                }
-            }
-        }
-
-        fun updateSpeechToTextEngine(engine: SpeechToTextEngine) {
-            updatePreferences(mutableState.value.copy(speechToTextEngine = engine))
-        }
-
-        fun updateAutoSendTranscripts(enabled: Boolean) {
-            updatePreferences(mutableState.value.copy(autoSendTranscripts = enabled))
-        }
-
-        fun updateTextToSpeechEngine(engine: TextToSpeechEngine) {
-            updatePreferences(mutableState.value.copy(textToSpeechEngine = engine))
-        }
-
-        fun updateSpeechRate(value: Float) {
-            updatePreferences(mutableState.value.copy(speechRate = value.coerceIn(0.5f, 2.0f)))
-        }
-
-        fun updateDefaultVoiceName(value: String) {
-            updatePreferences(mutableState.value.copy(defaultVoiceName = value.trim().ifBlank { null }))
-        }
-
-        private fun updatePreferences(nextState: AudioSettingsUiState) {
-            mutableState.value = nextState
-            viewModelScope.launch {
-                connectionFacade.updateAudioPreferences(
-                    speechToTextEngine = nextState.speechToTextEngine,
-                    autoSendTranscripts = nextState.autoSendTranscripts,
-                    textToSpeechEngine = nextState.textToSpeechEngine,
-                    speechRate = nextState.speechRate,
-                    defaultVoiceName = nextState.defaultVoiceName,
                 )
             }
         }

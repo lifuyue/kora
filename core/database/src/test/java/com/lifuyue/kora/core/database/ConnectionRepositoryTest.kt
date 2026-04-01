@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.ConnectionType
-import com.lifuyue.kora.core.common.SpeechToTextEngine
-import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.core.database.store.ApiKeySecureStore
@@ -91,9 +89,7 @@ class ConnectionRepositoryTest {
                 model = null,
                 selectedAppId = "app-1",
                 onboardingCompleted = true,
-                themeMode = ThemeMode.OLED_DARK,
-                dynamicColorEnabled = false,
-                oledEnabled = true,
+                themeMode = ThemeMode.DARK,
             )
 
             val snapshot = repository.snapshot.first()
@@ -103,9 +99,7 @@ class ConnectionRepositoryTest {
             assertEquals("fastgpt-secret", snapshot.apiKey)
             assertEquals("app-1", snapshot.selectedAppId)
             assertTrue(snapshot.onboardingCompleted)
-            assertEquals(ThemeMode.OLED_DARK, snapshot.appearancePreferences.themeMode)
-            assertFalse(snapshot.appearancePreferences.dynamicColorEnabled)
-            assertTrue(snapshot.appearancePreferences.oledEnabled)
+            assertEquals(ThemeMode.DARK, snapshot.appearancePreferences.themeMode)
             assertEquals("zh-CN", snapshot.appearancePreferences.languageTag)
             assertEquals("https://api.fastgpt.in/", prefs.serverBaseUrl)
             assertTrue(prefs.apiKeyPresent)
@@ -254,46 +248,6 @@ class ConnectionRepositoryTest {
 
             assertTrue(repository.snapshot.first().onboardingCompleted)
             assertTrue(store.preferences.first().onboardingCompleted)
-        }
-
-    @Test
-    fun updateAudioPreferencesPersistsSnapshotAndPreferences() =
-        runBlocking {
-            val context = ApplicationProvider.getApplicationContext<Context>()
-            val store =
-                ConnectionPreferencesStore.createForTest(
-                    scope = this,
-                    file = File(context.filesDir, "connection-audio.preferences_pb"),
-                )
-            val secureStore = ApiKeySecureStore(context, "connection-audio-secure")
-            val repository =
-                ConnectionRepository(
-                    preferencesStore = store,
-                    apiKeySecureStore = secureStore,
-                    connectionProvider = MutableConnectionProvider(),
-                    apiFactory = FastGptApiFactory(NetworkJson.default),
-                    openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
-                )
-
-            repository.updateAudioPreferences(
-                speechToTextEngine = SpeechToTextEngine.WhisperApp,
-                autoSendTranscripts = true,
-                textToSpeechEngine = TextToSpeechEngine.AppManaged,
-                speechRate = 1.15f,
-                defaultVoiceName = "verse",
-            )
-
-            val snapshot = repository.snapshot.first()
-            val preferences = store.preferences.first()
-
-            assertEquals(SpeechToTextEngine.WhisperApp, snapshot.audioPreferences.speechToTextEngine)
-            assertTrue(snapshot.audioPreferences.autoSendTranscripts)
-            assertEquals(TextToSpeechEngine.AppManaged, snapshot.audioPreferences.textToSpeechEngine)
-            assertEquals(1.15f, snapshot.audioPreferences.speechRate)
-            assertEquals("verse", snapshot.audioPreferences.defaultVoiceName)
-            assertEquals(SpeechToTextEngine.WhisperApp, preferences.speechToTextEngine)
-            assertTrue(preferences.autoSendTranscripts)
-            assertEquals(TextToSpeechEngine.AppManaged, preferences.textToSpeechEngine)
         }
 }
 

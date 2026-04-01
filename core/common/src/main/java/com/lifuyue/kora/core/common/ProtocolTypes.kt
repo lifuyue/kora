@@ -24,8 +24,6 @@ fun ResponseEnvelope<*>.toNetworkError(): NetworkError =
 enum class ThemeMode {
     LIGHT,
     DARK,
-    SYSTEM,
-    OLED_DARK,
 }
 
 @Serializable
@@ -37,34 +35,8 @@ enum class ConnectionType {
 const val DIRECT_OPENAI_APP_ID = "direct-openai"
 
 data class AppearancePreferences(
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColorEnabled: Boolean = false,
-    val oledEnabled: Boolean = false,
-    val streamEnabled: Boolean = true,
-    val autoScroll: Boolean = true,
-    val fontSizeScale: Float = 1f,
-    val showCitationsByDefault: Boolean = true,
+    val themeMode: ThemeMode = ThemeMode.DARK,
     val languageTag: String? = null,
-)
-
-@Serializable
-enum class SpeechToTextEngine {
-    System,
-    WhisperApp,
-}
-
-@Serializable
-enum class TextToSpeechEngine {
-    System,
-    AppManaged,
-}
-
-data class AudioPreferences(
-    val speechToTextEngine: SpeechToTextEngine = SpeechToTextEngine.System,
-    val autoSendTranscripts: Boolean = false,
-    val textToSpeechEngine: TextToSpeechEngine = TextToSpeechEngine.System,
-    val speechRate: Float = 1f,
-    val defaultVoiceName: String? = null,
 )
 
 data class ConnectionSnapshot(
@@ -75,7 +47,6 @@ data class ConnectionSnapshot(
     val selectedAppId: String? = null,
     val onboardingCompleted: Boolean = false,
     val appearancePreferences: AppearancePreferences = AppearancePreferences(),
-    val audioPreferences: AudioPreferences = AudioPreferences(),
 ) {
     val hasApiKey: Boolean
         get() = !apiKey.isNullOrBlank()

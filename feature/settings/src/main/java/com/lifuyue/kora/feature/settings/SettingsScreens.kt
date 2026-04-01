@@ -30,8 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,8 +50,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestResult
-import com.lifuyue.kora.core.common.SpeechToTextEngine
-import com.lifuyue.kora.core.common.TextToSpeechEngine
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.common.ui.KoraGeminiTopBar
 import com.lifuyue.kora.core.common.ui.KoraMetricRow
@@ -217,8 +213,6 @@ fun SettingsOverviewScreen(
     onOpenConnection: () -> Unit,
     onOpenCurrentApp: () -> Unit,
     onOpenTheme: () -> Unit,
-    onOpenChatPreferences: () -> Unit,
-    onOpenAudio: () -> Unit = {},
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -323,18 +317,6 @@ fun SettingsOverviewScreen(
                 title = stringResource(R.string.settings_overview_section_common),
                 content = {
                     SettingsEntry(
-                        title = stringResource(R.string.settings_chat_preferences_title),
-                        summary = stringResource(R.string.settings_chat_preferences_summary),
-                        onClick = onOpenChatPreferences,
-                        testTag = "settings-chat-preferences",
-                    )
-                    SettingsEntry(
-                        title = appString("settings_audio_title"),
-                        summary = appString("settings_audio_summary"),
-                        onClick = onOpenAudio,
-                        testTag = "settings-audio",
-                    )
-                    SettingsEntry(
                         title = stringResource(R.string.settings_language_title),
                         summary = languageLabel(state.selectedLanguageTag),
                         onClick = onOpenLanguage,
@@ -417,8 +399,6 @@ private fun SettingsEntry(
 fun ThemeAppearanceScreen(
     state: ThemeAppearanceUiState,
     onThemeModeChange: (ThemeMode) -> Unit,
-    onDynamicColorChange: (Boolean) -> Unit,
-    onOledChange: (Boolean) -> Unit,
     onBack: (() -> Unit)? = null,
     onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -429,7 +409,7 @@ fun ThemeAppearanceScreen(
         onOpenDrawer = onOpenDrawer,
         modifier = modifier,
     ) {
-        ThemeMode.entries.forEach { mode ->
+        listOf(ThemeMode.LIGHT, ThemeMode.DARK).forEach { mode ->
             Row(
                 modifier =
                     Modifier
@@ -442,22 +422,6 @@ fun ThemeAppearanceScreen(
             }
             HorizontalDivider()
         }
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.settings_theme_dynamic_color))
-            Switch(
-                checked = state.dynamicColorEnabled,
-                onCheckedChange = onDynamicColorChange,
-                modifier = Modifier.semantics { testTag = "dynamic-color" },
-            )
-        }
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.settings_theme_oled))
-            Switch(
-                checked = state.oledEnabled,
-                onCheckedChange = onOledChange,
-                modifier = Modifier.semantics { testTag = "oled-toggle" },
-            )
-        }
     }
 }
 
@@ -466,8 +430,6 @@ fun ChatSettingsSheetContent(
     state: SettingsOverviewUiState,
     onOpenConnection: () -> Unit,
     onOpenTheme: () -> Unit,
-    onOpenChatPreferences: () -> Unit,
-    onOpenAudio: () -> Unit,
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -518,20 +480,6 @@ fun ChatSettingsSheetContent(
                     testTag = "chat-settings-theme",
                 )
                 ChatSettingsSheetEntry(
-                    title = stringResource(R.string.settings_chat_preferences_title),
-                    summary = stringResource(R.string.settings_chat_preferences_summary),
-                    onClick = onOpenChatPreferences,
-                    containerColor = cardColor,
-                    testTag = "chat-settings-chat-preferences",
-                )
-                ChatSettingsSheetEntry(
-                    title = appString("settings_audio_title"),
-                    summary = appString("settings_audio_summary"),
-                    onClick = onOpenAudio,
-                    containerColor = cardColor,
-                    testTag = "chat-settings-audio",
-                )
-                ChatSettingsSheetEntry(
                     title = stringResource(R.string.settings_language_title),
                     summary = languageLabel(state.selectedLanguageTag),
                     onClick = onOpenLanguage,
@@ -554,138 +502,6 @@ fun ChatSettingsSheetContent(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun ChatPreferencesScreen(
-    state: ChatPreferencesUiState,
-    onStreamEnabledChange: (Boolean) -> Unit,
-    onAutoScrollChange: (Boolean) -> Unit,
-    onShowCitationsChange: (Boolean) -> Unit,
-    onFontSizeScaleChange: (Float) -> Unit,
-    onBack: (() -> Unit)? = null,
-    onOpenDrawer: () -> Unit = {},
-    modifier: Modifier = Modifier,
-) {
-    SettingsPageColumn(
-        title = stringResource(R.string.settings_chat_preferences_title),
-        onBack = onBack,
-        onOpenDrawer = onOpenDrawer,
-        modifier = modifier,
-    ) {
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.settings_chat_preferences_stream))
-            Switch(
-                checked = state.streamEnabled,
-                onCheckedChange = onStreamEnabledChange,
-                modifier = Modifier.semantics { testTag = "chat-pref-stream" },
-            )
-        }
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.settings_chat_preferences_auto_scroll))
-            Switch(
-                checked = state.autoScroll,
-                onCheckedChange = onAutoScrollChange,
-                modifier = Modifier.semantics { testTag = "chat-pref-auto-scroll" },
-            )
-        }
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.settings_chat_preferences_citations))
-            Switch(
-                checked = state.showCitationsByDefault,
-                onCheckedChange = onShowCitationsChange,
-                modifier = Modifier.semantics { testTag = "chat-pref-citations" },
-            )
-        }
-        Text(stringResource(R.string.settings_chat_preferences_font_scale, (state.fontSizeScale * 100).toInt()))
-        Slider(
-            value = state.fontSizeScale,
-            onValueChange = onFontSizeScaleChange,
-            valueRange = 0.8f..1.4f,
-            steps = 5,
-        )
-    }
-}
-
-@Composable
-fun AudioSettingsScreen(
-    state: AudioSettingsUiState,
-    onSpeechToTextEngineChange: (SpeechToTextEngine) -> Unit,
-    onAutoSendTranscriptsChange: (Boolean) -> Unit,
-    onTextToSpeechEngineChange: (TextToSpeechEngine) -> Unit,
-    onSpeechRateChange: (Float) -> Unit,
-    onDefaultVoiceNameChange: (String) -> Unit,
-    onBack: (() -> Unit)? = null,
-    onOpenDrawer: () -> Unit = {},
-    modifier: Modifier = Modifier,
-) {
-    SettingsPageColumn(
-        title = appString("settings_audio_title"),
-        onBack = onBack,
-        onOpenDrawer = onOpenDrawer,
-        modifier = modifier,
-    ) {
-        SettingsSection(
-            title = appString("settings_audio_section_stt"),
-            content = {
-                Text(appString("settings_audio_stt_engine"), style = MaterialTheme.typography.titleMedium)
-                AudioEngineOption(
-                    tag = "audio-stt-system",
-                    label = appString("settings_audio_stt_engine_system"),
-                    selected = state.speechToTextEngine == SpeechToTextEngine.System,
-                    onClick = { onSpeechToTextEngineChange(SpeechToTextEngine.System) },
-                )
-                AudioEngineOption(
-                    tag = "audio-stt-whisper",
-                    label = appString("settings_audio_stt_engine_whisper"),
-                    selected = state.speechToTextEngine == SpeechToTextEngine.WhisperApp,
-                    onClick = { onSpeechToTextEngineChange(SpeechToTextEngine.WhisperApp) },
-                )
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text(appString("settings_audio_auto_send_transcripts"))
-                    Switch(
-                        checked = state.autoSendTranscripts,
-                        onCheckedChange = onAutoSendTranscriptsChange,
-                        modifier = Modifier.semantics { testTag = "audio-auto-send" },
-                    )
-                }
-            },
-        )
-        SettingsSection(
-            title = appString("settings_audio_section_tts"),
-            content = {
-                Text(appString("settings_audio_tts_engine"), style = MaterialTheme.typography.titleMedium)
-                AudioEngineOption(
-                    tag = "audio-tts-system",
-                    label = appString("settings_audio_tts_engine_system"),
-                    selected = state.textToSpeechEngine == TextToSpeechEngine.System,
-                    onClick = { onTextToSpeechEngineChange(TextToSpeechEngine.System) },
-                )
-                AudioEngineOption(
-                    tag = "audio-tts-app-managed",
-                    label = appString("settings_audio_tts_engine_app_managed"),
-                    selected = state.textToSpeechEngine == TextToSpeechEngine.AppManaged,
-                    onClick = { onTextToSpeechEngineChange(TextToSpeechEngine.AppManaged) },
-                )
-                Text(appString("settings_audio_speech_rate", state.speechRate), style = MaterialTheme.typography.bodyMedium)
-                Slider(
-                    value = state.speechRate,
-                    onValueChange = onSpeechRateChange,
-                    valueRange = 0.5f..2.0f,
-                    steps = 9,
-                    modifier = Modifier.semantics { testTag = "audio-speech-rate" },
-                )
-                OutlinedTextField(
-                    value = state.defaultVoiceName.orEmpty(),
-                    onValueChange = onDefaultVoiceNameChange,
-                    label = { Text(appString("settings_audio_default_voice")) },
-                    supportingText = { Text(appString("settings_audio_default_voice_hint")) },
-                    modifier = Modifier.fillMaxWidth().semantics { testTag = "audio-default-voice" },
-                    singleLine = true,
-                )
-            },
-        )
     }
 }
 
@@ -742,30 +558,6 @@ private fun LanguageOption(
         ) {
             Text(label)
             Text(if (selected) stringResource(R.string.settings_selected) else "")
-        }
-    }
-}
-
-@Composable
-private fun AudioEngineOption(
-    tag: String,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().semantics { testTag = tag },
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(label)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = selected, onClick = null)
-                Text(if (selected) stringResource(R.string.settings_selected) else "")
-            }
         }
     }
 }
@@ -973,17 +765,6 @@ private fun themeModeLabel(mode: ThemeMode): String =
         when (mode) {
             ThemeMode.LIGHT -> R.string.settings_theme_mode_light
             ThemeMode.DARK -> R.string.settings_theme_mode_dark
-            ThemeMode.SYSTEM -> R.string.settings_theme_mode_system
-            ThemeMode.OLED_DARK -> R.string.settings_theme_mode_oled_dark
-        },
-    )
-
-@Composable
-private fun speechToTextEngineLabel(engine: SpeechToTextEngine): String =
-    stringResource(
-        when (engine) {
-            SpeechToTextEngine.System -> R.string.settings_audio_engine_system
-            SpeechToTextEngine.WhisperApp -> R.string.settings_audio_engine_whisper_app
         },
     )
 
