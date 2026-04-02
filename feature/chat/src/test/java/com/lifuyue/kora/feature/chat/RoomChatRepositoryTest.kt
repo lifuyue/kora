@@ -294,7 +294,7 @@ class RoomChatRepositoryTest {
     }
 
     @Test
-    fun openAiStreamIgnoresJsonNullContentAndDoesNotExposeReasoning() =
+    fun openAiStreamIgnoresJsonNullContentAndPreservesReasoning() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             connectionProvider.update(
                 connectionProvider.getSnapshot().copy(
@@ -322,7 +322,7 @@ class RoomChatRepositoryTest {
             val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
             assertEquals(2, messages.size)
             assertEquals("你好", messages.last().markdown)
-            assertEquals("", messages.last().reasoning)
+            assertEquals("思考中", messages.last().reasoning)
         }
 
     @Test

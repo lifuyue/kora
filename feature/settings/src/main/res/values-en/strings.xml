@@ -38,9 +38,24 @@
     <string name="settings_connection_server_error">Server error: %1$s</string>
 
     <string name="settings_current_app_title">Current app</string>
+    <string name="settings_current_app_openai_summary">In OpenAI-compatible mode, the active app is determined by the selected model.</string>
+    <string name="settings_current_app_open_detail">Open app details</string>
+    <string name="settings_current_app_refresh">Refresh app list</string>
+    <string name="settings_current_app_loading">Loading app list...</string>
     <string name="settings_theme_title">Theme</string>
     <string name="settings_theme_mode_light">Light</string>
     <string name="settings_theme_mode_dark">Dark</string>
+    <string name="settings_chat_preferences_title">Chat preferences</string>
+    <string name="settings_chat_preferences_description">Control streaming replies and reasoning entry visibility in conversations.</string>
+    <string name="settings_chat_preferences_reasoning_title">Show reasoning entry</string>
+    <string name="settings_chat_preferences_reasoning_description">When the model returns reasoning, show an expandable entry inside the message.</string>
+    <string name="settings_chat_preferences_stream_title">Enable streaming responses</string>
+    <string name="settings_chat_preferences_stream_description">Show answer text incrementally while the response is being generated.</string>
+    <string name="settings_chat_preferences_reasoning_on">Reasoning entry on</string>
+    <string name="settings_chat_preferences_reasoning_off">Reasoning entry off</string>
+    <string name="settings_chat_preferences_stream_on">Streaming on</string>
+    <string name="settings_chat_preferences_stream_off">Streaming off</string>
+    <string name="settings_chat_preferences_summary">%1$s · %2$s</string>
 
     <string name="settings_quick_title">Quick chat settings</string>
     <string name="settings_quick_summary">Adjust common preferences without leaving the current conversation.</string>

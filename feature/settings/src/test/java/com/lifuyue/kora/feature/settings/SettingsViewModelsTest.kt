@@ -53,6 +53,19 @@ class SettingsViewModelsTest {
             assertNull(viewModel.uiState.value.model)
             assertEquals("app-1", viewModel.uiState.value.selectedAppId)
         }
+
+    @Test
+    fun chatPreferencesViewModelReflectsAndUpdatesPreferences() =
+        runTest {
+            val facade = FakeSettingsConnectionFacade()
+            val viewModel = ChatPreferencesViewModel(facade)
+
+            viewModel.updateShowReasoningEntry(false)
+            viewModel.updateStreamResponses(false)
+
+            assertEquals(false, viewModel.uiState.value.showReasoningEntry)
+            assertEquals(false, viewModel.uiState.value.streamResponses)
+        }
 }
 
 private class FakeSettingsConnectionFacade : SettingsConnectionFacade {
@@ -93,6 +106,20 @@ private class FakeSettingsConnectionFacade : SettingsConnectionFacade {
             mutableSnapshot.value.copy(
                 appearancePreferences =
                     mutableSnapshot.value.appearancePreferences.copy(languageTag = languageTag),
+            )
+    }
+
+    override suspend fun updateChatPreferences(
+        showReasoningEntry: Boolean,
+        streamResponses: Boolean,
+    ) {
+        mutableSnapshot.value =
+            mutableSnapshot.value.copy(
+                appearancePreferences =
+                    mutableSnapshot.value.appearancePreferences.copy(
+                        showReasoningEntry = showReasoningEntry,
+                        streamResponses = streamResponses,
+                    ),
             )
     }
 }

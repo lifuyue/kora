@@ -14,6 +14,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import com.lifuyue.kora.core.network.FastGptApi
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -27,6 +28,8 @@ object SettingsRoutes {
     const val LANGUAGE = "settings/language"
     const val CACHE = "settings/cache"
     const val ABOUT = "settings/about"
+    const val CURRENT_APP = "settings/current-app"
+    const val CHAT_PREFERENCES = "settings/chat-preferences"
 }
 
 fun NavGraphBuilder.settingsGraph(
@@ -40,15 +43,13 @@ fun NavGraphBuilder.settingsGraph(
         SettingsOverviewRoute(
             onOpenConnection = { navController.navigate(SettingsRoutes.CONNECTION) },
             onOpenCurrentApp = {
-                val appId = currentAppId
-                if (!appId.isNullOrBlank()) {
-                    onOpenCurrentApp?.invoke(appId)
-                }
+                navController.navigate(SettingsRoutes.CURRENT_APP)
             },
             onOpenTheme = { navController.navigate(SettingsRoutes.THEME) },
             onOpenLanguage = { navController.navigate(SettingsRoutes.LANGUAGE) },
             onOpenCache = { navController.navigate(SettingsRoutes.CACHE) },
             onOpenAbout = { navController.navigate(SettingsRoutes.ABOUT) },
+            onOpenChatPreferences = { navController.navigate(SettingsRoutes.CHAT_PREFERENCES) },
             onOpenDrawer = onOpenDrawer,
         )
     }
@@ -71,6 +72,21 @@ fun NavGraphBuilder.settingsGraph(
     composable(SettingsRoutes.ABOUT) {
         AboutRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
     }
+    composable(SettingsRoutes.CURRENT_APP) {
+        CurrentAppSettingsRoute(
+            onBack = { navController.popBackStack() },
+            onOpenDrawer = onOpenDrawer,
+            onOpenCurrentApp = { appId ->
+                if (!appId.isNullOrBlank()) {
+                    onOpenCurrentApp?.invoke(appId)
+                }
+            },
+            currentAppId = currentAppId,
+        )
+    }
+    composable(SettingsRoutes.CHAT_PREFERENCES) {
+        ChatPreferencesRoute(onBack = { navController.popBackStack() }, onOpenDrawer = onOpenDrawer)
+    }
 }
 
 @Composable
@@ -81,6 +97,7 @@ fun SettingsOverviewRoute(
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenChatPreferences: () -> Unit,
     onOpenDrawer: () -> Unit = {},
     viewModel: SettingsOverviewViewModel = settingsViewModel(),
 ) {
@@ -98,6 +115,7 @@ fun SettingsOverviewRoute(
                     onOpenLanguage = onOpenLanguage,
                     onOpenCache = onOpenCache,
                     onOpenAbout = onOpenAbout,
+                    onOpenChatPreferences = onOpenChatPreferences,
                     onOpenDrawer = onOpenDrawer,
                 )
             },
@@ -112,6 +130,7 @@ fun SettingsOverviewRoute(
             onOpenLanguage = onOpenLanguage,
             onOpenCache = onOpenCache,
             onOpenAbout = onOpenAbout,
+            onOpenChatPreferences = onOpenChatPreferences,
             onOpenDrawer = onOpenDrawer,
         )
     }
@@ -213,10 +232,52 @@ fun ChatSettingsSheetRoute(
     ChatSettingsSheetContent(
         state = uiState,
         onOpenConnection = { onOpenRoute(SettingsRoutes.CONNECTION) },
+        onOpenCurrentApp = { onOpenRoute(SettingsRoutes.CURRENT_APP) },
         onOpenTheme = { onOpenRoute(SettingsRoutes.THEME) },
         onOpenLanguage = { onOpenRoute(SettingsRoutes.LANGUAGE) },
         onOpenCache = { onOpenRoute(SettingsRoutes.CACHE) },
         onOpenAbout = { onOpenRoute(SettingsRoutes.ABOUT) },
+        onOpenChatPreferences = { onOpenRoute(SettingsRoutes.CHAT_PREFERENCES) },
+    )
+}
+
+@Composable
+fun ChatPreferencesRoute(
+    viewModel: ChatPreferencesViewModel = settingsViewModel(),
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    ChatPreferencesScreen(
+        state = uiState,
+        onShowReasoningEntryChange = viewModel::updateShowReasoningEntry,
+        onStreamResponsesChange = viewModel::updateStreamResponses,
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+    )
+}
+
+@Composable
+fun CurrentAppSettingsRoute(
+    viewModel: CurrentAppSettingsViewModel = settingsViewModel(),
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
+    onOpenCurrentApp: (String) -> Unit = {},
+    currentAppId: String? = null,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    CurrentAppSettingsScreen(
+        state = uiState,
+        onSwitchApp = viewModel::switchApp,
+        onRefresh = viewModel::refresh,
+        onOpenCurrentApp = {
+            val appId = uiState.selectedAppId ?: currentAppId
+            if (!appId.isNullOrBlank()) {
+                onOpenCurrentApp(appId)
+            }
+        },
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
     )
 }
 
@@ -224,6 +285,7 @@ fun ChatSettingsSheetRoute(
 @InstallIn(SingletonComponent::class)
 internal interface SettingsViewModelEntryPoint {
     fun connectionRepository(): ConnectionRepository
+    fun fastGptApi(): FastGptApi
 
     @ApplicationContext
     fun applicationContext(): Context
@@ -254,6 +316,10 @@ private inline fun <reified T : ViewModel> settingsViewModel(): T {
                             ThemeAppearanceViewModel(settingsConnectionFacade) as VM
                         LanguageSettingsViewModel::class.java ->
                             LanguageSettingsViewModel(settingsConnectionFacade) as VM
+                        ChatPreferencesViewModel::class.java ->
+                            ChatPreferencesViewModel(settingsConnectionFacade) as VM
+                        CurrentAppSettingsViewModel::class.java ->
+                            CurrentAppSettingsViewModel(settingsConnectionFacade, entryPoint.fastGptApi()) as VM
                         CacheSettingsViewModel::class.java ->
                             CacheSettingsViewModel(settingsCacheManager) as VM
                         AboutViewModel::class.java ->

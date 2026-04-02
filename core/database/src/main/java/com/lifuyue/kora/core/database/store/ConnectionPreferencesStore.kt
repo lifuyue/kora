@@ -47,6 +47,8 @@ class ConnectionPreferencesStore internal constructor(
                             ?: ThemeMode.DARK,
                     languageInitialized = preferences[Keys.LANGUAGE_INITIALIZED] ?: false,
                     languageTag = preferences[Keys.LANGUAGE_TAG],
+                    showReasoningEntry = preferences[Keys.SHOW_REASONING_ENTRY] ?: true,
+                    streamResponses = preferences[Keys.STREAM_RESPONSES] ?: true,
                 )
             }
 
@@ -120,6 +122,18 @@ class ConnectionPreferencesStore internal constructor(
         }
     }
 
+    suspend fun updateShowReasoningEntry(value: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SHOW_REASONING_ENTRY] = value
+        }
+    }
+
+    suspend fun updateStreamResponses(value: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.STREAM_RESPONSES] = value
+        }
+    }
+
     companion object {
         fun create(
             scope: CoroutineScope,
@@ -153,6 +167,8 @@ class ConnectionPreferencesStore internal constructor(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val LANGUAGE_INITIALIZED = booleanPreferencesKey("language_initialized")
         val LANGUAGE_TAG = stringPreferencesKey("language_tag")
+        val SHOW_REASONING_ENTRY = booleanPreferencesKey("show_reasoning_entry")
+        val STREAM_RESPONSES = booleanPreferencesKey("stream_responses")
     }
 
     private fun inferLegacyConnectionType(preferences: Preferences): ConnectionType =

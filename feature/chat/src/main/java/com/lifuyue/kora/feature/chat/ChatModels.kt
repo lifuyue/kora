@@ -149,9 +149,13 @@ data class ChatMessageUiModel(
     val citations: List<CitationItemUiModel> = emptyList(),
     val suggestedQuestions: List<String> = emptyList(),
     val interactiveCard: InteractiveCardUiModel? = null,
+    val isReasoningExpanded: Boolean = false,
 ) {
     val blocks: List<AssistantBlock>
         get() = parseAssistantBlocks(markdown)
+
+    val hasReasoning: Boolean
+        get() = reasoning.isNotBlank()
 }
 
 @Immutable
@@ -226,6 +230,8 @@ data class ChatUiState(
     val attachmentConfig: ChatAttachmentConfig = ChatAttachmentConfig(),
     val pendingInteractiveCard: InteractiveCardUiModel? = null,
     val shareExportState: ShareExportUiState = ShareExportUiState(),
+    val showReasoningEntry: Boolean = true,
+    val streamResponses: Boolean = true,
 ) {
     val canStopGeneration: Boolean
         get() = messages.any { it.isStreaming }
