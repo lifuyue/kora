@@ -13,4 +13,6 @@ data class ConnectionPreferences(
     val themeMode: ThemeMode = ThemeMode.DARK,
     val languageInitialized: Boolean = false,
     val languageTag: String? = null,
+    val showReasoningEntry: Boolean = true,
+    val streamResponses: Boolean = true,
 )

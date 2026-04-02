@@ -41,6 +41,11 @@ interface SettingsConnectionFacade {
     )
 
     suspend fun updateLanguageTag(languageTag: String?)
+
+    suspend fun updateChatPreferences(
+        showReasoningEntry: Boolean,
+        streamResponses: Boolean,
+    )
 }
 
 @Singleton
@@ -94,6 +99,16 @@ class ConnectionRepositorySettingsFacade
 
         override suspend fun updateLanguageTag(languageTag: String?) {
             connectionRepository.updateLanguageTag(languageTag)
+        }
+
+        override suspend fun updateChatPreferences(
+            showReasoningEntry: Boolean,
+            streamResponses: Boolean,
+        ) {
+            connectionRepository.updateChatPreferences(
+                showReasoningEntry = showReasoningEntry,
+                streamResponses = streamResponses,
+            )
         }
     }
 

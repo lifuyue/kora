@@ -6,6 +6,7 @@ import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.ThemeMode
+import com.lifuyue.kora.core.network.FastGptApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -139,6 +140,8 @@ class SettingsOverviewViewModel
                         selectedAppId = snapshot.selectedAppId,
                         themeMode = snapshot.appearancePreferences.themeMode,
                         selectedLanguageTag = snapshot.appearancePreferences.languageTag,
+                        showReasoningEntry = snapshot.appearancePreferences.showReasoningEntry,
+                        streamResponses = snapshot.appearancePreferences.streamResponses,
                     )
                 }
                 .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsOverviewUiState())
@@ -239,4 +242,111 @@ class AboutViewModel
                     licensesUrl = appInfoProvider.licensesUrl(),
                 ),
             ).asStateFlow()
+    }
+
+class ChatPreferencesViewModel
+    constructor(
+        private val connectionFacade: SettingsConnectionFacade,
+    ) : ViewModel() {
+        val uiState: StateFlow<ChatPreferencesUiState> =
+            connectionFacade.snapshot
+                .map { snapshot ->
+                    ChatPreferencesUiState(
+                        showReasoningEntry = snapshot.appearancePreferences.showReasoningEntry,
+                        streamResponses = snapshot.appearancePreferences.streamResponses,
+                    )
+                }.stateIn(viewModelScope, SharingStarted.Eagerly, ChatPreferencesUiState())
+
+        fun updateShowReasoningEntry(value: Boolean) {
+            viewModelScope.launch {
+                connectionFacade.updateChatPreferences(
+                    showReasoningEntry = value,
+                    streamResponses = uiState.value.streamResponses,
+                )
+            }
+        }
+
+        fun updateStreamResponses(value: Boolean) {
+            viewModelScope.launch {
+                connectionFacade.updateChatPreferences(
+                    showReasoningEntry = uiState.value.showReasoningEntry,
+                    streamResponses = value,
+                )
+            }
+        }
+    }
+
+class CurrentAppSettingsViewModel
+    constructor(
+        private val connectionFacade: SettingsConnectionFacade,
+        private val api: FastGptApi,
+    ) : ViewModel() {
+        private val mutableState = MutableStateFlow(CurrentAppSettingsUiState())
+        val uiState: StateFlow<CurrentAppSettingsUiState> = mutableState.asStateFlow()
+
+        init {
+            viewModelScope.launch {
+                connectionFacade.snapshot.collect { snapshot ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            connectionType = snapshot.connectionType,
+                            selectedAppId = snapshot.selectedAppId,
+                            model = snapshot.model,
+                            serverBaseUrl = snapshot.serverBaseUrl,
+                        )
+                    if (snapshot.connectionType == ConnectionType.FAST_GPT) {
+                        refreshApps(snapshot.selectedAppId)
+                    } else {
+                        mutableState.value =
+                            mutableState.value.copy(
+                                selectedAppName = snapshot.model.orEmpty(),
+                                items = emptyList(),
+                                isLoading = false,
+                                errorMessage = null,
+                            )
+                    }
+                }
+            }
+        }
+
+        fun switchApp(appId: String) {
+            viewModelScope.launch {
+                connectionFacade.updateSelectedAppId(appId)
+            }
+        }
+
+        fun refresh() {
+            val selectedAppId = connectionFacade.snapshot.value.selectedAppId
+            if (connectionFacade.snapshot.value.connectionType == ConnectionType.FAST_GPT) {
+                viewModelScope.launch { refreshApps(selectedAppId) }
+            }
+        }
+
+        private suspend fun refreshApps(selectedAppId: String?) {
+            mutableState.value = mutableState.value.copy(isLoading = true, errorMessage = null)
+            runCatching { api.getAppList().data.orEmpty() }
+                .onSuccess { apps ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            selectedAppName = apps.firstOrNull { it.id == selectedAppId }?.name.orEmpty(),
+                            items =
+                                apps.map { app ->
+                                    SettingsCurrentAppItemUiModel(
+                                        appId = app.id,
+                                        name = app.name,
+                                        intro = app.intro,
+                                        isSelected = app.id == selectedAppId,
+                                    )
+                                },
+                            isLoading = false,
+                            errorMessage = null,
+                        )
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isLoading = false,
+                            errorMessage = error.message,
+                        )
+                }
+        }
     }

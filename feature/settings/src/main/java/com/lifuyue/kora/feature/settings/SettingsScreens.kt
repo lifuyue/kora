@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -32,8 +31,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -219,6 +220,7 @@ fun SettingsOverviewScreen(
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenChatPreferences: () -> Unit,
     onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -311,6 +313,25 @@ fun SettingsOverviewScreen(
                         summary = themeModeLabel(state.themeMode),
                         onClick = onOpenTheme,
                         testTag = "settings-theme",
+                    )
+                    SettingsEntry(
+                        title = stringResource(R.string.settings_chat_preferences_title),
+                        summary =
+                            stringResource(
+                                R.string.settings_chat_preferences_summary,
+                                if (state.showReasoningEntry) {
+                                    stringResource(R.string.settings_chat_preferences_reasoning_on)
+                                } else {
+                                    stringResource(R.string.settings_chat_preferences_reasoning_off)
+                                },
+                                if (state.streamResponses) {
+                                    stringResource(R.string.settings_chat_preferences_stream_on)
+                                } else {
+                                    stringResource(R.string.settings_chat_preferences_stream_off)
+                                },
+                            ),
+                        onClick = onOpenChatPreferences,
+                        testTag = "settings-chat-preferences",
                     )
                 },
             )
@@ -432,10 +453,12 @@ fun ThemeAppearanceScreen(
 fun ChatSettingsSheetContent(
     state: SettingsOverviewUiState,
     onOpenConnection: () -> Unit,
+    onOpenCurrentApp: () -> Unit,
     onOpenTheme: () -> Unit,
     onOpenLanguage: () -> Unit,
     onOpenCache: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenChatPreferences: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -490,6 +513,20 @@ fun ChatSettingsSheetContent(
             }
             item {
                 ChatSettingsSheetEntry(
+                    title = stringResource(R.string.settings_current_app_title),
+                    summary =
+                        if (state.connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+                            state.model ?: stringResource(R.string.settings_summary_not_selected)
+                        } else {
+                            state.selectedAppId ?: stringResource(R.string.settings_summary_not_selected)
+                        },
+                    onClick = onOpenCurrentApp,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-current-app",
+                )
+            }
+            item {
+                ChatSettingsSheetEntry(
                     title = stringResource(R.string.settings_theme_title),
                     summary = themeModeLabel(state.themeMode),
                     onClick = onOpenTheme,
@@ -504,6 +541,28 @@ fun ChatSettingsSheetContent(
                     onClick = onOpenLanguage,
                     containerColor = cardColor,
                     testTag = "chat-settings-language",
+                )
+            }
+            item {
+                ChatSettingsSheetEntry(
+                    title = stringResource(R.string.settings_chat_preferences_title),
+                    summary =
+                        stringResource(
+                            R.string.settings_chat_preferences_summary,
+                            if (state.showReasoningEntry) {
+                                stringResource(R.string.settings_chat_preferences_reasoning_on)
+                            } else {
+                                stringResource(R.string.settings_chat_preferences_reasoning_off)
+                            },
+                            if (state.streamResponses) {
+                                stringResource(R.string.settings_chat_preferences_stream_on)
+                            } else {
+                                stringResource(R.string.settings_chat_preferences_stream_off)
+                            },
+                        ),
+                    onClick = onOpenChatPreferences,
+                    containerColor = cardColor,
+                    testTag = "chat-settings-chat-preferences",
                 )
             }
             item {
@@ -523,6 +582,118 @@ fun ChatSettingsSheetContent(
                     containerColor = cardColor,
                     testTag = "chat-settings-about",
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun ChatPreferencesScreen(
+    state: ChatPreferencesUiState,
+    onShowReasoningEntryChange: (Boolean) -> Unit,
+    onStreamResponsesChange: (Boolean) -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_chat_preferences_title),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.settings_chat_preferences_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ToggleSettingsCard(
+            title = stringResource(R.string.settings_chat_preferences_reasoning_title),
+            summary = stringResource(R.string.settings_chat_preferences_reasoning_description),
+            checked = state.showReasoningEntry,
+            onCheckedChange = onShowReasoningEntryChange,
+            testTag = "chat-preferences-reasoning",
+        )
+        ToggleSettingsCard(
+            title = stringResource(R.string.settings_chat_preferences_stream_title),
+            summary = stringResource(R.string.settings_chat_preferences_stream_description),
+            checked = state.streamResponses,
+            onCheckedChange = onStreamResponsesChange,
+            testTag = "chat-preferences-stream",
+        )
+    }
+}
+
+@Composable
+fun CurrentAppSettingsScreen(
+    state: CurrentAppSettingsUiState,
+    onSwitchApp: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onOpenCurrentApp: () -> Unit,
+    onBack: (() -> Unit)? = null,
+    onOpenDrawer: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    SettingsPageColumn(
+        title = stringResource(R.string.settings_current_app_title),
+        onBack = onBack,
+        onOpenDrawer = onOpenDrawer,
+        modifier = modifier,
+    ) {
+        if (state.connectionType == ConnectionType.OPENAI_COMPATIBLE) {
+            Card(modifier = Modifier.fillMaxWidth().testTag("settings-current-app-summary")) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = state.model ?: stringResource(R.string.settings_summary_not_selected),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_current_app_openai_summary),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        } else {
+            OutlinedButton(onClick = onRefresh, modifier = Modifier.testTag("settings-current-app-refresh")) {
+                Text(stringResource(R.string.settings_current_app_refresh))
+            }
+            state.errorMessage?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag("settings-current-app-error"),
+                )
+            }
+            if (state.isLoading) {
+                Text(stringResource(R.string.settings_current_app_loading))
+            }
+            if (state.selectedAppId != null) {
+                OutlinedButton(onClick = onOpenCurrentApp, modifier = Modifier.testTag("settings-current-app-detail")) {
+                    Text(stringResource(R.string.settings_current_app_open_detail))
+                }
+            }
+            state.items.forEach { item ->
+                Card(
+                    onClick = { onSwitchApp(item.appId) },
+                    modifier = Modifier.fillMaxWidth().testTag("settings-current-app-${item.appId}"),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(item.name, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = item.intro,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text(if (item.isSelected) stringResource(R.string.settings_selected) else "")
+                    }
+                }
             }
         }
     }
@@ -700,6 +871,34 @@ private fun ChatSettingsSheetEntry(
 }
 
 @Composable
+private fun ToggleSettingsCard(
+    title: String,
+    summary: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    testTag: String,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().semantics { this.testTag = testTag },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
+    }
+}
+
+@Composable
 fun CacheSettingsScreen(
     state: CacheSettingsUiState,
     onClearCache: () -> Unit,
@@ -813,17 +1012,25 @@ private fun SettingsPageColumn(
     if (onBack != null) {
         BackHandler(onBack = onBack)
     }
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
-    ) {
-        KoraGeminiTopBar(title = title, onOpenDrawer = onOpenDrawer)
-        SettingsPageHeader(onBack = onBack)
-        content()
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
+            KoraGeminiTopBar(title = title, onOpenDrawer = onOpenDrawer)
+        },
+    ) { innerPadding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+        ) {
+            SettingsPageHeader(onBack = onBack)
+            content()
+        }
     }
 }
 
