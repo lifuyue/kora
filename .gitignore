@@ -39,3 +39,6 @@ gen/
 
 # Git worktrees
 .worktrees/
+
+# Skills
+.agents/
