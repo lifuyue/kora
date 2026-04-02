@@ -970,7 +970,7 @@ class RoomChatRepository
                                         if (isOpenAiMode(appId)) {
                                             update.copy(
                                                 markdownDelta = normalizeOpenAiVisibleDelta(update.markdownDelta),
-                                                reasoningDelta = "",
+                                                reasoningDelta = normalizeOpenAiVisibleDelta(update.reasoningDelta),
                                             )
                                         } else {
                                             update
