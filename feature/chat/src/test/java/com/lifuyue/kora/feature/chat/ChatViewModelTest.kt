@@ -5,6 +5,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import com.lifuyue.kora.core.database.store.ApiKeySecureStore
+import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
+import com.lifuyue.kora.core.network.FastGptApiFactory
+import com.lifuyue.kora.core.network.MutableConnectionProvider
+import com.lifuyue.kora.core.network.NetworkJson
+import com.lifuyue.kora.core.network.OpenAiCompatibleApiFactory
 import com.lifuyue.kora.core.network.UploadedAssetRef
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +20,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
@@ -112,5 +120,21 @@ private fun createChatViewModel(repository: FakeChatRepository): ChatViewModel =
         context = ApplicationProvider.getApplicationContext(),
         chatRepository = repository,
         conversationExportManager = FakeConversationExportManager(),
+        connectionRepository = testConnectionRepository(),
         strings = ChatStrings(ApplicationProvider.getApplicationContext()),
     )
+
+private fun testConnectionRepository(): ConnectionRepository {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    return ConnectionRepository(
+        preferencesStore =
+            ConnectionPreferencesStore.createForTest(
+                scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO),
+                file = File(context.filesDir, "chat-view-model-${System.nanoTime()}.preferences_pb"),
+            ),
+        apiKeySecureStore = ApiKeySecureStore(context, "chat-view-model-${System.nanoTime()}"),
+        connectionProvider = MutableConnectionProvider(),
+        apiFactory = FastGptApiFactory(NetworkJson.default),
+        openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
+    )
+}

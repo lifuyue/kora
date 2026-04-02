@@ -223,6 +223,7 @@ class ChatViewModel
         @ApplicationContext private val context: Context,
         private val chatRepository: ChatRepository,
         private val conversationExportManager: ConversationExportManager,
+        private val connectionRepository: ConnectionRepository,
         private val strings: ChatStrings,
     ) : ViewModel() {
         private val appId: String = checkNotNull(savedStateHandle["appId"])
@@ -232,6 +233,7 @@ class ChatViewModel
         private val attachments = MutableStateFlow<List<AttachmentDraftUiModel>>(emptyList())
         private val attachmentConfig = MutableStateFlow(ChatAttachmentConfig())
         private val shareExportState = MutableStateFlow(ShareExportUiState())
+        private val expandedReasoningMessageIds = MutableStateFlow<Set<String>>(emptySet())
         private val uploadJobs = linkedMapOf<String, Job>()
 
         init {
@@ -278,6 +280,8 @@ class ChatViewModel
                 attachments,
                 attachmentConfig,
                 shareExportState,
+                expandedReasoningMessageIds,
+                connectionRepository.snapshot,
             ) { values ->
                 val currentInput = values[0] as String
                 val meta = values[1] as ChatMetaState
@@ -285,8 +289,14 @@ class ChatViewModel
                 val currentAttachments = values[3] as List<AttachmentDraftUiModel>
                 val currentAttachmentConfig = values[4] as ChatAttachmentConfig
                 val currentShareExportState = values[5] as ShareExportUiState
+                val expandedReasoningIds = values[6] as Set<String>
+                val snapshot = values[7] as com.lifuyue.kora.core.common.ConnectionSnapshot
+                val messagesWithReasoningState =
+                    messages.map { message ->
+                        message.copy(isReasoningExpanded = expandedReasoningIds.contains(message.messageId))
+                    }
                 val pendingInteractiveCard =
-                    messages.lastOrNull { it.interactiveCard?.status == InteractiveCardStatus.Pending }?.interactiveCard
+                    messagesWithReasoningState.lastOrNull { it.interactiveCard?.status == InteractiveCardStatus.Pending }?.interactiveCard
                 ChatUiState(
                     appId = appId,
                     chatId = chatId.value,
@@ -294,12 +304,14 @@ class ChatViewModel
                     input = currentInput,
                     isSending = meta.isSending,
                     errorMessage = meta.errorMessage,
-                    messages = messages,
-                    isInitialLoading = meta.isLoading && messages.isEmpty(),
+                    messages = messagesWithReasoningState,
+                    isInitialLoading = meta.isLoading && messagesWithReasoningState.isEmpty(),
                     attachments = currentAttachments,
                     attachmentConfig = currentAttachmentConfig,
                     pendingInteractiveCard = pendingInteractiveCard,
                     shareExportState = currentShareExportState,
+                    showReasoningEntry = snapshot.appearancePreferences.showReasoningEntry,
+                    streamResponses = snapshot.appearancePreferences.streamResponses,
                 )
             }.stateIn(
                 viewModelScope,
@@ -312,6 +324,8 @@ class ChatViewModel
                     attachments = attachments.value,
                     attachmentConfig = attachmentConfig.value,
                     shareExportState = shareExportState.value,
+                    showReasoningEntry = connectionRepository.snapshot.value.appearancePreferences.showReasoningEntry,
+                    streamResponses = connectionRepository.snapshot.value.appearancePreferences.streamResponses,
                 ),
             )
 
@@ -496,6 +510,16 @@ class ChatViewModel
 
         fun send() {
             sendCurrentDraft()
+        }
+
+        fun toggleReasoning(messageId: String) {
+            expandedReasoningMessageIds.update { expandedIds ->
+                if (expandedIds.contains(messageId)) {
+                    expandedIds - messageId
+                } else {
+                    expandedIds + messageId
+                }
+            }
         }
 
         fun stopGeneration() {
