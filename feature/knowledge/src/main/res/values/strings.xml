@@ -99,6 +99,10 @@
     <string name="knowledge_error_search_failed">检索失败</string>
     <string name="knowledge_search_result_title_fallback">命中片段</string>
     <string name="knowledge_search_result_snippet_fallback">暂无预览</string>
+    <string name="knowledge_reference_preview_title">引用预览</string>
+    <string name="knowledge_reference_preview_source">来源：%1$s</string>
+    <string name="knowledge_reference_preview_empty">暂无引用内容</string>
+    <string name="knowledge_open_chunk_context">打开 chunk 上下文</string>
     <string name="knowledge_score_summary">%1$s · %2$s</string>
     <string name="knowledge_local_overview_title">资料库</string>
     <string name="knowledge_local_workspace_title">本地轻量资料库</string>

@@ -14,6 +14,9 @@
     <string name="chat_citations_title">引用 %1$d 条</string>
     <string name="chat_open_citation">查看知识来源</string>
     <string name="chat_citation_title_fallback">引用</string>
+    <string name="chat_citation_preview_title">引用预览</string>
+    <string name="chat_citation_preview_source">来源：%1$s</string>
+    <string name="chat_citation_preview_empty">暂无引用内容</string>
     <string name="chat_score_summary">%1$s · %2$s</string>
     <string name="chat_greeting">你好，有什么可以帮你？</string>
     <string name="chat_empty_welcome">开始一个新对话，消息会在这里以 Markdown 和代码块形式渲染。</string>

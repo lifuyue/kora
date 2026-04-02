@@ -209,7 +209,10 @@ fun NavGraphBuilder.knowledgeGraph(
             onEmbeddingWeightChanged = viewModel::updateEmbeddingWeight,
             onUseReRankChanged = viewModel::updateReRank,
             onSearch = viewModel::search,
-            onOpenResult = { result ->
+            previewResult = uiState.activePreviewResult,
+            onOpenResultPreview = viewModel::openResultPreview,
+            onDismissPreview = viewModel::dismissResultPreview,
+            onOpenResultContext = { result ->
                 if (!result.datasetId.isNullOrBlank() && !result.collectionId.isNullOrBlank()) {
                     navController.navigate(
                         KnowledgeRoutes.chunks(

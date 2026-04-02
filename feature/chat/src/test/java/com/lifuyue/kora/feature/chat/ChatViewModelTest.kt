@@ -10,6 +10,7 @@ import com.lifuyue.kora.core.database.store.ApiKeySecureStore
 import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
 import com.lifuyue.kora.core.network.FastGptApiFactory
 import com.lifuyue.kora.core.network.MutableConnectionProvider
+import com.lifuyue.kora.core.network.NetworkJson
 import com.lifuyue.kora.core.network.OpenAiCompatibleApiFactory
 import com.lifuyue.kora.core.network.UploadedAssetRef
 import kotlinx.coroutines.CoroutineScope
@@ -122,22 +123,21 @@ private fun createChatViewModel(repository: FakeChatRepository): ChatViewModel =
         context = ApplicationProvider.getApplicationContext(),
         chatRepository = repository,
         conversationExportManager = FakeConversationExportManager(),
-        connectionRepository = createConnectionRepository(),
+        connectionRepository = testConnectionRepository(),
         strings = ChatStrings(ApplicationProvider.getApplicationContext()),
     )
 
-private fun createConnectionRepository(): ConnectionRepository {
+private fun testConnectionRepository(): ConnectionRepository {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val preferencesFile = File.createTempFile("chat-view-model", ".preferences_pb").apply { deleteOnExit() }
     return ConnectionRepository(
         preferencesStore =
             ConnectionPreferencesStore.createForTest(
-                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-                file = preferencesFile,
+                scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO),
+                file = File(context.filesDir, "chat-view-model-${System.nanoTime()}.preferences_pb"),
             ),
-        apiKeySecureStore = ApiKeySecureStore(context, "chat-view-model-secure"),
+        apiKeySecureStore = ApiKeySecureStore(context, "chat-view-model-${System.nanoTime()}"),
         connectionProvider = MutableConnectionProvider(),
-        apiFactory = FastGptApiFactory(),
-        openAiApiFactory = OpenAiCompatibleApiFactory(),
+        apiFactory = FastGptApiFactory(NetworkJson.default),
+        openAiApiFactory = OpenAiCompatibleApiFactory(NetworkJson.default),
     )
 }

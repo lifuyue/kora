@@ -100,6 +100,10 @@
     <string name="knowledge_error_search_failed">Failed to search</string>
     <string name="knowledge_search_result_title_fallback">Matched snippet</string>
     <string name="knowledge_search_result_snippet_fallback">No preview available</string>
+    <string name="knowledge_reference_preview_title">Reference preview</string>
+    <string name="knowledge_reference_preview_source">Source: %1$s</string>
+    <string name="knowledge_reference_preview_empty">No reference content available</string>
+    <string name="knowledge_open_chunk_context">Open chunk context</string>
     <string name="knowledge_score_summary">%1$s · %2$s</string>
     <string name="knowledge_local_overview_title">Library</string>
     <string name="knowledge_local_workspace_title">Local lightweight library</string>

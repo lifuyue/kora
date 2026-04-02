@@ -668,9 +668,17 @@ class SearchTestViewModel
             mutableState.update { it.copy(useReRank = enabled) }
         }
 
+        fun openResultPreview(result: SearchResultUiModel) {
+            mutableState.update { it.copy(activePreviewResult = result) }
+        }
+
+        fun dismissResultPreview() {
+            mutableState.update { it.copy(activePreviewResult = null) }
+        }
+
         fun search() {
             viewModelScope.launch {
-                mutableState.update { it.copy(isSearching = true, errorMessage = null) }
+                mutableState.update { it.copy(isSearching = true, errorMessage = null, activePreviewResult = null) }
                 runCatching {
                     repository.search(
                         datasetId = datasetId,
@@ -687,6 +695,7 @@ class SearchTestViewModel
                             duration = duration,
                             extensionInfo = extensionInfo,
                             results = results,
+                            activePreviewResult = null,
                             status = if (results.isEmpty()) KnowledgeLoadState.Empty else KnowledgeLoadState.Content,
                         )
                     }
@@ -694,6 +703,7 @@ class SearchTestViewModel
                     mutableState.update {
                         it.copy(
                             isSearching = false,
+                            activePreviewResult = null,
                             errorMessage = error.message ?: strings.searchFailed(),
                             status = KnowledgeLoadState.Error,
                         )

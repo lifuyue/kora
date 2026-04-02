@@ -169,6 +169,7 @@ data class SearchTestUiState(
     val embeddingWeight: String = "0.5",
     val useReRank: Boolean = false,
     val results: List<SearchResultUiModel> = emptyList(),
+    val activePreviewResult: SearchResultUiModel? = null,
     val duration: String = "",
     val extensionInfo: String = "",
     val status: KnowledgeLoadState = KnowledgeLoadState.Content,

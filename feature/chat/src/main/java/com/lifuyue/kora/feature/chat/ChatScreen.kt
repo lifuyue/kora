@@ -162,6 +162,7 @@ fun ChatScreen(
     val errorContainer = if (isLightTheme) Color(0xFFFFE2DE) else Color(0xFF351A1A)
     val errorText = if (isLightTheme) Color(0xFF8C2E27) else Color(0xFFFFC9C5)
     var activeCitationMessage by remember { mutableStateOf<ChatMessageUiModel?>(null) }
+    var activeCitationPreview by remember { mutableStateOf<CitationItemUiModel?>(null) }
     var autoScrollPaused by rememberSaveable { mutableStateOf(false) }
     var hasInitializedScroll by rememberSaveable(uiState.chatId) { mutableStateOf(false) }
 
@@ -252,13 +253,27 @@ fun ChatScreen(
                             citationScoreLabel(citation)?.let { scoreLabel ->
                                 Text(scoreLabel, style = MaterialTheme.typography.labelMedium)
                             }
-                            TextButton(onClick = { onOpenCitation(citation) }) {
+                            TextButton(onClick = { activeCitationPreview = citation }) {
                                 Text(stringResource(R.string.chat_open_citation))
                             }
                         }
                     }
                 }
             }
+        }
+    }
+    activeCitationPreview?.let { citation ->
+        ModalBottomSheet(
+            onDismissRequest = { activeCitationPreview = null },
+            modifier = Modifier.testTag(ChatTestTags.CITATION_PREVIEW_SHEET),
+        ) {
+            CitationPreviewSheet(
+                citation = citation,
+                onOpenCitation = {
+                    onOpenCitation(citation)
+                    activeCitationPreview = null
+                },
+            )
         }
     }
     Scaffold(
@@ -335,7 +350,8 @@ fun ChatScreen(
                             onRegenerate = { onRegenerate(message) },
                             onFeedback = { feedback -> onFeedback(message, feedback) },
                             onSuggestedQuestion = onSuggestedQuestion,
-                            onOpenCitation = onOpenCitation,
+                            onOpenCitationList = { activeCitationMessage = it },
+                            onOpenCitation = { citation -> activeCitationPreview = citation },
                             onUpdateInteractiveDraft = onUpdateInteractiveDraft,
                             onSubmitInteractiveResponse = onSubmitInteractiveResponse,
                             onToggleReasoning = onToggleReasoning,
@@ -906,6 +922,7 @@ private fun MessageCard(
     onRegenerate: () -> Unit,
     onFeedback: (MessageFeedback) -> Unit,
     onSuggestedQuestion: (String) -> Unit,
+    onOpenCitationList: (ChatMessageUiModel) -> Unit,
     onOpenCitation: (CitationItemUiModel) -> Unit,
     onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit,
     onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit,
@@ -1127,7 +1144,13 @@ private fun MessageCard(
         }
         if (message.citations.isNotEmpty()) {
             TextButton(
-                onClick = { onOpenCitation(message.citations.first()) },
+                onClick = {
+                    if (message.citations.size == 1) {
+                        onOpenCitation(message.citations.first())
+                    } else {
+                        onOpenCitationList(message)
+                    }
+                },
                 modifier = Modifier.testTag(ChatTestTags.citationSummary(message.messageId)),
             ) {
                 Text(stringResource(R.string.chat_citations_title, message.citations.size))
@@ -1148,6 +1171,44 @@ private fun MessageCard(
                         Text(question)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun CitationPreviewSheet(
+    citation: CitationItemUiModel,
+    onOpenCitation: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(16.dp).testTag("citation_preview_content"),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.chat_citation_preview_title),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Text(citationDisplayTitle(citation), style = MaterialTheme.typography.titleMedium)
+        if (citation.sourceName.isNotBlank()) {
+            Text(
+                stringResource(R.string.chat_citation_preview_source, citation.sourceName),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        Text(
+            text = citation.snippet.ifBlank { stringResource(R.string.chat_citation_preview_empty) },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        citationScoreLabel(citation)?.let { scoreLabel ->
+            Text(scoreLabel, style = MaterialTheme.typography.labelMedium)
+        }
+        if (!citation.datasetId.isNullOrBlank() && !citation.collectionId.isNullOrBlank()) {
+            Button(
+                onClick = onOpenCitation,
+                modifier = Modifier.testTag("citation_preview_open_context"),
+            ) {
+                Text(stringResource(R.string.chat_open_citation))
             }
         }
     }
