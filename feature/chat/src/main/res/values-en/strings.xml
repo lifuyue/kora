@@ -14,6 +14,9 @@
     <string name="chat_citations_title">%1$d citations</string>
     <string name="chat_open_citation">View knowledge source</string>
     <string name="chat_citation_title_fallback">Citation</string>
+    <string name="chat_citation_preview_title">Citation preview</string>
+    <string name="chat_citation_preview_source">Source: %1$s</string>
+    <string name="chat_citation_preview_empty">No citation content available</string>
     <string name="chat_score_summary">%1$s · %2$s</string>
     <string name="chat_greeting">Hi, how can I help?</string>
     <string name="chat_empty_welcome">Start a new conversation. Messages will render here with Markdown and code blocks.</string>

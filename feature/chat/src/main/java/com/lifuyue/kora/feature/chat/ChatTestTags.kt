@@ -39,6 +39,7 @@ object ChatTestTags {
     const val CHAT_SKELETON = "chat_skeleton"
     const val AUTO_SCROLL_RESUME = "auto_scroll_resume"
     const val CITATION_PANEL = "citation_panel"
+    const val CITATION_PREVIEW_SHEET = "citation_preview_sheet"
     const val CITATION_SUMMARY_PREFIX = "citation_summary_"
     const val MERMAID_BLOCK_PREFIX = "mermaid_block_"
 

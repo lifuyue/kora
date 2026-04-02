@@ -264,7 +264,9 @@ class KnowledgeScreensTest {
                 onEmbeddingWeightChanged = {},
                 onUseReRankChanged = {},
                 onSearch = {},
-                onOpenResult = {},
+                onOpenResultPreview = {},
+                onDismissPreview = {},
+                onOpenResultContext = {},
             )
         }
 
@@ -277,6 +279,97 @@ class KnowledgeScreensTest {
         composeRule.onNodeWithText("Matched snippet").assertExists()
         composeRule.onNodeWithText("No preview available").assertExists()
         composeRule.onNodeWithText("semantic · 0.98").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun searchResultOpensPreviewBeforeContextNavigation() {
+        composeRule.setContent {
+            SearchTestScreen(
+                state =
+                    SearchTestUiState(
+                        datasetId = "dataset-1",
+                        results =
+                            listOf(
+                                SearchResultUiModel(
+                                    datasetId = "dataset-1",
+                                    collectionId = "collection-1",
+                                    dataId = "data-1",
+                                    sourceName = "Doc A",
+                                    question = "Question A",
+                                    answer = "Answer A",
+                                    scoreType = "semantic",
+                                    score = 0.91,
+                                ),
+                            ),
+                        activePreviewResult =
+                            SearchResultUiModel(
+                                datasetId = "dataset-1",
+                                collectionId = "collection-1",
+                                dataId = "data-1",
+                                sourceName = "Doc A",
+                                question = "Question A",
+                                answer = "Answer A",
+                                scoreType = "semantic",
+                                score = 0.91,
+                            ),
+                    ),
+                onBack = {},
+                onQueryChanged = {},
+                onSearchModeChanged = {},
+                onSimilarityChanged = {},
+                onEmbeddingWeightChanged = {},
+                onUseReRankChanged = {},
+                onSearch = {},
+                previewResult =
+                    SearchResultUiModel(
+                        datasetId = "dataset-1",
+                        collectionId = "collection-1",
+                        dataId = "data-1",
+                        sourceName = "Doc A",
+                        question = "Question A",
+                        answer = "Answer A",
+                        scoreType = "semantic",
+                        score = 0.91,
+                    ),
+                onOpenResultPreview = {},
+                onDismissPreview = {},
+                onOpenResultContext = {},
+            )
+        }
+
+        composeRule.onNodeWithTag("knowledge_search_result_preview_content").assertExists()
+        composeRule.onNodeWithText("Reference preview").assertExists()
+        composeRule.onNodeWithText("Source: Doc A").assertExists()
+        composeRule.onNodeWithText("Question A\n\nAnswer A").assertExists()
+        composeRule.onNodeWithTag("knowledge_search_result_preview_open_context").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun searchResultPreviewSheetOpensContextAction() {
+        var openContextCount = 0
+        composeRule.setContent {
+            SearchResultPreviewSheet(
+                result =
+                    SearchResultUiModel(
+                        datasetId = "dataset-1",
+                        collectionId = "collection-1",
+                        dataId = "data-1",
+                        sourceName = "Doc A",
+                        question = "Question A",
+                        answer = "Answer A",
+                        scoreType = "semantic",
+                        score = 0.91,
+                    ),
+                onOpenContext = { openContextCount += 1 },
+            )
+        }
+
+        composeRule.onNodeWithTag("knowledge_search_result_preview_open_context").performClick()
+        composeRule.runOnIdle {
+            assertTrue(openContextCount == 1)
+        }
     }
 
     @Test

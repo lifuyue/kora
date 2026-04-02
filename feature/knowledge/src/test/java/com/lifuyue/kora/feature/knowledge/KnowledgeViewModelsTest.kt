@@ -118,6 +118,32 @@ class KnowledgeViewModelsTest {
         }
 
     @Test
+    fun searchPreviewStateOpensAndDismisses() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            val viewModel =
+                SearchTestViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("datasetId" to "dataset-1")),
+                    repository = FakeKnowledgeRepository(),
+                    strings = FakeKnowledgeStrings(),
+                )
+            val result =
+                SearchResultUiModel(
+                    datasetId = "dataset-1",
+                    collectionId = "collection-1",
+                    dataId = "data-1",
+                    sourceName = "source",
+                    question = "question",
+                    answer = "answer",
+                )
+
+            viewModel.openResultPreview(result)
+            assertEquals(result, viewModel.uiState.value.activePreviewResult)
+
+            viewModel.dismissResultPreview()
+            assertEquals(null, viewModel.uiState.value.activePreviewResult)
+        }
+
+    @Test
     fun datasetBrowserFiltersByRawStatusField() =
         runTest(mainDispatcherRule.dispatcher.scheduler) {
             val repository =

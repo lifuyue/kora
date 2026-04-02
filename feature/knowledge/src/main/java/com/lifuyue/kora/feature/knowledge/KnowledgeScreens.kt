@@ -883,9 +883,26 @@ fun SearchTestScreen(
     onEmbeddingWeightChanged: (String) -> Unit,
     onUseReRankChanged: (Boolean) -> Unit,
     onSearch: () -> Unit,
-    onOpenResult: (SearchResultUiModel) -> Unit,
+    previewResult: SearchResultUiModel? = null,
+    onOpenResultPreview: (SearchResultUiModel) -> Unit,
+    onDismissPreview: () -> Unit,
+    onOpenResultContext: (SearchResultUiModel) -> Unit,
     onOpenDrawer: () -> Unit = {},
 ) {
+    previewResult?.let { result ->
+        ModalBottomSheet(
+            onDismissRequest = onDismissPreview,
+            modifier = Modifier.testTag("knowledge_search_result_preview_sheet"),
+        ) {
+            SearchResultPreviewSheet(
+                result = result,
+                onOpenContext = {
+                    onDismissPreview()
+                    onOpenResultContext(result)
+                },
+            )
+        }
+    }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
@@ -948,7 +965,7 @@ fun SearchTestScreen(
                 Text(stringResource(R.string.knowledge_search_empty), style = MaterialTheme.typography.bodyMedium)
             }
             state.results.forEach { item ->
-                Card(modifier = Modifier.fillMaxWidth().clickable { onOpenResult(item) }) {
+                Card(modifier = Modifier.fillMaxWidth().clickable { onOpenResultPreview(item) }) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(searchResultTitle(item), style = MaterialTheme.typography.titleSmall)
                         Text(searchResultSnippet(item), style = MaterialTheme.typography.bodyMedium)
@@ -991,6 +1008,47 @@ private fun searchResultScoreLabel(item: SearchResultUiModel): String? {
         else -> stringResource(R.string.knowledge_score_summary, item.scoreType, formattedScore)
     }
 }
+
+@Composable
+internal fun SearchResultPreviewSheet(
+    result: SearchResultUiModel,
+    onOpenContext: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(16.dp).testTag("knowledge_search_result_preview_content"),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.knowledge_reference_preview_title),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Text(searchResultTitle(result), style = MaterialTheme.typography.titleMedium)
+        if (result.sourceName.isNotBlank()) {
+            Text(
+                stringResource(R.string.knowledge_reference_preview_source, result.sourceName),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        Text(searchResultPreviewBody(result), style = MaterialTheme.typography.bodyMedium)
+        searchResultScoreLabel(result)?.let { scoreLabel ->
+            Text(scoreLabel, style = MaterialTheme.typography.labelMedium)
+        }
+        if (!result.datasetId.isNullOrBlank() && !result.collectionId.isNullOrBlank()) {
+            Button(
+                onClick = onOpenContext,
+                modifier = Modifier.testTag("knowledge_search_result_preview_open_context"),
+            ) {
+                Text(stringResource(R.string.knowledge_open_chunk_context))
+            }
+        }
+    }
+}
+
+@Composable
+private fun searchResultPreviewBody(item: SearchResultUiModel): String =
+    listOf(item.question, item.answer).filter { it.isNotBlank() }.joinToString("\n\n").ifBlank {
+        stringResource(R.string.knowledge_reference_preview_empty)
+    }
 
 @Composable
 private fun KnowledgePageContainer(
