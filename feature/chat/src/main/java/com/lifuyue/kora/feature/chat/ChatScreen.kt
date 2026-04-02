@@ -152,6 +152,7 @@ fun ChatScreen(
     onOpenCitation: (CitationItemUiModel) -> Unit = {},
     onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit = { _, _ -> },
     onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit = { _, _ -> },
+    onToggleReasoning: (String) -> Unit = {},
 ) {
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
@@ -337,6 +338,8 @@ fun ChatScreen(
                             onOpenCitation = onOpenCitation,
                             onUpdateInteractiveDraft = onUpdateInteractiveDraft,
                             onSubmitInteractiveResponse = onSubmitInteractiveResponse,
+                            onToggleReasoning = onToggleReasoning,
+                            showReasoningEntry = uiState.showReasoningEntry,
                         )
                     }
                 }
@@ -906,10 +909,14 @@ private fun MessageCard(
     onOpenCitation: (CitationItemUiModel) -> Unit,
     onUpdateInteractiveDraft: (ChatMessageUiModel, String) -> Unit,
     onSubmitInteractiveResponse: (ChatMessageUiModel, String) -> Unit,
+    onToggleReasoning: (String) -> Unit,
+    showReasoningEntry: Boolean,
 ) {
     val shouldShowThinkingPlaceholder =
         message.role == ChatRole.AI &&
-            message.deliveryState == MessageDeliveryState.Streaming
+            message.deliveryState == MessageDeliveryState.Streaming &&
+            message.markdown.isBlank() &&
+            message.reasoning.isBlank()
     if (message.role == ChatRole.Human) {
         Column(
             modifier =
@@ -985,19 +992,40 @@ private fun MessageCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth(),
                 )
-            } else {
+            } else if (message.markdown.isNotBlank()) {
                 MarkdownMessage(
                     markdown = message.markdown,
                     onCopyCode = onCopyCode,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            if (message.reasoning.isNotBlank()) {
-                Text(
-                    text = message.reasoning,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
+            if (showReasoningEntry && message.hasReasoning) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    TextButton(
+                        onClick = { onToggleReasoning(message.messageId) },
+                        modifier = Modifier.testTag("message-reasoning-toggle-${message.messageId}"),
+                    ) {
+                        Text(
+                            if (message.isReasoningExpanded) {
+                                stringResource(R.string.chat_message_reasoning_collapse)
+                            } else {
+                                stringResource(R.string.chat_message_reasoning_expand)
+                            },
+                        )
+                    }
+                    if (message.isReasoningExpanded) {
+                        Text(
+                            text = stringResource(R.string.chat_message_reasoning_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                        Text(
+                            text = message.reasoning,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                }
             }
             message.interactiveCard?.let { card ->
                 InteractiveCard(

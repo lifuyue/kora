@@ -29,6 +29,8 @@ data class SettingsOverviewUiState(
     val selectedAppId: String? = null,
     val themeMode: ThemeMode = ThemeMode.DARK,
     val selectedLanguageTag: String? = "zh-CN",
+    val showReasoningEntry: Boolean = true,
+    val streamResponses: Boolean = true,
 )
 
 data class LanguageSettingsUiState(
@@ -48,6 +50,29 @@ data class AboutUiState(
 
 data class ThemeAppearanceUiState(
     val themeMode: ThemeMode = ThemeMode.DARK,
+)
+
+data class ChatPreferencesUiState(
+    val showReasoningEntry: Boolean = true,
+    val streamResponses: Boolean = true,
+)
+
+data class CurrentAppSettingsUiState(
+    val connectionType: ConnectionType = ConnectionType.OPENAI_COMPATIBLE,
+    val selectedAppId: String? = null,
+    val selectedAppName: String = "",
+    val model: String? = null,
+    val serverBaseUrl: String? = null,
+    val items: List<SettingsCurrentAppItemUiModel> = emptyList(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+)
+
+data class SettingsCurrentAppItemUiModel(
+    val appId: String,
+    val name: String,
+    val intro: String,
+    val isSelected: Boolean,
 )
 
 enum class StorageBucket {

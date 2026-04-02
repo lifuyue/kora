@@ -37,6 +37,8 @@ const val DIRECT_OPENAI_APP_ID = "direct-openai"
 data class AppearancePreferences(
     val themeMode: ThemeMode = ThemeMode.DARK,
     val languageTag: String? = null,
+    val showReasoningEntry: Boolean = true,
+    val streamResponses: Boolean = true,
 )
 
 data class ConnectionSnapshot(

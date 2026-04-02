@@ -75,6 +75,8 @@ class ConnectionRepository
             onboardingCompleted: Boolean,
             themeMode: ThemeMode = mutableSnapshot.value.appearancePreferences.themeMode,
             languageTag: String? = mutableSnapshot.value.appearancePreferences.languageTag,
+            showReasoningEntry: Boolean = mutableSnapshot.value.appearancePreferences.showReasoningEntry,
+            streamResponses: Boolean = mutableSnapshot.value.appearancePreferences.streamResponses,
         ) {
             val normalizedBaseUrl = normalizeBaseUrl(connectionType, serverBaseUrl)
             val trimmedApiKey = apiKey.trim()
@@ -95,6 +97,8 @@ class ConnectionRepository
             preferencesStore.updateThemeMode(themeMode)
             preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
+            preferencesStore.updateShowReasoningEntry(showReasoningEntry)
+            preferencesStore.updateStreamResponses(streamResponses)
 
             publishSnapshot(
                 ConnectionSnapshot(
@@ -108,6 +112,8 @@ class ConnectionRepository
                         AppearancePreferences(
                             themeMode = themeMode,
                             languageTag = languageTag,
+                            showReasoningEntry = showReasoningEntry,
+                            streamResponses = streamResponses,
                         ),
                 ),
             )
@@ -125,6 +131,23 @@ class ConnectionRepository
         suspend fun updateLanguageTag(languageTag: String?) {
             preferencesStore.updateLanguageInitialized(true)
             preferencesStore.updateLanguageTag(languageTag)
+        }
+
+        suspend fun updateChatPreferences(
+            showReasoningEntry: Boolean = mutableSnapshot.value.appearancePreferences.showReasoningEntry,
+            streamResponses: Boolean = mutableSnapshot.value.appearancePreferences.streamResponses,
+        ) {
+            preferencesStore.updateShowReasoningEntry(showReasoningEntry)
+            preferencesStore.updateStreamResponses(streamResponses)
+            publishSnapshot(
+                mutableSnapshot.value.copy(
+                    appearancePreferences =
+                        mutableSnapshot.value.appearancePreferences.copy(
+                            showReasoningEntry = showReasoningEntry,
+                            streamResponses = streamResponses,
+                        ),
+                ),
+            )
         }
 
         suspend fun updateOnboardingCompleted(onboardingCompleted: Boolean) {
@@ -280,6 +303,8 @@ class ConnectionRepository
                     AppearancePreferences(
                         themeMode = preferences.themeMode,
                         languageTag = resolvedLanguageTag(preferences),
+                        showReasoningEntry = preferences.showReasoningEntry,
+                        streamResponses = preferences.streamResponses,
                     ),
             )
 

@@ -909,6 +909,7 @@ class RoomChatRepository
             onSuccess: suspend () -> Unit = {},
         ) {
             streamingJobs.remove(chatId)?.cancel()
+            val streamResponses = connectionSnapshotProvider.getSnapshot().appearancePreferences.streamResponses
             streamingJobs[chatId] =
                 scope.launch {
                     var markdown = ""
@@ -934,16 +935,18 @@ class RoomChatRepository
                                 coroutineContext.ensureActive()
                                 markdown = mergeStreamChunk(markdown, step.markdownDelta)
                                 reasoning = mergeStreamChunk(reasoning, step.reasoningDelta)
-                                persistAssistantState(
-                                    dataId = assistantMessageId,
-                                    markdown = markdown,
-                                    reasoning = reasoning,
-                                    eventPayloads = eventPayloads,
-                                    isStreaming = step.terminalError == null,
-                                    sendStatus = if (step.terminalError == null) "streaming" else "failed",
-                                    errorCode = null,
-                                    errorMessage = step.terminalError,
-                                )
+                                if (streamResponses || step.terminalError != null) {
+                                    persistAssistantState(
+                                        dataId = assistantMessageId,
+                                        markdown = markdown,
+                                        reasoning = reasoning,
+                                        eventPayloads = eventPayloads,
+                                        isStreaming = step.terminalError == null,
+                                        sendStatus = if (step.terminalError == null) "streaming" else "failed",
+                                        errorCode = null,
+                                        errorMessage = step.terminalError,
+                                    )
+                                }
                                 if (step.terminalError != null) {
                                     failed = true
                                     updateConversationPreview(chatId, markdown.ifBlank { step.terminalError })
@@ -996,16 +999,18 @@ class RoomChatRepository
                                             markdown = mergedMarkdown
                                             reasoning = mergedReasoning
                                             eventPayloads = eventPayloads + normalizedUpdate.eventPayloads
-                                            persistAssistantState(
-                                                dataId = assistantMessageId,
-                                                markdown = markdown,
-                                                reasoning = reasoning,
-                                                eventPayloads = eventPayloads,
-                                                isStreaming = true,
-                                                sendStatus = "streaming",
-                                                errorCode = null,
-                                                errorMessage = null,
-                                            )
+                                            if (streamResponses) {
+                                                persistAssistantState(
+                                                    dataId = assistantMessageId,
+                                                    markdown = markdown,
+                                                    reasoning = reasoning,
+                                                    eventPayloads = eventPayloads,
+                                                    isStreaming = true,
+                                                    sendStatus = "streaming",
+                                                    errorCode = null,
+                                                    errorMessage = null,
+                                                )
+                                            }
                                         }
                                     }
                                 }

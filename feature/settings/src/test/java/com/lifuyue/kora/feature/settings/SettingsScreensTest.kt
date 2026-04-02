@@ -8,7 +8,6 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -48,16 +47,15 @@ class SettingsScreensTest {
                 onOpenLanguage = {},
                 onOpenCache = {},
                 onOpenAbout = {},
+                onOpenChatPreferences = {},
             )
         }
 
         composeRule
             .onNodeWithTag("settings-overview-scroll")
-            .performScrollToNode(hasTestTag("settings-theme"))
-        composeRule.onAllNodes(hasTestTag("settings-theme")).assertCountEquals(1)
-        composeRule.onAllNodes(hasTestTag("settings-language")).assertCountEquals(1)
-        composeRule.onNodeWithText(context.getString(R.string.settings_theme_title)).assertIsDisplayed()
-        composeRule.onAllNodesWithText("聊天偏好").assertCountEquals(0)
+            .performScrollToNode(hasTestTag("settings-chat-preferences"))
+        composeRule.onNodeWithTag("settings-theme").assertIsDisplayed()
+        composeRule.onNodeWithTag("settings-chat-preferences").assertIsDisplayed()
         composeRule.onAllNodesWithText("音频与语音").assertCountEquals(0)
     }
 
@@ -90,10 +88,12 @@ class SettingsScreensTest {
                             selectedLanguageTag = "zh-CN",
                         ),
                     onOpenConnection = {},
+                    onOpenCurrentApp = {},
                     onOpenTheme = {},
                     onOpenLanguage = {},
                     onOpenCache = {},
                     onOpenAbout = {},
+                    onOpenChatPreferences = {},
                     modifier = Modifier.padding(top = 320.dp),
                 )
             }
@@ -104,5 +104,20 @@ class SettingsScreensTest {
             .onNodeWithTag("chat_settings_sheet")
             .performScrollToNode(hasTestTag("chat-settings-about"))
         composeRule.onNodeWithTag("chat-settings-about").assertIsDisplayed()
+    }
+
+    @Test
+    fun chatPreferencesScreenShowsBothToggles() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        composeRule.setContent {
+            ChatPreferencesScreen(
+                state = ChatPreferencesUiState(showReasoningEntry = true, streamResponses = true),
+                onShowReasoningEntryChange = {},
+                onStreamResponsesChange = {},
+            )
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.settings_chat_preferences_reasoning_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_chat_preferences_stream_title)).assertIsDisplayed()
     }
 }

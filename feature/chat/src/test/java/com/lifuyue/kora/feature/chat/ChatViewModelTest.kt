@@ -5,7 +5,16 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.database.connection.ConnectionRepository
+import com.lifuyue.kora.core.database.store.ApiKeySecureStore
+import com.lifuyue.kora.core.database.store.ConnectionPreferencesStore
+import com.lifuyue.kora.core.network.FastGptApiFactory
+import com.lifuyue.kora.core.network.MutableConnectionProvider
+import com.lifuyue.kora.core.network.OpenAiCompatibleApiFactory
 import com.lifuyue.kora.core.network.UploadedAssetRef
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -13,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
@@ -112,5 +122,22 @@ private fun createChatViewModel(repository: FakeChatRepository): ChatViewModel =
         context = ApplicationProvider.getApplicationContext(),
         chatRepository = repository,
         conversationExportManager = FakeConversationExportManager(),
+        connectionRepository = createConnectionRepository(),
         strings = ChatStrings(ApplicationProvider.getApplicationContext()),
     )
+
+private fun createConnectionRepository(): ConnectionRepository {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val preferencesFile = File.createTempFile("chat-view-model", ".preferences_pb").apply { deleteOnExit() }
+    return ConnectionRepository(
+        preferencesStore =
+            ConnectionPreferencesStore.createForTest(
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+                file = preferencesFile,
+            ),
+        apiKeySecureStore = ApiKeySecureStore(context, "chat-view-model-secure"),
+        connectionProvider = MutableConnectionProvider(),
+        apiFactory = FastGptApiFactory(),
+        openAiApiFactory = OpenAiCompatibleApiFactory(),
+    )
+}

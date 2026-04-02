@@ -37,9 +37,24 @@
     <string name="settings_connection_server_error">服务端错误：%1$s</string>
 
     <string name="settings_current_app_title">当前应用</string>
+    <string name="settings_current_app_openai_summary">OpenAI 兼容模式下，当前应用由所选模型决定。</string>
+    <string name="settings_current_app_open_detail">查看应用详情</string>
+    <string name="settings_current_app_refresh">刷新应用列表</string>
+    <string name="settings_current_app_loading">正在加载应用列表...</string>
     <string name="settings_theme_title">主题外观</string>
     <string name="settings_theme_mode_light">浅色</string>
     <string name="settings_theme_mode_dark">深色</string>
+    <string name="settings_chat_preferences_title">聊天偏好</string>
+    <string name="settings_chat_preferences_description">控制对话中的流式回复和思考链入口显示方式。</string>
+    <string name="settings_chat_preferences_reasoning_title">显示思考链入口</string>
+    <string name="settings_chat_preferences_reasoning_description">当模型返回思考链时，在消息内提供可展开入口。</string>
+    <string name="settings_chat_preferences_stream_title">启用流式输出</string>
+    <string name="settings_chat_preferences_stream_description">回复生成时实时显示正文增量。</string>
+    <string name="settings_chat_preferences_reasoning_on">思考链入口已显示</string>
+    <string name="settings_chat_preferences_reasoning_off">思考链入口已隐藏</string>
+    <string name="settings_chat_preferences_stream_on">流式输出已开启</string>
+    <string name="settings_chat_preferences_stream_off">流式输出已关闭</string>
+    <string name="settings_chat_preferences_summary">%1$s · %2$s</string>
 
     <string name="settings_quick_title">聊天快速设置</string>
     <string name="settings_quick_summary">不离开当前对话，直接调整常用偏好。</string>
