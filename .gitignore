@@ -43,3 +43,5 @@ gen/
 # Skills
 .agents/
 .claude/skills/gstack
+.claude/skills/
+skills-lock.json
