@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
 import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.KoraFeedbackPhase
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.network.FastGptApi
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -51,25 +53,53 @@ class ConnectionConfigViewModel
                             "https://api.fastgpt.in/api"
                         },
                     canSave = false,
-                    testResult = null,
+                    validationResult = null,
+                    feedback = ConnectionInlineFeedbackUiState(),
                 )
         }
 
         fun onBaseUrlChanged(value: String) {
-            mutableState.value = mutableState.value.copy(serverUrl = value, canSave = false, testResult = null)
+            mutableState.value =
+                mutableState.value.copy(
+                    serverUrl = value,
+                    canSave = false,
+                    validationResult = null,
+                    feedback = ConnectionInlineFeedbackUiState(),
+                )
         }
 
         fun onApiKeyChanged(value: String) {
-            mutableState.value = mutableState.value.copy(apiKey = value, canSave = false, testResult = null)
+            mutableState.value =
+                mutableState.value.copy(
+                    apiKey = value,
+                    canSave = false,
+                    validationResult = null,
+                    feedback = ConnectionInlineFeedbackUiState(),
+                )
         }
 
         fun onModelChanged(value: String) {
-            mutableState.value = mutableState.value.copy(model = value, canSave = false, testResult = null)
+            mutableState.value =
+                mutableState.value.copy(
+                    model = value,
+                    canSave = false,
+                    validationResult = null,
+                    feedback = ConnectionInlineFeedbackUiState(),
+                )
         }
 
         fun testConnection() {
             viewModelScope.launch {
-                mutableState.value = mutableState.value.copy(isTesting = true, canSave = false)
+                mutableState.value =
+                    mutableState.value.copy(
+                        isTesting = true,
+                        canSave = false,
+                        feedback =
+                            ConnectionInlineFeedbackUiState(
+                                phase = KoraFeedbackPhase.Validating,
+                                source = ConnectionFeedbackSource.Test,
+                            ),
+                    )
                 val result =
                     connectionFacade.testConnection(
                         connectionType = mutableState.value.connectionType,
@@ -80,14 +110,24 @@ class ConnectionConfigViewModel
                 mutableState.value =
                     mutableState.value.copy(
                         isTesting = false,
-                        testResult = result,
+                        validationResult = result,
                         canSave = result is ConnectionTestResult.Success,
+                        feedback =
+                            ConnectionInlineFeedbackUiState(
+                                phase =
+                                    if (result is ConnectionTestResult.Success) {
+                                        KoraFeedbackPhase.SuccessStable
+                                    } else {
+                                        KoraFeedbackPhase.ErrorRecoverable
+                                    },
+                                source = ConnectionFeedbackSource.Test,
+                            ),
                     )
             }
         }
 
         fun saveConnection(onSaved: () -> Unit) {
-            val result = mutableState.value.testResult as? ConnectionTestResult.Success ?: return
+            val result = mutableState.value.validationResult as? ConnectionTestResult.Success ?: return
             val selectedAppId =
                 when (mutableState.value.connectionType) {
                     ConnectionType.OPENAI_COMPATIBLE -> DIRECT_OPENAI_APP_ID
@@ -95,17 +135,56 @@ class ConnectionConfigViewModel
                 }
 
             viewModelScope.launch {
-                mutableState.value = mutableState.value.copy(isSaving = true)
-                connectionFacade.saveConnection(
-                    connectionType = mutableState.value.connectionType,
-                    serverBaseUrl = mutableState.value.serverUrl,
-                    apiKey = mutableState.value.apiKey,
-                    model = mutableState.value.model.ifBlank { null },
-                    selectedAppId = selectedAppId,
-                    onboardingCompleted = true,
-                )
-                mutableState.value = mutableState.value.copy(isSaving = false)
-                onSaved()
+                mutableState.value =
+                    mutableState.value.copy(
+                        isSaving = true,
+                        feedback =
+                            ConnectionInlineFeedbackUiState(
+                                phase = KoraFeedbackPhase.SuccessStable,
+                                source = ConnectionFeedbackSource.Test,
+                            ),
+                    )
+                runCatching {
+                    connectionFacade.saveConnection(
+                        connectionType = mutableState.value.connectionType,
+                        serverBaseUrl = mutableState.value.serverUrl,
+                        apiKey = mutableState.value.apiKey,
+                        model = mutableState.value.model.ifBlank { null },
+                        selectedAppId = selectedAppId,
+                        onboardingCompleted = true,
+                    )
+                }.onSuccess {
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isSaving = false,
+                            feedback =
+                                ConnectionInlineFeedbackUiState(
+                                    phase = KoraFeedbackPhase.SuccessTransient,
+                                    source = ConnectionFeedbackSource.Save,
+                                ),
+                        )
+                    delay(SAVE_SUCCESS_TRANSIENT_MS)
+                    mutableState.value =
+                        mutableState.value.copy(
+                            feedback =
+                                ConnectionInlineFeedbackUiState(
+                                    phase = KoraFeedbackPhase.SuccessStable,
+                                    source = ConnectionFeedbackSource.Save,
+                                ),
+                        )
+                    onSaved()
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            isSaving = false,
+                            feedback =
+                                ConnectionInlineFeedbackUiState(
+                                    phase = KoraFeedbackPhase.ErrorRecoverable,
+                                    source = ConnectionFeedbackSource.Save,
+                                    saveErrorMessage = error.message,
+                                ),
+                        )
+                }
             }
         }
 
@@ -119,10 +198,20 @@ class ConnectionConfigViewModel
                         apiKey = "",
                         model = "",
                         apiKeyMaskedSummary = "",
+                        feedback =
+                            ConnectionInlineFeedbackUiState(
+                                phase = KoraFeedbackPhase.SuccessTransient,
+                                source = ConnectionFeedbackSource.Clear,
+                            ),
                     )
+                delay(CLEAR_TRANSIENT_MS)
+                mutableState.value = mutableState.value.copy(feedback = ConnectionInlineFeedbackUiState())
             }
         }
     }
+
+private const val SAVE_SUCCESS_TRANSIENT_MS = 1200L
+private const val CLEAR_TRANSIENT_MS = 900L
 
 @HiltViewModel
 class SettingsOverviewViewModel

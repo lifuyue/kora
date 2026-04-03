@@ -2,6 +2,7 @@ package com.lifuyue.kora.feature.chat
 
 import androidx.compose.runtime.Immutable
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.KoraFeedbackPhase
 import com.lifuyue.kora.core.network.UploadedAssetRef
 
 enum class AttachmentKind {
@@ -156,6 +157,9 @@ data class ChatMessageUiModel(
 
     val hasReasoning: Boolean
         get() = reasoning.isNotBlank()
+
+    val phase: KoraFeedbackPhase
+        get() = deliveryState.toFeedbackPhase(isStreaming = isStreaming, markdown = markdown, reasoning = reasoning)
 }
 
 @Immutable
@@ -233,8 +237,11 @@ data class ChatUiState(
     val showReasoningEntry: Boolean = true,
     val streamResponses: Boolean = true,
 ) {
+    val conversationPhase: KoraFeedbackPhase
+        get() = resolveConversationPhase(messages, isSending)
+
     val canStopGeneration: Boolean
-        get() = messages.any { it.isStreaming }
+        get() = conversationPhase == KoraFeedbackPhase.InFlightFirstByte || conversationPhase == KoraFeedbackPhase.InFlightStreaming
 
     val canSend: Boolean
         get() =
@@ -243,6 +250,35 @@ data class ChatUiState(
                 (input.isNotBlank() || attachments.any { it.uploadStatus == AttachmentUploadStatus.Uploaded }) &&
                 attachments.none { it.uploadStatus == AttachmentUploadStatus.Uploading || it.uploadStatus == AttachmentUploadStatus.Failed }
 }
+
+private fun resolveConversationPhase(
+    messages: List<ChatMessageUiModel>,
+    isSending: Boolean,
+): KoraFeedbackPhase {
+    val lastAssistantMessage = messages.lastOrNull { it.role == ChatRole.AI }
+    return when {
+        lastAssistantMessage != null -> lastAssistantMessage.phase
+        isSending -> KoraFeedbackPhase.InFlightFirstByte
+        else -> KoraFeedbackPhase.Idle
+    }
+}
+
+private fun MessageDeliveryState.toFeedbackPhase(
+    isStreaming: Boolean,
+    markdown: String,
+    reasoning: String,
+): KoraFeedbackPhase =
+    when (this) {
+        MessageDeliveryState.Streaming ->
+            if (isStreaming && markdown.isBlank() && reasoning.isBlank()) {
+                KoraFeedbackPhase.InFlightFirstByte
+            } else {
+                KoraFeedbackPhase.InFlightStreaming
+            }
+        MessageDeliveryState.Failed -> KoraFeedbackPhase.ErrorRecoverable
+        MessageDeliveryState.Stopped -> KoraFeedbackPhase.Stopped
+        MessageDeliveryState.Sent -> KoraFeedbackPhase.Idle
+    }
 
 @Immutable
 data class AppSelectorItemUiModel(

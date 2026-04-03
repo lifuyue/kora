@@ -2,7 +2,20 @@ package com.lifuyue.kora.feature.settings
 
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import com.lifuyue.kora.core.common.ConnectionType
+import com.lifuyue.kora.core.common.KoraFeedbackPhase
 import com.lifuyue.kora.core.common.ThemeMode
+
+enum class ConnectionFeedbackSource {
+    Test,
+    Save,
+    Clear,
+}
+
+data class ConnectionInlineFeedbackUiState(
+    val phase: KoraFeedbackPhase = KoraFeedbackPhase.Idle,
+    val source: ConnectionFeedbackSource = ConnectionFeedbackSource.Test,
+    val saveErrorMessage: String? = null,
+)
 
 data class ConnectionConfigUiState(
     val connectionType: ConnectionType = ConnectionType.OPENAI_COMPATIBLE,
@@ -13,7 +26,8 @@ data class ConnectionConfigUiState(
     val isTesting: Boolean = false,
     val isSaving: Boolean = false,
     val canSave: Boolean = false,
-    val testResult: ConnectionTestResult? = null,
+    val validationResult: ConnectionTestResult? = null,
+    val feedback: ConnectionInlineFeedbackUiState = ConnectionInlineFeedbackUiState(),
 )
 
 data class SettingsEntryUiModel(

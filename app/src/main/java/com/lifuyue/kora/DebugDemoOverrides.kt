@@ -14,7 +14,6 @@ import com.lifuyue.kora.core.common.ConnectionSnapshot
 import com.lifuyue.kora.feature.chat.ChatMessageUiModel
 import com.lifuyue.kora.feature.chat.ChatScreen
 import com.lifuyue.kora.feature.chat.MessageDeliveryState
-import com.lifuyue.kora.feature.chat.MessageFeedback
 import com.lifuyue.kora.testing.KoraTestOverrides
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -180,12 +179,6 @@ private fun DemoChatScreen() {
         onContinueGeneration = {
             errorMessage = continueGenerationMessage
         },
-        onFeedback = { message, feedback ->
-            val index = messages.indexOfFirst { it.messageId == message.messageId }
-            if (index >= 0) {
-                messages[index] = messages[index].copy(feedback = feedback)
-            }
-        },
         onRegenerate = { message ->
             val index = messages.indexOfFirst { it.messageId == message.messageId }
             if (index >= 0) {
@@ -199,7 +192,6 @@ private fun DemoChatScreen() {
                             class DemoRegeneratedReply
                             ```
                             """.trimIndent(),
-                        feedback = MessageFeedback.None,
                     )
             }
             errorMessage = null

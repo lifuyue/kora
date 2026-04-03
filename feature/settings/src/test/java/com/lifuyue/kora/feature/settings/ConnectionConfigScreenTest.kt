@@ -8,10 +8,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestApp
+import com.lifuyue.kora.core.common.KoraFeedbackPhase
 import com.lifuyue.kora.core.common.ConnectionTestResult
 import org.junit.Rule
 import org.junit.Test
@@ -35,11 +37,16 @@ class ConnectionConfigScreenTest {
                         serverUrl = "https://api.fastgpt.in",
                         apiKey = "fastgpt-secret",
                         canSave = true,
-                        testResult =
+                        validationResult =
                             ConnectionTestResult.Success(
                                 normalizedBaseUrl = "https://api.fastgpt.in/",
                                 apps = listOf(ConnectionTestApp(id = "app-1", name = "Kora")),
                                 latencyMs = 120,
+                            ),
+                        feedback =
+                            ConnectionInlineFeedbackUiState(
+                                phase = KoraFeedbackPhase.SuccessStable,
+                                source = ConnectionFeedbackSource.Test,
                             ),
                 ),
                 onConnectionTypeChange = {},
@@ -55,6 +62,6 @@ class ConnectionConfigScreenTest {
         composeRule.onAllNodesWithTag("connection-result").assertCountEquals(1)
         composeRule.onNodeWithText(context.getString(R.string.settings_connection_save)).assertIsEnabled()
         composeRule.onNodeWithTag("global_drawer_button").assertIsDisplayed()
-        composeRule.onNodeWithText(context.getString(R.string.settings_back)).assertIsDisplayed()
     }
+
 }

@@ -34,7 +34,6 @@ class ChatScreenTest {
                 onSend = {},
                 onStopGenerating = {},
                 onContinueGeneration = {},
-                onFeedback = { _, _ -> },
                 onRegenerate = {},
             )
         }
@@ -67,7 +66,6 @@ class ChatScreenTest {
                 onSend = {},
                 onStopGenerating = {},
                 onContinueGeneration = {},
-                onFeedback = { _, _ -> },
                 onRegenerate = {},
             )
         }
@@ -75,6 +73,40 @@ class ChatScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.messageCopyAction("msg-1")).assertIsDisplayed()
         composeRule.onAllNodesWithText("朗读").assertCountEquals(0)
         composeRule.onAllNodesWithText("暂停朗读").assertCountEquals(0)
+    }
+
+    @Test
+    fun waitingAssistantMessageShowsExplicitFirstByteState() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "msg-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "",
+                                    isStreaming = true,
+                                    deliveryState = MessageDeliveryState.Streaming,
+                                ),
+                            ),
+                    ),
+                onBack = {},
+                onInputChanged = {},
+                onSend = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onRegenerate = {},
+            )
+        }
+
+        composeRule.onNodeWithTag("chat_message_waiting_msg-1").assertIsDisplayed()
+        composeRule.onAllNodesWithText(context.getString(R.string.chat_message_waiting_label)).assertCountEquals(1)
     }
 
     @Test
@@ -96,6 +128,7 @@ class ChatScreenTest {
                                     markdown = "Partial answer",
                                     reasoning = "internal chain",
                                     isStreaming = true,
+                                    deliveryState = MessageDeliveryState.Streaming,
                                 ),
                             ),
                     ),
@@ -104,15 +137,82 @@ class ChatScreenTest {
                 onSend = {},
                 onStopGenerating = {},
                 onContinueGeneration = {},
-                onFeedback = { _, _ -> },
                 onRegenerate = {},
                 onToggleReasoning = {},
             )
         }
 
         composeRule.onNodeWithTag(ChatTestTags.messageCard("msg-1")).assertIsDisplayed()
-        composeRule.onAllNodesWithText(context.getString(R.string.chat_message_streaming_placeholder)).assertCountEquals(0)
+        composeRule.onNodeWithText(context.getString(R.string.chat_message_streaming_label)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.chat_message_reasoning_expand)).assertIsDisplayed()
+    }
+
+    @Test
+    fun stoppedAssistantMessageShowsContinueEntry() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "msg-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = "Partial answer",
+                                    isStreaming = false,
+                                    deliveryState = MessageDeliveryState.Stopped,
+                                ),
+                            ),
+                    ),
+                onBack = {},
+                onInputChanged = {},
+                onSend = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onRegenerate = {},
+            )
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.chat_message_stopped_continue)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.chat_continue_generation)).assertIsDisplayed()
+    }
+
+    @Test
+    fun failedAssistantMessageHidesRawStructuredErrorPayload() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        messages =
+                            listOf(
+                                ChatMessageUiModel(
+                                    messageId = "msg-1",
+                                    chatId = "chat-1",
+                                    appId = "app-1",
+                                    role = ChatRole.AI,
+                                    markdown = """{"error":{"message":"No endpoints found for qwen/qwen3.6-plus-preview:free.","code":404}}""",
+                                    isStreaming = false,
+                                    deliveryState = MessageDeliveryState.Failed,
+                                ),
+                            ),
+                    ),
+                onBack = {},
+                onInputChanged = {},
+                onSend = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onRegenerate = {},
+            )
+        }
+
+        composeRule.onNodeWithTag("chat_message_error_msg-1").assertIsDisplayed()
+        composeRule.onAllNodesWithText("""{"error":{"message":"No endpoints found for qwen/qwen3.6-plus-preview:free.","code":404}}""").assertCountEquals(0)
+        composeRule.onNodeWithText("No endpoints found for qwen/qwen3.6-plus-preview:free. (404)").assertIsDisplayed()
     }
 
     @Test
@@ -142,7 +242,6 @@ class ChatScreenTest {
                 onSend = {},
                 onStopGenerating = {},
                 onContinueGeneration = {},
-                onFeedback = { _, _ -> },
                 onRegenerate = {},
                 onToggleReasoning = {},
             )
@@ -190,7 +289,6 @@ class ChatScreenTest {
                 onSend = {},
                 onStopGenerating = {},
                 onContinueGeneration = {},
-                onFeedback = { _, _ -> },
                 onRegenerate = {},
             )
         }
@@ -262,7 +360,6 @@ class ChatScreenTest {
                 onSend = {},
                 onStopGenerating = {},
                 onContinueGeneration = {},
-                onFeedback = { _, _ -> },
                 onRegenerate = {},
             )
         }

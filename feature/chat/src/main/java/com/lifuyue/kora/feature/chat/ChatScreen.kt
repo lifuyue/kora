@@ -42,6 +42,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -87,6 +88,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.lifuyue.kora.core.common.ChatRole
+import com.lifuyue.kora.core.common.KoraFeedbackPhase
+import com.lifuyue.kora.core.common.ui.KoraFeedbackLabel
+import com.lifuyue.kora.core.common.ui.KoraInlineFeedbackCard
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
@@ -123,7 +127,6 @@ fun ChatScreen(
     onCancelAttachmentUpload: (String) -> Unit = {},
     onStopGenerating: () -> Unit,
     onContinueGeneration: () -> Unit,
-    onFeedback: (ChatMessageUiModel, MessageFeedback) -> Unit,
     onRegenerate: (ChatMessageUiModel) -> Unit,
     onOpenDrawer: () -> Unit = {},
     onOpenConversationBrowser: () -> Unit = {},
@@ -348,7 +351,6 @@ fun ChatScreen(
                             },
                             onContinueGeneration = onContinueGeneration,
                             onRegenerate = { onRegenerate(message) },
-                            onFeedback = { feedback -> onFeedback(message, feedback) },
                             onSuggestedQuestion = onSuggestedQuestion,
                             onOpenCitationList = { activeCitationMessage = it },
                             onOpenCitation = { citation -> activeCitationPreview = citation },
@@ -920,7 +922,6 @@ private fun MessageCard(
     onCopyCode: (String) -> Unit,
     onContinueGeneration: () -> Unit,
     onRegenerate: () -> Unit,
-    onFeedback: (MessageFeedback) -> Unit,
     onSuggestedQuestion: (String) -> Unit,
     onOpenCitationList: (ChatMessageUiModel) -> Unit,
     onOpenCitation: (CitationItemUiModel) -> Unit,
@@ -929,11 +930,17 @@ private fun MessageCard(
     onToggleReasoning: (String) -> Unit,
     showReasoningEntry: Boolean,
 ) {
-    val shouldShowThinkingPlaceholder =
+    val shouldShowWaitingPlaceholder =
         message.role == ChatRole.AI &&
-            message.deliveryState == MessageDeliveryState.Streaming &&
+            message.phase == KoraFeedbackPhase.InFlightFirstByte &&
             message.markdown.isBlank() &&
             message.reasoning.isBlank()
+    val failedAssistantBody = failedAssistantFeedbackBody(message)
+    val shouldSuppressAssistantMarkdown =
+        message.role == ChatRole.AI &&
+            message.phase == KoraFeedbackPhase.ErrorRecoverable &&
+            failedAssistantBody != null &&
+            shouldHideFailedMarkdown(message)
     if (message.role == ChatRole.Human) {
         Column(
             modifier =
@@ -959,33 +966,26 @@ private fun MessageCard(
                         onCopyCode = onCopyCode,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    if (message.deliveryState != MessageDeliveryState.Sent) {
+                    messageStatusText(message)?.let { statusText ->
                         Text(
-                            text =
-                                when (message.deliveryState) {
-                                    MessageDeliveryState.Streaming -> stringResource(R.string.chat_message_streaming)
-                                    MessageDeliveryState.Failed ->
-                                        message.errorMessage ?: stringResource(R.string.chat_message_failed)
-                                    MessageDeliveryState.Stopped ->
-                                        message.errorMessage ?: stringResource(R.string.chat_message_stopped)
-                                    MessageDeliveryState.Sent -> ""
-                                },
+                            text = statusText,
                             style = MaterialTheme.typography.labelMedium,
-                            color =
-                                when (message.deliveryState) {
-                                    MessageDeliveryState.Failed -> MaterialTheme.colorScheme.error
-                                    else -> MaterialTheme.colorScheme.secondary
-                                },
+                            color = messageStatusColor(message),
                             modifier = Modifier.testTag(ChatTestTags.messageError(message.messageId)),
                         )
                     }
                 }
             }
-            TextButton(
-                onClick = onCopy,
-                modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
             ) {
-                Text(stringResource(R.string.chat_copy))
+                MessageActionIconButton(
+                    onClick = onCopy,
+                    painter = painterResource(R.drawable.ic_chat_copy),
+                    contentDescription = stringResource(R.string.chat_copy),
+                    modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+                )
             }
         }
         return
@@ -1002,14 +1002,20 @@ private fun MessageCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            if (shouldShowThinkingPlaceholder) {
-                Text(
-                    text = stringResource(R.string.chat_message_streaming_placeholder),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
+            if (shouldShowWaitingPlaceholder) {
+                AssistantWaitingBubble(
+                    text = stringResource(R.string.chat_message_waiting_label),
+                    modifier = Modifier.testTag("chat_message_waiting_${message.messageId}"),
                 )
-            } else if (message.markdown.isNotBlank()) {
+            } else if (message.phase == KoraFeedbackPhase.ErrorRecoverable && failedAssistantBody != null) {
+                KoraInlineFeedbackCard(
+                    phase = KoraFeedbackPhase.ErrorRecoverable,
+                    title = stringResource(R.string.chat_message_failed),
+                    body = failedAssistantBody,
+                    actionHint = stringResource(R.string.chat_message_failed_hint),
+                    testTag = "chat_message_error_${message.messageId}",
+                )
+            } else if (message.markdown.isNotBlank() && !shouldSuppressAssistantMarkdown) {
                 MarkdownMessage(
                     markdown = message.markdown,
                     onCopyCode = onCopyCode,
@@ -1054,93 +1060,36 @@ private fun MessageCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            if (message.deliveryState != MessageDeliveryState.Sent) {
-                Text(
-                    text =
-                        when (message.deliveryState) {
-                            MessageDeliveryState.Streaming -> stringResource(R.string.chat_message_streaming)
-                            MessageDeliveryState.Failed ->
-                                message.errorMessage ?: stringResource(R.string.chat_message_failed)
-                            MessageDeliveryState.Stopped ->
-                                message.errorMessage ?: stringResource(R.string.chat_message_stopped)
-                            MessageDeliveryState.Sent -> ""
-                        },
-                    style = MaterialTheme.typography.labelMedium,
-                    color =
-                        when (message.deliveryState) {
-                            MessageDeliveryState.Failed -> MaterialTheme.colorScheme.error
-                            else -> MaterialTheme.colorScheme.secondary
-                        },
-                    modifier = Modifier.testTag(ChatTestTags.messageError(message.messageId)),
+            messageStatusText(message)?.let { statusText ->
+                KoraFeedbackLabel(
+                    phase = message.phase,
+                    text = statusText,
+                    testTag = ChatTestTags.messageError(message.messageId),
                 )
             }
         }
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(
-                onClick = onCopy,
-                modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
-            ) {
-                Text(stringResource(R.string.chat_copy))
-            }
             if (message.deliveryState == MessageDeliveryState.Stopped) {
                 TextButton(onClick = onContinueGeneration) {
                     Text(stringResource(R.string.chat_continue_generation))
                 }
             }
-            TextButton(
+            MessageActionIconButton(
                 onClick = onRegenerate,
+                painter = painterResource(R.drawable.ic_chat_regenerate),
+                contentDescription = stringResource(R.string.chat_regenerate),
                 modifier = Modifier.testTag(ChatTestTags.messageRegenerateAction(message.messageId)),
-            ) {
-                Text(stringResource(R.string.chat_regenerate))
-            }
-            TextButton(
-                onClick = {
-                    onFeedback(
-                        if (message.feedback == MessageFeedback.Upvote) {
-                            MessageFeedback.None
-                        } else {
-                            MessageFeedback.Upvote
-                        },
-                    )
-                },
-                modifier = Modifier.testTag(ChatTestTags.messageUpvoteAction(message.messageId)),
-            ) {
-                Text(
-                    stringResource(
-                        if (message.feedback == MessageFeedback.Upvote) {
-                            R.string.chat_cancel_upvote
-                        } else {
-                            R.string.chat_upvote
-                        },
-                    ),
-                )
-            }
-            TextButton(
-                onClick = {
-                    onFeedback(
-                        if (message.feedback == MessageFeedback.Downvote) {
-                            MessageFeedback.None
-                        } else {
-                            MessageFeedback.Downvote
-                        },
-                    )
-                },
-                modifier = Modifier.testTag(ChatTestTags.messageDownvoteAction(message.messageId)),
-            ) {
-                Text(
-                    stringResource(
-                        if (message.feedback == MessageFeedback.Downvote) {
-                            R.string.chat_cancel_downvote
-                        } else {
-                            R.string.chat_downvote
-                        },
-                    ),
-                )
-            }
+            )
+            MessageActionIconButton(
+                onClick = onCopy,
+                painter = painterResource(R.drawable.ic_chat_copy),
+                contentDescription = stringResource(R.string.chat_copy),
+                modifier = Modifier.testTag(ChatTestTags.messageCopyAction(message.messageId)),
+            )
         }
         if (message.citations.isNotEmpty()) {
             TextButton(
@@ -1172,6 +1121,105 @@ private fun MessageCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MessageActionIconButton(
+    onClick: () -> Unit,
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(40.dp),
+    ) {
+        Icon(
+            painter = painter,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun AssistantWaitingBubble(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.widthIn(max = 220.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Composable
+private fun messageStatusText(message: ChatMessageUiModel): String? =
+    when (message.phase) {
+        KoraFeedbackPhase.InFlightFirstByte -> null
+        KoraFeedbackPhase.InFlightStreaming -> stringResource(R.string.chat_message_streaming_label)
+        KoraFeedbackPhase.ErrorRecoverable -> message.errorMessage ?: stringResource(R.string.chat_message_failed)
+        KoraFeedbackPhase.Stopped -> message.errorMessage ?: stringResource(R.string.chat_message_stopped_continue)
+        else -> null
+    }
+
+@Composable
+private fun messageStatusColor(message: ChatMessageUiModel) =
+    when (message.phase) {
+        KoraFeedbackPhase.ErrorRecoverable -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.secondary
+    }
+
+private fun failedAssistantFeedbackBody(message: ChatMessageUiModel): String? {
+    if (message.phase != KoraFeedbackPhase.ErrorRecoverable) {
+        return null
+    }
+    return when {
+        !message.errorMessage.isNullOrBlank() -> message.errorMessage
+        looksLikeStructuredErrorPayload(message.markdown) -> extractStructuredErrorMessage(message.markdown)
+        else -> null
+    }
+}
+
+private fun shouldHideFailedMarkdown(message: ChatMessageUiModel): Boolean =
+    message.errorMessage != null || looksLikeStructuredErrorPayload(message.markdown)
+
+private fun looksLikeStructuredErrorPayload(markdown: String): Boolean {
+    val trimmed = markdown.trim()
+    return trimmed.startsWith("{") &&
+        trimmed.contains("\"error\"") &&
+        trimmed.contains("\"message\"")
+}
+
+private fun extractStructuredErrorMessage(payload: String): String {
+    val messageMatch = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(payload)?.groupValues?.getOrNull(1)
+    val codeMatch = Regex("\"code\"\\s*:\\s*\"?([^\"]+?)\"?(,|})").find(payload)?.groupValues?.getOrNull(1)
+    return buildString {
+        append(messageMatch ?: payload.trim())
+        if (!codeMatch.isNullOrBlank()) {
+            append(" (")
+            append(codeMatch)
+            append(")")
         }
     }
 }

@@ -552,20 +552,6 @@ class ChatViewModel
             }
         }
 
-        fun updateFeedback(
-            message: ChatMessageUiModel,
-            feedback: MessageFeedback,
-        ) {
-            viewModelScope.launch {
-                chatRepository.setFeedback(
-                    appId = appId,
-                    chatId = message.chatId,
-                    messageId = message.messageId,
-                    feedback = feedback,
-                )
-            }
-        }
-
         fun updateInteractiveDraft(
             message: ChatMessageUiModel,
             value: String,

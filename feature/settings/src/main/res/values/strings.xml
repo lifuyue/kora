@@ -27,6 +27,7 @@
     <string name="settings_connection_saving">保存中...</string>
     <string name="settings_connection_clear">清除</string>
     <string name="settings_connection_api_key_summary">当前密钥摘要：%1$s</string>
+    <string name="settings_connection_latency">耗时 %1$dms</string>
     <plurals name="settings_connection_success">
         <item quantity="other">连接成功，发现 %1$d 个应用，耗时 %2$dms</item>
     </plurals>
@@ -35,6 +36,30 @@
     <string name="settings_connection_auth_error">认证失败：%1$s</string>
     <string name="settings_connection_network_error">网络错误：%1$s</string>
     <string name="settings_connection_server_error">服务端错误：%1$s</string>
+    <string name="settings_connection_validating_title">正在连接校验</string>
+    <string name="settings_connection_validating_body">请求已发出，正在验证服务地址、密钥和模型是否可用。</string>
+    <string name="settings_connection_validating_hint">校验完成后可继续保存并生效。</string>
+    <string name="settings_connection_test_success_title">连接已通过</string>
+    <string name="settings_connection_test_success_hint">连接已可用，下一步可直接保存并生效。</string>
+    <string name="settings_connection_test_failed_title">连接校验未通过</string>
+    <string name="settings_connection_test_failed_hint">调整配置后可重新测试。</string>
+    <string name="settings_connection_save_success_title">已保存并生效</string>
+    <string name="settings_connection_save_success_body">当前连接配置已经写入本地，并立即用于后续对话。</string>
+    <string name="settings_connection_save_success_hint">稍后会回落为稳定摘要态。</string>
+    <string name="settings_connection_save_stable_title">当前连接已生效</string>
+    <string name="settings_connection_save_stable_body">后续聊天会继续使用当前服务器、密钥和模型配置。</string>
+    <string name="settings_connection_save_stable_hint">如需切换配置，可重新测试后再保存。</string>
+    <string name="settings_connection_save_failed_title">本地保存未完成</string>
+    <string name="settings_connection_save_failed_body">保存时出现错误，请重试。</string>
+    <string name="settings_connection_save_failed_supporting">服务可达，但本地保存尚未完成。</string>
+    <string name="settings_connection_save_failed_hint">请检查本地存储权限或重试保存。</string>
+    <string name="settings_connection_cleared_title">连接配置已清除</string>
+    <string name="settings_connection_cleared_body">当前连接摘要已回落到未连接状态。</string>
+    <string name="settings_connection_cleared_hint">可以重新输入新配置并测试连接。</string>
+    <string name="settings_connection_clear_confirm_title">清除当前连接配置？</string>
+    <string name="settings_connection_clear_confirm_message">该操作会移除当前服务器、密钥和模型配置。</string>
+    <string name="settings_connection_clear_confirm_action">确认清除</string>
+    <string name="settings_connection_clear_confirm_cancel">取消</string>
 
     <string name="settings_current_app_title">当前应用</string>
     <string name="settings_current_app_openai_summary">OpenAI 兼容模式下，当前应用由所选模型决定。</string>

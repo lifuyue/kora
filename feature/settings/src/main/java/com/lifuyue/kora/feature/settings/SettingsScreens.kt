@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,6 +39,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,8 +59,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lifuyue.kora.core.common.ConnectionType
 import com.lifuyue.kora.core.common.ConnectionTestResult
+import com.lifuyue.kora.core.common.KoraFeedbackPhase
 import com.lifuyue.kora.core.common.ThemeMode
 import com.lifuyue.kora.core.common.ui.KoraGeminiTopBar
+import com.lifuyue.kora.core.common.ui.KoraInlineFeedbackCard
 import com.lifuyue.kora.core.common.ui.KoraMetricRow
 import com.lifuyue.kora.core.common.ui.KoraSectionCard
 
@@ -73,6 +80,7 @@ fun ConnectionConfigScreen(
     onOpenDrawer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    var showClearConfirm by remember { mutableStateOf(false) }
     SettingsPageColumn(
         title = stringResource(R.string.settings_connection_title),
         onBack = onBack,
@@ -159,14 +167,14 @@ fun ConnectionConfigScreen(
                 )
             }
             Button(
-                onClick = onClear,
+                onClick = { showClearConfirm = true },
                 modifier = Modifier.semantics { testTag = "clear-connection" },
             ) {
                 Text(stringResource(R.string.settings_connection_clear))
             }
         }
-        state.testResult?.let {
-            ConnectionTestResultCard(result = it)
+        resolveConnectionFeedbackContent(state)?.let { feedback ->
+            ConnectionFeedbackCard(feedback = feedback)
         }
         if (state.apiKeyMaskedSummary.isNotBlank()) {
             Text(
@@ -175,41 +183,174 @@ fun ConnectionConfigScreen(
             )
         }
     }
-}
-
-@Composable
-private fun ConnectionTestResultCard(result: ConnectionTestResult) {
-    val description =
-        when (result) {
-            is ConnectionTestResult.Success ->
-                if (result.apps.isEmpty()) {
-                    stringResource(R.string.settings_connection_success_openai, result.latencyMs)
-                } else {
-                    pluralStringResource(
-                        R.plurals.settings_connection_success,
-                        result.apps.size,
-                        result.apps.size,
-                        result.latencyMs,
-                    )
+    if (showClearConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            title = { Text(stringResource(R.string.settings_connection_clear_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_connection_clear_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearConfirm = false
+                        onClear()
+                    },
+                ) {
+                    Text(stringResource(R.string.settings_connection_clear_confirm_action))
                 }
-            is ConnectionTestResult.ValidationError ->
-                stringResource(R.string.settings_connection_validation_error, result.reason)
-            is ConnectionTestResult.AuthError ->
-                stringResource(R.string.settings_connection_auth_error, result.error.message)
-            is ConnectionTestResult.NetworkFailure ->
-                stringResource(R.string.settings_connection_network_error, result.message)
-            is ConnectionTestResult.ServerError ->
-                stringResource(R.string.settings_connection_server_error, result.error.message)
-        }
-
-    Card(modifier = Modifier.fillMaxWidth().semantics { testTag = "connection-result" }) {
-        Text(
-            text = description,
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodyMedium,
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirm = false }) {
+                    Text(stringResource(R.string.settings_connection_clear_confirm_cancel))
+                }
+            },
         )
     }
 }
+
+@Composable
+private fun ConnectionFeedbackCard(feedback: ConnectionFeedbackContent) {
+    KoraInlineFeedbackCard(
+        phase = feedback.phase,
+        title = feedback.title,
+        body = feedback.body,
+        supportingText = feedback.supportingText,
+        actionHint = feedback.actionHint,
+        testTag = "connection-result",
+    )
+}
+
+@Composable
+private fun resolveConnectionFeedbackContent(state: ConnectionConfigUiState): ConnectionFeedbackContent? {
+    return when (state.feedback.source) {
+        ConnectionFeedbackSource.Test -> resolveValidationFeedbackContent(state)
+        ConnectionFeedbackSource.Save -> resolveSaveFeedbackContent(state)
+        ConnectionFeedbackSource.Clear -> {
+            if (state.feedback.phase == KoraFeedbackPhase.Idle) {
+                null
+            } else {
+                ConnectionFeedbackContent(
+                    phase = state.feedback.phase,
+                    title = stringResource(R.string.settings_connection_cleared_title),
+                    body = stringResource(R.string.settings_connection_cleared_body),
+                    actionHint = stringResource(R.string.settings_connection_cleared_hint),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun resolveValidationFeedbackContent(state: ConnectionConfigUiState): ConnectionFeedbackContent? {
+    if (state.feedback.phase == KoraFeedbackPhase.Validating) {
+        return ConnectionFeedbackContent(
+            phase = state.feedback.phase,
+            title = stringResource(R.string.settings_connection_validating_title),
+            body = stringResource(R.string.settings_connection_validating_body),
+            actionHint = stringResource(R.string.settings_connection_validating_hint),
+        )
+    }
+    val result = state.validationResult ?: return null
+    return when (result) {
+        is ConnectionTestResult.Success ->
+            ConnectionFeedbackContent(
+                phase = state.feedback.phase,
+                title = stringResource(R.string.settings_connection_test_success_title),
+                body =
+                    if (result.apps.isEmpty()) {
+                        stringResource(R.string.settings_connection_success_openai, result.latencyMs)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.settings_connection_success,
+                            result.apps.size,
+                            result.apps.size,
+                            result.latencyMs,
+                        )
+                    },
+                supportingText = stringResource(R.string.settings_connection_latency, result.latencyMs),
+                actionHint = stringResource(R.string.settings_connection_test_success_hint),
+            )
+        is ConnectionTestResult.ValidationError ->
+            ConnectionFeedbackContent(
+                phase = KoraFeedbackPhase.ErrorRecoverable,
+                title = stringResource(R.string.settings_connection_test_failed_title),
+                body = stringResource(R.string.settings_connection_validation_error, result.reason),
+                actionHint = stringResource(R.string.settings_connection_test_failed_hint),
+            )
+        is ConnectionTestResult.AuthError ->
+            ConnectionFeedbackContent(
+                phase = KoraFeedbackPhase.ErrorRecoverable,
+                title = stringResource(R.string.settings_connection_test_failed_title),
+                body = stringResource(R.string.settings_connection_auth_error, result.error.message),
+                actionHint = stringResource(R.string.settings_connection_test_failed_hint),
+            )
+        is ConnectionTestResult.NetworkFailure ->
+            ConnectionFeedbackContent(
+                phase = KoraFeedbackPhase.ErrorRecoverable,
+                title = stringResource(R.string.settings_connection_test_failed_title),
+                body = stringResource(R.string.settings_connection_network_error, result.message),
+                actionHint = stringResource(R.string.settings_connection_test_failed_hint),
+            )
+        is ConnectionTestResult.ServerError ->
+            ConnectionFeedbackContent(
+                phase = KoraFeedbackPhase.ErrorRecoverable,
+                title = stringResource(R.string.settings_connection_test_failed_title),
+                body = stringResource(R.string.settings_connection_server_error, result.error.message),
+                actionHint = stringResource(R.string.settings_connection_test_failed_hint),
+            )
+    }
+}
+
+@Composable
+private fun resolveSaveFeedbackContent(state: ConnectionConfigUiState): ConnectionFeedbackContent? {
+    return when (state.feedback.phase) {
+        KoraFeedbackPhase.SuccessTransient ->
+            ConnectionFeedbackContent(
+                phase = state.feedback.phase,
+                title = stringResource(R.string.settings_connection_save_success_title),
+                body = stringResource(R.string.settings_connection_save_success_body),
+                supportingText =
+                    state.apiKeyMaskedSummary
+                        .takeIf { it.isNotBlank() }
+                        ?.let { stringResource(R.string.settings_connection_api_key_summary, it) },
+                actionHint = stringResource(R.string.settings_connection_save_success_hint),
+            )
+        KoraFeedbackPhase.SuccessStable ->
+            ConnectionFeedbackContent(
+                phase = state.feedback.phase,
+                title = stringResource(R.string.settings_connection_save_stable_title),
+                body = stringResource(R.string.settings_connection_save_stable_body),
+                supportingText =
+                    state.apiKeyMaskedSummary
+                        .takeIf { it.isNotBlank() }
+                        ?.let { stringResource(R.string.settings_connection_api_key_summary, it) },
+                actionHint = stringResource(R.string.settings_connection_save_stable_hint),
+            )
+        KoraFeedbackPhase.ErrorRecoverable ->
+            ConnectionFeedbackContent(
+                phase = state.feedback.phase,
+                title = stringResource(R.string.settings_connection_save_failed_title),
+                body =
+                    state.feedback.saveErrorMessage
+                        ?: stringResource(R.string.settings_connection_save_failed_body),
+                supportingText =
+                    if (state.validationResult is ConnectionTestResult.Success) {
+                        stringResource(R.string.settings_connection_save_failed_supporting)
+                    } else {
+                        null
+                    },
+                actionHint = stringResource(R.string.settings_connection_save_failed_hint),
+            )
+        else -> null
+    }
+}
+
+private data class ConnectionFeedbackContent(
+    val phase: KoraFeedbackPhase,
+    val title: String,
+    val body: String,
+    val supportingText: String? = null,
+    val actionHint: String? = null,
+)
 
 @Composable
 fun SettingsOverviewScreen(

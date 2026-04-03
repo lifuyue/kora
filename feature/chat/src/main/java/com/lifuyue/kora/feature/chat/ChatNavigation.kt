@@ -249,7 +249,6 @@ private fun ChatRoute(
         onCancelAttachmentUpload = viewModel::cancelAttachmentUpload,
         onStopGenerating = viewModel::stopGeneration,
         onContinueGeneration = viewModel::continueGeneration,
-        onFeedback = viewModel::updateFeedback,
         onRegenerate = viewModel::regenerate,
         onOpenDrawer = onOpenDrawer,
         onOpenQuickSettings = onOpenQuickSettings,

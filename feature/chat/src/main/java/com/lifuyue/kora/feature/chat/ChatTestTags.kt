@@ -49,10 +49,6 @@ object ChatTestTags {
 
     fun messageRegenerateAction(messageId: String): String = "message_regenerate_$messageId"
 
-    fun messageUpvoteAction(messageId: String): String = "message_upvote_$messageId"
-
-    fun messageDownvoteAction(messageId: String): String = "message_downvote_$messageId"
-
     fun messageError(messageId: String): String = "message_error_$messageId"
 
     fun citationSummary(messageId: String): String = "${CITATION_SUMMARY_PREFIX}$messageId"
