@@ -7,10 +7,10 @@ phase: 3-advanced
 # Conversation Export
 
 ## Overview
-导出用于备份或离线审阅。MVP 交付 `JSON` 和 `TXT` 两种格式；`PDF` 不进入当前实现范围。
+导出用于备份或离线审阅。当前底层已经有 `JSON`、`TXT` 和 `PDF` 文件生成能力，后续需要把它接到会话页里的导出、打开和分享入口。
 
 ## Functional Requirements
-- [ ] FR-1: 用户可导出整段会话为 `JSON` 或 `TXT`。
+- [ ] FR-1: 用户可导出整段会话为 `JSON`、`TXT` 或 `PDF`。
 - [ ] FR-2: 导出内容包含会话元数据、消息顺序、时间和角色。
 - [ ] FR-3: 导出完成后支持打开或分享文件。
 

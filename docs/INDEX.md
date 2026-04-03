@@ -45,7 +45,7 @@
 - [api/error-handling.md](api/error-handling.md)
 
 ## Feature Specs
-所有功能文档均含 Overview、FR/NFR、API Contract、UI、Data Model、Architecture Notes、Acceptance Criteria 七节结构，可作为实现依据；各文档内容密度不同，实现前需完整阅读，不要因文档简短而跳过。
+功能规格文档通常复用 `SPEC-TEMPLATE.md` 的 section 名称，可作为实现依据；各文档内容密度不同，实现前需完整阅读，不要因文档简短而跳过。
 
 - Chat: [features/chat/streaming-chat.md](features/chat/streaming-chat.md), [features/chat/markdown-rendering.md](features/chat/markdown-rendering.md), [features/chat/message-actions.md](features/chat/message-actions.md), [features/chat/message-feedback.md](features/chat/message-feedback.md), [features/chat/interactive-nodes.md](features/chat/interactive-nodes.md), [features/chat/suggested-questions.md](features/chat/suggested-questions.md), [features/chat/citations.md](features/chat/citations.md), [features/chat/multimodal-input.md](features/chat/multimodal-input.md)
 - Conversations: [features/conversations/conversation-list.md](features/conversations/conversation-list.md), [features/conversations/conversation-crud.md](features/conversations/conversation-crud.md), [features/conversations/conversation-pin.md](features/conversations/conversation-pin.md), [features/conversations/conversation-folders.md](features/conversations/conversation-folders.md), [features/conversations/conversation-tags.md](features/conversations/conversation-tags.md), [features/conversations/conversation-archive.md](features/conversations/conversation-archive.md), [features/conversations/conversation-share.md](features/conversations/conversation-share.md), [features/conversations/conversation-export.md](features/conversations/conversation-export.md)
