@@ -3,6 +3,7 @@ package com.lifuyue.kora.feature.chat
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -41,6 +42,27 @@ class ChatScreenTest {
         composeRule.onNodeWithTag(ChatTestTags.CHAT_PRIMARY_ACTION_BUTTON).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(context.chatString("chat_send")).assertIsDisplayed()
         composeRule.onAllNodesWithText("语音输入").assertCountEquals(0)
+    }
+
+    @Test
+    fun plusButtonUsesKnowledgeReferenceSemantics() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState = ChatUiState(appId = "app-1"),
+                onBack = {},
+                onInputChanged = {},
+                onSend = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onRegenerate = {},
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON).assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription(context.getString(R.string.chat_composer_add_knowledge))
+            .assertIsDisplayed()
     }
 
     @Test
@@ -368,5 +390,126 @@ class ChatScreenTest {
         composeRule.onNodeWithTag("citation_preview_content").assertIsDisplayed()
         composeRule.onNodeWithText("No citation content available").assertExists()
         composeRule.onAllNodesWithText("View knowledge source").assertCountEquals(0)
+    }
+
+    @Test
+    fun selectedKnowledgePillAndEmptyPickerStateAreVisible() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        selectedKnowledgeReference =
+                            ChatKnowledgeReferenceUiModel(
+                                datasetId = "dataset-1",
+                                datasetName = "Dataset One",
+                                collectionId = "collection-1",
+                                collectionName = "Collection Alpha",
+                            ),
+                        knowledgePickerState =
+                            ChatKnowledgePickerUiState(
+                                isVisible = true,
+                                datasets = emptyList(),
+                                collections = emptyList(),
+                                isLoadingDatasets = false,
+                            ),
+                    ),
+                onBack = {},
+                onInputChanged = {},
+                onSend = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onRegenerate = {},
+            )
+        }
+
+        composeRule.onNodeWithTag(ChatTestTags.CHAT_SELECTED_KNOWLEDGE_PILL).assertIsDisplayed()
+        composeRule.onNodeWithTag(ChatTestTags.KNOWLEDGE_PICKER_SHEET).assertIsDisplayed()
+        composeRule.onAllNodesWithTag(ChatTestTags.KNOWLEDGE_PICKER_OPEN_MANAGER).assertCountEquals(1)
+    }
+
+    @Test
+    fun knowledgePickerSearchFiltersVisibleItems() {
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        knowledgePickerState =
+                            ChatKnowledgePickerUiState(
+                                isVisible = true,
+                                query = "",
+                                datasets =
+                                    listOf(
+                                        ChatKnowledgeDatasetOptionUiModel(
+                                            datasetId = "dataset-1",
+                                            name = "Alpha",
+                                            summary = "primary",
+                                        ),
+                                        ChatKnowledgeDatasetOptionUiModel(
+                                            datasetId = "dataset-2",
+                                            name = "Beta",
+                                            summary = "secondary",
+                                        ),
+                                    ),
+                                filteredDatasets =
+                                    listOf(
+                                        ChatKnowledgeDatasetOptionUiModel(
+                                            datasetId = "dataset-2",
+                                            name = "Beta",
+                                            summary = "secondary",
+                                        ),
+                                    ),
+                            ),
+                    ),
+                onBack = {},
+                onInputChanged = {},
+                onSend = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onRegenerate = {},
+            )
+        }
+
+        composeRule.onAllNodesWithTag(ChatTestTags.KNOWLEDGE_PICKER_SEARCH).assertCountEquals(1)
+        composeRule.onAllNodesWithText("Beta").assertCountEquals(1)
+        composeRule.onAllNodesWithText("Alpha").assertCountEquals(0)
+    }
+
+    @Test
+    fun knowledgePickerSearchClearButtonAndNoResultsStateAreVisible() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        composeRule.setContent {
+            ChatScreen(
+                uiState =
+                    ChatUiState(
+                        appId = "app-1",
+                        knowledgePickerState =
+                            ChatKnowledgePickerUiState(
+                                isVisible = true,
+                                query = "zzz",
+                                datasets =
+                                    listOf(
+                                        ChatKnowledgeDatasetOptionUiModel(
+                                            datasetId = "dataset-1",
+                                            name = "Alpha",
+                                            summary = "primary",
+                                        ),
+                                    ),
+                                filteredDatasets = emptyList(),
+                            ),
+                    ),
+                onBack = {},
+                onInputChanged = {},
+                onSend = {},
+                onStopGenerating = {},
+                onContinueGeneration = {},
+                onRegenerate = {},
+            )
+        }
+
+        composeRule.onAllNodesWithTag(ChatTestTags.KNOWLEDGE_PICKER_SEARCH_CLEAR).assertCountEquals(1)
+        composeRule.onAllNodesWithText(context.getString(R.string.chat_knowledge_picker_no_results)).assertCountEquals(1)
+        composeRule.onAllNodesWithTag(ChatTestTags.KNOWLEDGE_PICKER_OPEN_MANAGER).assertCountEquals(0)
     }
 }

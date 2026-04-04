@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,13 +50,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -120,14 +122,20 @@ fun ChatScreen(
     onBack: () -> Unit,
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
-    onPickImage: () -> Unit = {},
-    onPickFile: () -> Unit = {},
     onRemoveAttachment: (String) -> Unit = {},
     onRetryAttachment: (String) -> Unit = {},
     onCancelAttachmentUpload: (String) -> Unit = {},
     onStopGenerating: () -> Unit,
     onContinueGeneration: () -> Unit,
     onRegenerate: (ChatMessageUiModel) -> Unit,
+    onOpenKnowledgePicker: () -> Unit = {},
+    onDismissKnowledgePicker: () -> Unit = {},
+    onBackToKnowledgeDatasets: () -> Unit = {},
+    onSelectKnowledgeDataset: (String) -> Unit = {},
+    onSelectKnowledgeCollection: (String) -> Unit = {},
+    onKnowledgePickerQueryChanged: (String) -> Unit = {},
+    onClearKnowledgeReference: () -> Unit = {},
+    onOpenKnowledgeManager: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
     onOpenConversationBrowser: () -> Unit = {},
     onDismissConversationBrowser: () -> Unit = {},
@@ -227,6 +235,21 @@ fun ChatScreen(
             )
         }
     }
+    if (uiState.knowledgePickerState.isVisible) {
+        ModalBottomSheet(
+            onDismissRequest = onDismissKnowledgePicker,
+            modifier = Modifier.testTag(ChatTestTags.KNOWLEDGE_PICKER_SHEET),
+        ) {
+            ChatKnowledgePickerSheet(
+                state = uiState.knowledgePickerState,
+                onBack = onBackToKnowledgeDatasets,
+                onSelectDataset = onSelectKnowledgeDataset,
+                onSelectCollection = onSelectKnowledgeCollection,
+                onQueryChanged = onKnowledgePickerQueryChanged,
+                onOpenKnowledgeManager = onOpenKnowledgeManager,
+            )
+        }
+    }
     activeCitationMessage?.let { message ->
         ModalBottomSheet(
             onDismissRequest = { activeCitationMessage = null },
@@ -294,13 +317,8 @@ fun ChatScreen(
                 onInputChanged = onInputChanged,
                 onSend = onSend,
                 onStopGenerating = onStopGenerating,
-                onPickImage = onPickImage,
-                onPickFile = onPickFile,
-                onToggleAttachmentActions = {
-                    if (uiState.attachmentConfig.hasAnySelectionType) {
-                        onPickFile()
-                    }
-                },
+                onOpenKnowledgePicker = onOpenKnowledgePicker,
+                onClearKnowledgeReference = onClearKnowledgeReference,
             )
         },
     ) { innerPadding ->
@@ -386,8 +404,8 @@ fun ChatScreen(
                         uiState.attachmentConfig.canSelectVideo ||
                         uiState.attachmentConfig.canSelectAudio ||
                         uiState.attachmentConfig.canSelectCustomFileExtension,
-                    onPickImage = onPickImage,
-                    onPickFile = onPickFile,
+                    onPickImage = {},
+                    onPickFile = {},
                     onRemoveAttachment = onRemoveAttachment,
                     onRetryAttachment = onRetryAttachment,
                     onCancelAttachmentUpload = onCancelAttachmentUpload,
@@ -570,9 +588,8 @@ private fun ChatGeminiComposer(
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
     onStopGenerating: () -> Unit,
-    onPickImage: () -> Unit,
-    onPickFile: () -> Unit,
-    onToggleAttachmentActions: () -> Unit,
+    onOpenKnowledgePicker: () -> Unit,
+    onClearKnowledgeReference: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isLightTheme = colorScheme.background.luminance() > 0.5f
@@ -589,6 +606,13 @@ private fun ChatGeminiComposer(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            uiState.selectedKnowledgeReference?.let { reference ->
+                SelectedKnowledgeReferencePill(
+                    reference = reference,
+                    onClear = onClearKnowledgeReference,
+                    modifier = Modifier.testTag(ChatTestTags.CHAT_SELECTED_KNOWLEDGE_PILL),
+                )
+            }
             BasicTextField(
                 value = uiState.input,
                 onValueChange = onInputChanged,
@@ -631,8 +655,8 @@ private fun ChatGeminiComposer(
             ) {
                 GeminiComposerIconButton(
                     icon = Icons.Filled.Add,
-                    contentDescription = stringResource(R.string.chat_composer_add_attachment),
-                    onClick = onToggleAttachmentActions,
+                    contentDescription = stringResource(R.string.chat_composer_add_knowledge),
+                    onClick = onOpenKnowledgePicker,
                     modifier = Modifier.testTag(ChatTestTags.CHAT_ATTACHMENT_TRIGGER_BUTTON),
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -657,6 +681,234 @@ private fun ChatGeminiComposer(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SelectedKnowledgeReferencePill(
+    reference: ChatKnowledgeReferenceUiModel,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.chat_selected_knowledge_reference, reference.collectionName),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            IconButton(
+                onClick = onClear,
+                modifier = Modifier.size(28.dp).testTag(ChatTestTags.CHAT_SELECTED_KNOWLEDGE_CLEAR),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.chat_clear_selected_knowledge),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatKnowledgePickerSheet(
+    state: ChatKnowledgePickerUiState,
+    onBack: () -> Unit,
+    onSelectDataset: (String) -> Unit,
+    onSelectCollection: (String) -> Unit,
+    onQueryChanged: (String) -> Unit,
+    onOpenKnowledgeManager: () -> Unit,
+) {
+    val isDatasetLevel = state.selectedDatasetId == null
+    val filteredItemsEmpty =
+        if (isDatasetLevel) {
+            state.filteredDatasets.isEmpty()
+        } else {
+            state.filteredCollections.isEmpty()
+        }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.chat_knowledge_picker_title),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.testTag(ChatTestTags.KNOWLEDGE_PICKER_TITLE),
+        )
+        KnowledgePickerSearchField(
+            value = state.query,
+            placeholder =
+                when {
+                    state.usesLocalLibrary -> stringResource(R.string.chat_knowledge_picker_search_local_placeholder)
+                    isDatasetLevel -> stringResource(R.string.chat_knowledge_picker_search_datasets_placeholder)
+                    else -> stringResource(R.string.chat_knowledge_picker_search_collections_placeholder)
+                },
+            onValueChange = onQueryChanged,
+            modifier = Modifier.testTag(ChatTestTags.KNOWLEDGE_PICKER_SEARCH),
+        )
+        state.errorMessage?.let { message ->
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        if (isDatasetLevel) {
+            Text(
+                text =
+                    if (state.usesLocalLibrary) {
+                        stringResource(R.string.chat_knowledge_picker_local_documents_title)
+                    } else {
+                        stringResource(R.string.chat_knowledge_picker_datasets_title)
+                    },
+                style = MaterialTheme.typography.titleMedium,
+            )
+            if (state.isLoadingDatasets) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            if (!state.isLoadingDatasets && state.datasets.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.chat_knowledge_picker_empty_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                TextButton(
+                    onClick = onOpenKnowledgeManager,
+                    modifier = Modifier.testTag(ChatTestTags.KNOWLEDGE_PICKER_OPEN_MANAGER),
+                ) {
+                    Text(stringResource(R.string.chat_knowledge_picker_open_manager))
+                }
+            } else if (!state.isLoadingDatasets && filteredItemsEmpty) {
+                Text(
+                    text = stringResource(R.string.chat_knowledge_picker_no_results),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                ) {
+                    items(state.filteredDatasets, key = { it.datasetId }) { dataset ->
+                        KnowledgePickerListItem(
+                            title = dataset.name,
+                            summary = dataset.summary,
+                            onClick = { onSelectDataset(dataset.datasetId) },
+                            modifier = Modifier.testTag(ChatTestTags.knowledgeDataset(dataset.datasetId)),
+                        )
+                    }
+                }
+            }
+        } else {
+            TextButton(onClick = onBack, modifier = Modifier.testTag(ChatTestTags.KNOWLEDGE_PICKER_BACK)) {
+                Text(stringResource(R.string.chat_knowledge_picker_back))
+            }
+            Text(
+                text = stringResource(R.string.chat_knowledge_picker_collections_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            if (state.isLoadingCollections) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            if (!state.isLoadingCollections && state.collections.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.chat_knowledge_picker_collections_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else if (!state.isLoadingCollections && filteredItemsEmpty) {
+                Text(
+                    text = stringResource(R.string.chat_knowledge_picker_no_results),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                ) {
+                    items(state.filteredCollections, key = { it.collectionId }) { collection ->
+                        KnowledgePickerListItem(
+                            title = collection.name,
+                            summary = collection.summary,
+                            onClick = { onSelectCollection(collection.collectionId) },
+                            modifier = Modifier.testTag(ChatTestTags.knowledgeCollection(collection.collectionId)),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun KnowledgePickerSearchField(
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth(),
+        singleLine = true,
+        shape = RoundedCornerShape(18.dp),
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = null,
+            )
+        },
+        trailingIcon = {
+            if (value.isNotBlank()) {
+                IconButton(
+                    onClick = { onValueChange("") },
+                    modifier = Modifier.testTag(ChatTestTags.KNOWLEDGE_PICKER_SEARCH_CLEAR),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.chat_knowledge_picker_search_clear),
+                    )
+                }
+            }
+        },
+        placeholder = {
+            Text(placeholder)
+        },
+    )
+}
+
+@Composable
+private fun KnowledgePickerListItem(
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(text = title, style = MaterialTheme.typography.titleMedium)
+        if (summary.isNotBlank()) {
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        HorizontalDivider(modifier = Modifier.padding(top = 6.dp))
     }
 }
 

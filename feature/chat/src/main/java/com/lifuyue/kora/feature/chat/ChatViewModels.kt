@@ -5,8 +5,12 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lifuyue.kora.core.common.DIRECT_OPENAI_APP_ID
+import com.lifuyue.kora.core.database.LocalKnowledgeIndexStatus
+import com.lifuyue.kora.core.database.LocalKnowledgeStore
 import com.lifuyue.kora.core.database.connection.ConnectionRepository
 import com.lifuyue.kora.core.network.FastGptApi
+import com.lifuyue.kora.feature.knowledge.KnowledgeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -222,6 +226,8 @@ class ChatViewModel
         savedStateHandle: SavedStateHandle,
         @ApplicationContext private val context: Context,
         private val chatRepository: ChatRepository,
+        private val knowledgeRepository: KnowledgeRepository,
+        private val localKnowledgeStore: LocalKnowledgeStore,
         private val conversationExportManager: ConversationExportManager,
         private val connectionRepository: ConnectionRepository,
         private val strings: ChatStrings,
@@ -234,9 +240,37 @@ class ChatViewModel
         private val attachmentConfig = MutableStateFlow(ChatAttachmentConfig())
         private val shareExportState = MutableStateFlow(ShareExportUiState())
         private val expandedReasoningMessageIds = MutableStateFlow<Set<String>>(emptySet())
+        private val selectedKnowledgeReference = MutableStateFlow<ChatKnowledgeReferenceUiModel?>(null)
+        private val isKnowledgePickerVisible = MutableStateFlow(false)
+        private val pickerSelectedDatasetId = MutableStateFlow<String?>(null)
+        private val knowledgePickerQuery = MutableStateFlow("")
+        private val isKnowledgeDatasetLoading = MutableStateFlow(false)
+        private val isKnowledgeCollectionLoading = MutableStateFlow(false)
+        private val knowledgePickerErrorMessage = MutableStateFlow<String?>(null)
         private val uploadJobs = linkedMapOf<String, Job>()
 
+        private val localKnowledgeDocuments =
+            localKnowledgeStore
+                .observeDocuments()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+        private val knowledgeDatasets =
+            knowledgeRepository
+                .observeDatasets()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+        private val knowledgeCollections =
+            pickerSelectedDatasetId
+                .flatMapLatest { datasetId ->
+                    if (datasetId.isNullOrBlank()) {
+                        flowOf(emptyList())
+                    } else {
+                        knowledgeRepository.observeCollections(datasetId)
+                    }
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
         init {
+            refreshKnowledgeDatasets()
             viewModelScope.launch {
                 val existingChatId = chatId.value
                 runCatching { chatRepository.bootstrapChat(appId, existingChatId) }
@@ -282,6 +316,16 @@ class ChatViewModel
                 shareExportState,
                 expandedReasoningMessageIds,
                 connectionRepository.snapshot,
+                selectedKnowledgeReference,
+                isKnowledgePickerVisible,
+                pickerSelectedDatasetId,
+                knowledgePickerQuery,
+                isKnowledgeDatasetLoading,
+                isKnowledgeCollectionLoading,
+                knowledgePickerErrorMessage,
+                knowledgeDatasets,
+                knowledgeCollections,
+                localKnowledgeDocuments,
             ) { values ->
                 val currentInput = values[0] as String
                 val meta = values[1] as ChatMetaState
@@ -291,12 +335,61 @@ class ChatViewModel
                 val currentShareExportState = values[5] as ShareExportUiState
                 val expandedReasoningIds = values[6] as Set<String>
                 val snapshot = values[7] as com.lifuyue.kora.core.common.ConnectionSnapshot
+                val currentKnowledgeReference = values[8] as ChatKnowledgeReferenceUiModel?
+                val knowledgePickerVisible = values[9] as Boolean
+                val currentSelectedDatasetId = values[10] as String?
+                val currentKnowledgeQuery = values[11] as String
+                val currentKnowledgeDatasetLoading = values[12] as Boolean
+                val currentKnowledgeCollectionLoading = values[13] as Boolean
+                val currentKnowledgeErrorMessage = values[14] as String?
+                val currentKnowledgeDatasets = values[15] as List<com.lifuyue.kora.feature.knowledge.DatasetListItemUiModel>
+                val currentKnowledgeCollections = values[16] as List<com.lifuyue.kora.feature.knowledge.CollectionListItemUiModel>
+                val currentLocalKnowledgeDocuments = values[17] as List<com.lifuyue.kora.core.database.LocalKnowledgeDocument>
                 val messagesWithReasoningState =
                     messages.map { message ->
                         message.copy(isReasoningExpanded = expandedReasoningIds.contains(message.messageId))
                     }
                 val pendingInteractiveCard =
                     messagesWithReasoningState.lastOrNull { it.interactiveCard?.status == InteractiveCardStatus.Pending }?.interactiveCard
+                val usesLocalKnowledgeLibrary = isLocalKnowledgeMode()
+                val availableLocalKnowledgeDocuments =
+                    currentLocalKnowledgeDocuments.filter { document ->
+                        document.isEnabled && document.indexStatus == LocalKnowledgeIndexStatus.Ready
+                    }
+                val datasetOptions =
+                    if (usesLocalKnowledgeLibrary) {
+                        availableLocalKnowledgeDocuments.map { document ->
+                            ChatKnowledgeDatasetOptionUiModel(
+                                datasetId = document.documentId,
+                                name = document.title,
+                                summary = document.sourceLabel.ifBlank { document.previewText },
+                            )
+                        }
+                    } else {
+                        currentKnowledgeDatasets.map { dataset ->
+                            ChatKnowledgeDatasetOptionUiModel(
+                                datasetId = dataset.datasetId,
+                                name = dataset.name,
+                                summary = dataset.intro.ifBlank { dataset.type.ifBlank { dataset.status } },
+                            )
+                        }
+                    }
+                val collectionOptions =
+                    if (usesLocalKnowledgeLibrary) {
+                        emptyList()
+                    } else {
+                        currentKnowledgeCollections.map { collection ->
+                            ChatKnowledgeCollectionOptionUiModel(
+                                collectionId = collection.collectionId,
+                                datasetId = collection.datasetId,
+                                name = collection.name,
+                                summary =
+                                    listOf(collection.type, collection.status)
+                                        .filter { it.isNotBlank() }
+                                        .joinToString(" · "),
+                            )
+                        }
+                    }
                 ChatUiState(
                     appId = appId,
                     chatId = chatId.value,
@@ -312,6 +405,21 @@ class ChatViewModel
                     shareExportState = currentShareExportState,
                     showReasoningEntry = snapshot.appearancePreferences.showReasoningEntry,
                     streamResponses = snapshot.appearancePreferences.streamResponses,
+                    selectedKnowledgeReference = currentKnowledgeReference,
+                    knowledgePickerState =
+                        ChatKnowledgePickerUiState(
+                            isVisible = knowledgePickerVisible,
+                            usesLocalLibrary = usesLocalKnowledgeLibrary,
+                            selectedDatasetId = if (usesLocalKnowledgeLibrary) null else currentSelectedDatasetId,
+                            query = currentKnowledgeQuery,
+                            datasets = datasetOptions,
+                            collections = collectionOptions,
+                            filteredDatasets = datasetOptions.filterDatasetOptions(currentKnowledgeQuery),
+                            filteredCollections = collectionOptions.filterCollectionOptions(currentKnowledgeQuery),
+                            isLoadingDatasets = currentKnowledgeDatasetLoading,
+                            isLoadingCollections = if (usesLocalKnowledgeLibrary) false else currentKnowledgeCollectionLoading,
+                            errorMessage = currentKnowledgeErrorMessage,
+                        ),
                 )
             }.stateIn(
                 viewModelScope,
@@ -326,6 +434,8 @@ class ChatViewModel
                     shareExportState = shareExportState.value,
                     showReasoningEntry = connectionRepository.snapshot.value.appearancePreferences.showReasoningEntry,
                     streamResponses = connectionRepository.snapshot.value.appearancePreferences.streamResponses,
+                    selectedKnowledgeReference = selectedKnowledgeReference.value,
+                    knowledgePickerState = ChatKnowledgePickerUiState(),
                 ),
             )
 
@@ -399,6 +509,7 @@ class ChatViewModel
         private fun sendCurrentDraft() {
             val text = input.value.trim()
             val sendableAttachments = attachments.value.filter { it.uploadStatus == AttachmentUploadStatus.Uploaded && it.uploadedRef != null }
+            val activeKnowledgeReference = selectedKnowledgeReference.value
             if (
                 metaState.value.isSending ||
                     uiState.value.canStopGeneration ||
@@ -416,11 +527,13 @@ class ChatViewModel
                         chatId = chatId.value,
                         text = text,
                         attachments = sendableAttachments,
+                        selectedKnowledgeReference = activeKnowledgeReference,
                     )
                 }.onSuccess { resolvedChatId ->
                     chatId.value = resolvedChatId
                     input.value = ""
                     attachments.value = emptyList()
+                    selectedKnowledgeReference.value = null
                     metaState.update { it.copy(isSending = false) }
                 }.onFailure { error ->
                     metaState.update {
@@ -511,6 +624,109 @@ class ChatViewModel
         fun send() {
             sendCurrentDraft()
         }
+
+        fun openKnowledgePicker() {
+            isKnowledgePickerVisible.value = true
+            pickerSelectedDatasetId.value = null
+            knowledgePickerQuery.value = ""
+            knowledgePickerErrorMessage.value = null
+            if (isLocalKnowledgeMode()) {
+                return
+            }
+            if (knowledgeDatasets.value.isEmpty()) {
+                refreshKnowledgeDatasets()
+            }
+        }
+
+        fun dismissKnowledgePicker() {
+            isKnowledgePickerVisible.value = false
+            pickerSelectedDatasetId.value = null
+            knowledgePickerQuery.value = ""
+            knowledgePickerErrorMessage.value = null
+        }
+
+        fun updateKnowledgePickerQuery(value: String) {
+            knowledgePickerQuery.value = value
+        }
+
+        fun selectKnowledgeDataset(datasetId: String) {
+            if (isLocalKnowledgeMode()) {
+                val document = localKnowledgeDocuments.value.firstOrNull { it.documentId == datasetId } ?: return
+                if (!document.isEnabled || document.indexStatus != LocalKnowledgeIndexStatus.Ready) {
+                    return
+                }
+                selectedKnowledgeReference.value =
+                    ChatKnowledgeReferenceUiModel(
+                        datasetId = document.documentId,
+                        datasetName = document.sourceLabel,
+                        collectionId = document.documentId,
+                        collectionName = document.title,
+                        kind = ChatKnowledgeReferenceKind.LocalDocument,
+                )
+                isKnowledgePickerVisible.value = false
+                pickerSelectedDatasetId.value = null
+                knowledgePickerQuery.value = ""
+                knowledgePickerErrorMessage.value = null
+                return
+            }
+            pickerSelectedDatasetId.value = datasetId
+            knowledgePickerQuery.value = ""
+            knowledgePickerErrorMessage.value = null
+            refreshKnowledgeCollections(datasetId)
+        }
+
+        fun backToKnowledgeDatasets() {
+            pickerSelectedDatasetId.value = null
+            knowledgePickerQuery.value = ""
+            knowledgePickerErrorMessage.value = null
+        }
+
+        fun selectKnowledgeCollection(collectionId: String) {
+            val datasetId = pickerSelectedDatasetId.value ?: return
+            val dataset = knowledgeDatasets.value.firstOrNull { it.datasetId == datasetId } ?: return
+            val collection = knowledgeCollections.value.firstOrNull { it.collectionId == collectionId } ?: return
+            selectedKnowledgeReference.value =
+                ChatKnowledgeReferenceUiModel(
+                    datasetId = dataset.datasetId,
+                    datasetName = dataset.name,
+                    collectionId = collection.collectionId,
+                    collectionName = collection.name,
+                    kind = ChatKnowledgeReferenceKind.RemoteCollection,
+                )
+            isKnowledgePickerVisible.value = false
+            pickerSelectedDatasetId.value = null
+            knowledgePickerQuery.value = ""
+            knowledgePickerErrorMessage.value = null
+        }
+
+        fun clearKnowledgeReference() {
+            selectedKnowledgeReference.value = null
+        }
+
+        private fun refreshKnowledgeDatasets() {
+            viewModelScope.launch {
+                isKnowledgeDatasetLoading.value = true
+                runCatching { knowledgeRepository.refreshDatasets() }
+                    .onFailure { error ->
+                        knowledgePickerErrorMessage.value = error.message ?: strings.loadKnowledgeFailed()
+                    }
+                isKnowledgeDatasetLoading.value = false
+            }
+        }
+
+        private fun refreshKnowledgeCollections(datasetId: String) {
+            viewModelScope.launch {
+                isKnowledgeCollectionLoading.value = true
+                runCatching { knowledgeRepository.refreshCollections(datasetId) }
+                    .onFailure { error ->
+                        knowledgePickerErrorMessage.value = error.message ?: strings.loadKnowledgeFailed()
+                    }
+                isKnowledgeCollectionLoading.value = false
+            }
+        }
+
+        private fun isLocalKnowledgeMode(): Boolean =
+            appId == DIRECT_OPENAI_APP_ID
 
         fun toggleReasoning(messageId: String) {
             expandedReasoningMessageIds.update { expandedIds ->
@@ -851,6 +1067,8 @@ open class ChatStrings
 
         open fun loadAppDetailFailed(): String = context.chatString("chat_error_load_app_detail_failed")
 
+        open fun loadKnowledgeFailed(): String = context.chatString("chat_error_load_knowledge_failed")
+
         open fun attachmentTypeNotAllowed(): String = context.chatString("chat_error_attachment_type_not_allowed")
 
         open fun attachmentLimitReached(maxFiles: Int): String =
@@ -858,6 +1076,28 @@ open class ChatStrings
 
         open fun attachmentUploadFailed(): String = context.chatString("chat_error_attachment_upload_failed")
     }
+
+private fun List<ChatKnowledgeDatasetOptionUiModel>.filterDatasetOptions(query: String): List<ChatKnowledgeDatasetOptionUiModel> {
+    val normalizedQuery = query.trim()
+    if (normalizedQuery.isEmpty()) {
+        return this
+    }
+    return filter { option ->
+        option.name.contains(normalizedQuery, ignoreCase = true) ||
+            option.summary.contains(normalizedQuery, ignoreCase = true)
+    }
+}
+
+private fun List<ChatKnowledgeCollectionOptionUiModel>.filterCollectionOptions(query: String): List<ChatKnowledgeCollectionOptionUiModel> {
+    val normalizedQuery = query.trim()
+    if (normalizedQuery.isEmpty()) {
+        return this
+    }
+    return filter { option ->
+        option.name.contains(normalizedQuery, ignoreCase = true) ||
+            option.summary.contains(normalizedQuery, ignoreCase = true)
+    }
+}
 
 private fun JsonArray.toDisplayItems(): List<String> = mapNotNull { element -> element.toString().trim('"').takeIf { it.isNotBlank() } }
 

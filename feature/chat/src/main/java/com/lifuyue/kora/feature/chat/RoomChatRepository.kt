@@ -121,6 +121,13 @@ class RoomChatRepository
             scope.cancel()
         }
 
+        suspend fun sendMessage(
+            appId: String,
+            chatId: String?,
+            text: String,
+            attachments: List<AttachmentDraftUiModel>,
+        ): String = sendMessage(appId, chatId, text, attachments, selectedKnowledgeReference = null)
+
         override suspend fun bootstrapChat(
             appId: String,
             chatId: String?,
@@ -459,6 +466,7 @@ class RoomChatRepository
             chatId: String?,
             text: String,
             attachments: List<AttachmentDraftUiModel>,
+            selectedKnowledgeReference: ChatKnowledgeReferenceUiModel?,
         ): String {
             return onIo {
                 val normalizedChatId = normalizeChatId(chatId)
@@ -498,11 +506,14 @@ class RoomChatRepository
                     )
                 val localHits =
                     if (isOpenAiMode(appId)) {
-                        searchLocalKnowledge(prompt)
+                        searchLocalKnowledge(
+                            prompt = prompt,
+                            selectedKnowledgeReference = selectedKnowledgeReference,
+                        )
                     } else {
                         emptyList()
                     }
-                val localReferences = localHits.map(LocalKnowledgeHit::toAssistantLocalReference)
+                val localReferences = localHits.toAssistantLocalReferences()
                 val humanMessage =
                     newMessageEntity(
                         dataId = nextId("human"),
@@ -548,12 +559,14 @@ class RoomChatRepository
                                 currentUserMessage = currentUserMessage,
                                 localHits = localHits,
                                 localReferences = localReferences,
+                                selectedKnowledgeReference = selectedKnowledgeReference,
                             )
                         } else {
                             null
                         },
                     localCitations = localReferences.map(AssistantLocalReference::toCitationPayload),
                     localReferences = localReferences,
+                    selectedKnowledgeReference = selectedKnowledgeReference,
                 )
                 resolvedChatId
             }
@@ -610,7 +623,7 @@ class RoomChatRepository
                     } else {
                         emptyList()
                     }
-                val localReferences = localHits.map(LocalKnowledgeHit::toAssistantLocalReference)
+                val localReferences = localHits.toAssistantLocalReferences()
                 startStreaming(
                     appId = appId,
                     chatId = chatId,
@@ -623,12 +636,14 @@ class RoomChatRepository
                                 currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt)),
                                 localHits = localHits,
                                 localReferences = localReferences,
+                                selectedKnowledgeReference = null,
                             )
                         } else {
                             null
                         },
                     localCitations = localReferences.map(AssistantLocalReference::toCitationPayload),
                     localReferences = localReferences,
+                    selectedKnowledgeReference = null,
                 )
                 chatId
             }
@@ -670,7 +685,7 @@ class RoomChatRepository
                     } else {
                         emptyList()
                     }
-                val localReferences = localHits.map(LocalKnowledgeHit::toAssistantLocalReference)
+                val localReferences = localHits.toAssistantLocalReferences()
                 startStreaming(
                     appId = appId,
                     chatId = chatId,
@@ -683,12 +698,14 @@ class RoomChatRepository
                                 currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt)),
                                 localHits = localHits,
                                 localReferences = localReferences,
+                                selectedKnowledgeReference = null,
                             )
                         } else {
                             null
                         },
                     localCitations = localReferences.map(AssistantLocalReference::toCitationPayload),
                     localReferences = localReferences,
+                    selectedKnowledgeReference = null,
                 )
                 chatId
             }
@@ -835,7 +852,7 @@ class RoomChatRepository
                 } else {
                     emptyList()
                 }
-            val localReferences = localHits.map(LocalKnowledgeHit::toAssistantLocalReference)
+            val localReferences = localHits.toAssistantLocalReferences()
             startStreaming(
                 appId = appId,
                 chatId = chatId,
@@ -854,12 +871,14 @@ class RoomChatRepository
                             currentUserMessage = ChatCompletionMessageParam(role = "user", content = JsonPrimitive(displayValue)),
                             localHits = localHits,
                             localReferences = localReferences,
+                            selectedKnowledgeReference = null,
                         )
                     } else {
                         null
                     },
                 localCitations = localReferences.map(AssistantLocalReference::toCitationPayload),
                 localReferences = localReferences,
+                selectedKnowledgeReference = null,
                 onSuccess = {
                     interactiveDraftDao.deleteByChatId(chatId)
                     updateInteractiveMessageState(
@@ -906,6 +925,7 @@ class RoomChatRepository
             openAiMessages: List<ChatCompletionMessageParam>? = null,
             localCitations: List<CitationPayload> = emptyList(),
             localReferences: List<AssistantLocalReference> = emptyList(),
+            selectedKnowledgeReference: ChatKnowledgeReferenceUiModel? = null,
             onSuccess: suspend () -> Unit = {},
         ) {
             streamingJobs.remove(chatId)?.cancel()
@@ -961,6 +981,7 @@ class RoomChatRepository
                                 prompt = prompt,
                                 userMessage = userMessage,
                                 openAiMessages = openAiMessages,
+                                selectedKnowledgeReference = selectedKnowledgeReference,
                             ).collect { event ->
                                     val update =
                                         event.toAssistantUpdate(
@@ -1327,6 +1348,7 @@ class RoomChatRepository
             prompt: String,
             userMessage: ChatCompletionMessageParam?,
             openAiMessages: List<ChatCompletionMessageParam>? = null,
+            selectedKnowledgeReference: ChatKnowledgeReferenceUiModel? = null,
         ): Flow<SseEventData> {
             val resolvedUserMessage = userMessage ?: ChatCompletionMessageParam(role = "user", content = JsonPrimitive(prompt))
             return if (isOpenAiMode(appId)) {
@@ -1342,7 +1364,15 @@ class RoomChatRepository
                         chatId = chatId,
                         appId = appId,
                         responseChatItemId = assistantMessageId,
-                        messages = listOf(resolvedUserMessage),
+                        messages =
+                            buildList {
+                                selectedKnowledgeReference?.let {
+                                    add(selectedKnowledgeSystemMessage(it))
+                                }
+                                add(resolvedUserMessage)
+                            },
+                        variables = selectedKnowledgeVariables(selectedKnowledgeReference),
+                        metadata = selectedKnowledgeMetadata(selectedKnowledgeReference),
                     ),
                 )
             }
@@ -1357,6 +1387,7 @@ class RoomChatRepository
             currentUserMessage: ChatCompletionMessageParam,
             localHits: List<LocalKnowledgeHit>,
             localReferences: List<AssistantLocalReference>,
+            selectedKnowledgeReference: ChatKnowledgeReferenceUiModel?,
         ): List<ChatCompletionMessageParam> {
             val history =
                 messageDao.getMessagesForChat(chatId)
@@ -1397,18 +1428,82 @@ class RoomChatRepository
                             ),
                     )
                 }
+            val selectedKnowledgeMessage =
+                selectedKnowledgeReference?.let(::selectedKnowledgeSystemMessage)
             return buildList {
+                selectedKnowledgeMessage?.let(::add)
                 localContextMessage?.let(::add)
                 addAll(history)
                 add(currentUserMessage)
             }
         }
 
-        private fun searchLocalKnowledge(prompt: String): List<LocalKnowledgeHit> =
+        private fun searchLocalKnowledge(
+            prompt: String,
+            selectedKnowledgeReference: ChatKnowledgeReferenceUiModel? = null,
+        ): List<LocalKnowledgeHit> =
             localKnowledgeStore
-                ?.search(prompt, limit = LOCAL_REFERENCE_PROMPT_LIMIT)
+                ?.search(
+                    query = prompt,
+                    documentIds =
+                        selectedKnowledgeReference
+                            ?.takeIf { it.kind == ChatKnowledgeReferenceKind.LocalDocument }
+                            ?.let { setOf(it.collectionId) },
+                    limit = LOCAL_REFERENCE_PROMPT_LIMIT,
+                )
                 .orEmpty()
                 .take(LOCAL_REFERENCE_PROMPT_LIMIT)
+
+        private fun selectedKnowledgeSystemMessage(reference: ChatKnowledgeReferenceUiModel): ChatCompletionMessageParam =
+            ChatCompletionMessageParam(
+                role = "system",
+                content =
+                    JsonPrimitive(
+                        if (reference.kind == ChatKnowledgeReferenceKind.LocalDocument) {
+                            "The user explicitly selected the local knowledge document " +
+                                "\"${reference.collectionName}\" " +
+                                "(documentId=${reference.collectionId}) for this turn. " +
+                                "Ground the answer with this document first and cite only snippets that come from it when possible."
+                        } else {
+                            "The user explicitly selected the knowledge collection " +
+                                "\"${reference.collectionName}\" " +
+                                "(collectionId=${reference.collectionId}) inside dataset " +
+                                "\"${reference.datasetName}\" " +
+                                "(datasetId=${reference.datasetId}) for this turn. " +
+                                "Prioritize this collection when grounding the answer and keep citations aligned with it when possible."
+                        },
+                    ),
+            )
+
+        private fun selectedKnowledgeVariables(reference: ChatKnowledgeReferenceUiModel?) =
+            reference
+                ?.takeIf { it.kind == ChatKnowledgeReferenceKind.RemoteCollection }
+                ?.let {
+                JsonObject(
+                    mapOf(
+                        "datasetId" to JsonPrimitive(it.datasetId),
+                        "collectionId" to JsonPrimitive(it.collectionId),
+                    ),
+                )
+            } ?: JsonObject(emptyMap())
+
+        private fun selectedKnowledgeMetadata(reference: ChatKnowledgeReferenceUiModel?) =
+            reference?.let {
+                JsonObject(
+                    mapOf(
+                        "selectedKnowledge" to
+                            JsonObject(
+                                mapOf(
+                                    "kind" to JsonPrimitive(it.kind.name),
+                                    "datasetId" to JsonPrimitive(it.datasetId),
+                                    "datasetName" to JsonPrimitive(it.datasetName),
+                                    "collectionId" to JsonPrimitive(it.collectionId),
+                                    "collectionName" to JsonPrimitive(it.collectionName),
+                                ),
+                            ),
+                    ),
+                )
+            }
 
         private suspend fun <T> onIo(block: suspend () -> T): T = withContext(ioDispatcher) { block() }
     }
@@ -2067,6 +2162,9 @@ private fun LocalKnowledgeHit.toAssistantLocalReference(): AssistantLocalReferen
         sourceLabel = sourceLabel,
         snippet = snippet.toPromptSnippet(),
     )
+
+private fun List<LocalKnowledgeHit>.toAssistantLocalReferences(): List<AssistantLocalReference> =
+    distinctBy(LocalKnowledgeHit::documentId).map(LocalKnowledgeHit::toAssistantLocalReference)
 
 private fun AssistantLocalReference.toCitationPayload(): CitationPayload =
     CitationPayload(

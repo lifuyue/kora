@@ -334,6 +334,7 @@ class AcceptanceChatRepository :
         chatId: String?,
         text: String,
         attachments: List<com.lifuyue.kora.feature.chat.AttachmentDraftUiModel>,
+        selectedKnowledgeReference: com.lifuyue.kora.feature.chat.ChatKnowledgeReferenceUiModel?,
     ): String {
         sendCalls.incrementAndGet()
         val prompt = text.trim()

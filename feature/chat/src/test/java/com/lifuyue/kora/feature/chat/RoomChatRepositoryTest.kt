@@ -280,6 +280,66 @@ class RoomChatRepositoryTest {
             plannedRepository.cancelBackgroundWork()
         }
 
+    @Test
+    fun openAiModeSelectedLocalDocumentRestrictsLocalReferences() =
+        runTest(mainDispatcherRule.dispatcher.scheduler) {
+            localKnowledgeStore.importText(
+                title = "Alpha Doc",
+                text = "Alpha document contains the exact phrase lighthouse vector.",
+                sourceLabel = "manual",
+                now = 3L,
+            )
+            localKnowledgeStore.importText(
+                title = "Beta Doc",
+                text = "Beta document also contains lighthouse vector but should not be cited.",
+                sourceLabel = "manual",
+                now = 4L,
+            )
+            waitUntilLocalKnowledgeReady()
+            connectionProvider.update(
+                connectionProvider.getSnapshot().copy(
+                    connectionType = ConnectionType.OPENAI_COMPATIBLE,
+                    serverBaseUrl = server.url("/").toString(),
+                    apiKey = "openai-secret",
+                    model = "gpt-4o-mini",
+                ),
+            )
+            server.enqueueSse(
+                """
+                data: {"choices":[{"delta":{"content":"Alpha only"}}]}
+
+                data: [DONE]
+                """.trimIndent(),
+            )
+
+            val chatId =
+                repository.sendMessage(
+                    appId = DIRECT_OPENAI_APP_ID,
+                    chatId = null,
+                    text = "lighthouse vector",
+                    selectedKnowledgeReference =
+                        ChatKnowledgeReferenceUiModel(
+                            datasetId = "local-doc-3",
+                            datasetName = "manual",
+                            collectionId = "local-doc-3",
+                            collectionName = "Alpha Doc",
+                            kind = ChatKnowledgeReferenceKind.LocalDocument,
+                        ),
+                )
+            advanceUntilIdle()
+
+            val requestBody = server.takeRequest().body.readUtf8()
+            assertTrue(requestBody.contains("Alpha Doc"))
+            assertTrue(requestBody.contains("documentId=local-doc-3"))
+            assertTrue(requestBody.contains("Alpha document contains the exact phrase lighthouse vector."))
+            assertTrue(!requestBody.contains("Beta document also contains lighthouse vector"))
+
+            val messages = repository.observeMessages(DIRECT_OPENAI_APP_ID, chatId).first()
+            assertEquals("Alpha only", messages.last().markdown)
+            assertEquals(1, messages.last().citations.size)
+            assertEquals("Alpha Doc", messages.last().citations.single().title)
+        }
+
     private suspend fun waitUntilLocalKnowledgeReady() {
         repeat(50) {
             val ready = localKnowledgeStore.observeDocuments().first().all {

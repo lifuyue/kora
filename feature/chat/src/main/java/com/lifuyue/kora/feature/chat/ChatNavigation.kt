@@ -1,9 +1,6 @@
 package com.lifuyue.kora.feature.chat
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -206,18 +203,6 @@ private fun ChatRoute(
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val conversationBrowserUiState = conversationListViewModel.uiState.collectAsStateWithLifecycle()
-    val imagePickerLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
-            if (!uris.isNullOrEmpty()) {
-                viewModel.addAttachments(uris)
-            }
-        }
-    val filePickerLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri>? ->
-            if (!uris.isNullOrEmpty()) {
-                viewModel.addAttachments(uris)
-            }
-        }
     val handleBack = {
         if (!navController.popBackStack()) {
             Unit
@@ -230,26 +215,20 @@ private fun ChatRoute(
         onBack = handleBack,
         onInputChanged = viewModel::updateInput,
         onSend = viewModel::send,
-        onPickImage = {
-            val state = uiState.value
-            val mimeTypes = state.attachmentConfig.allowedMimeTypes(AttachmentKind.Image)
-            if (canLaunchAttachmentPicker(state.attachmentConfig, state.attachments.size, AttachmentKind.Image)) {
-                imagePickerLauncher.launch(mimeTypes)
-            }
-        },
-        onPickFile = {
-            val state = uiState.value
-            val mimeTypes = state.attachmentConfig.allowedMimeTypes(AttachmentKind.File)
-            if (canLaunchAttachmentPicker(state.attachmentConfig, state.attachments.size, AttachmentKind.File)) {
-                filePickerLauncher.launch(mimeTypes)
-            }
-        },
         onRemoveAttachment = viewModel::removeAttachment,
         onRetryAttachment = viewModel::retryAttachment,
         onCancelAttachmentUpload = viewModel::cancelAttachmentUpload,
         onStopGenerating = viewModel::stopGeneration,
         onContinueGeneration = viewModel::continueGeneration,
         onRegenerate = viewModel::regenerate,
+        onOpenKnowledgePicker = viewModel::openKnowledgePicker,
+        onDismissKnowledgePicker = viewModel::dismissKnowledgePicker,
+        onBackToKnowledgeDatasets = viewModel::backToKnowledgeDatasets,
+        onSelectKnowledgeDataset = viewModel::selectKnowledgeDataset,
+        onSelectKnowledgeCollection = viewModel::selectKnowledgeCollection,
+        onKnowledgePickerQueryChanged = viewModel::updateKnowledgePickerQuery,
+        onClearKnowledgeReference = viewModel::clearKnowledgeReference,
+        onOpenKnowledgeManager = { navController.navigate("knowledge/datasets") },
         onOpenDrawer = onOpenDrawer,
         onOpenQuickSettings = onOpenQuickSettings,
         onSuggestedQuestion = {

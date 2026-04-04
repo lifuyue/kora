@@ -136,6 +136,50 @@ data class CitationItemUiModel(
 )
 
 @Immutable
+data class ChatKnowledgeDatasetOptionUiModel(
+    val datasetId: String,
+    val name: String,
+    val summary: String,
+)
+
+@Immutable
+data class ChatKnowledgeCollectionOptionUiModel(
+    val collectionId: String,
+    val datasetId: String,
+    val name: String,
+    val summary: String,
+)
+
+@Immutable
+data class ChatKnowledgeReferenceUiModel(
+    val datasetId: String,
+    val datasetName: String,
+    val collectionId: String,
+    val collectionName: String,
+    val kind: ChatKnowledgeReferenceKind = ChatKnowledgeReferenceKind.RemoteCollection,
+)
+
+enum class ChatKnowledgeReferenceKind {
+    RemoteCollection,
+    LocalDocument,
+}
+
+@Immutable
+data class ChatKnowledgePickerUiState(
+    val isVisible: Boolean = false,
+    val usesLocalLibrary: Boolean = false,
+    val selectedDatasetId: String? = null,
+    val query: String = "",
+    val datasets: List<ChatKnowledgeDatasetOptionUiModel> = emptyList(),
+    val collections: List<ChatKnowledgeCollectionOptionUiModel> = emptyList(),
+    val filteredDatasets: List<ChatKnowledgeDatasetOptionUiModel> = datasets,
+    val filteredCollections: List<ChatKnowledgeCollectionOptionUiModel> = collections,
+    val isLoadingDatasets: Boolean = false,
+    val isLoadingCollections: Boolean = false,
+    val errorMessage: String? = null,
+)
+
+@Immutable
 data class ChatMessageUiModel(
     val messageId: String,
     val chatId: String,
@@ -236,6 +280,8 @@ data class ChatUiState(
     val shareExportState: ShareExportUiState = ShareExportUiState(),
     val showReasoningEntry: Boolean = true,
     val streamResponses: Boolean = true,
+    val selectedKnowledgeReference: ChatKnowledgeReferenceUiModel? = null,
+    val knowledgePickerState: ChatKnowledgePickerUiState = ChatKnowledgePickerUiState(),
 ) {
     val conversationPhase: KoraFeedbackPhase
         get() = resolveConversationPhase(messages, isSending)

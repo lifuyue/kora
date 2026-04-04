@@ -182,6 +182,7 @@ class LocalKnowledgeStore private constructor(
 
     fun search(
         query: String,
+        documentIds: Set<String>? = null,
         limit: Int = 4,
     ): List<LocalKnowledgeHit> {
         val normalizedQuery = query.normalizeForSearch()
@@ -192,6 +193,7 @@ class LocalKnowledgeStore private constructor(
         val readyDocuments =
             documentDao.getDocuments()
                 .filter { it.isEnabled && it.indexStatus == LocalKnowledgeIndexStatus.Ready.name }
+                .filter { documentIds == null || it.documentId in documentIds }
         if (readyDocuments.isEmpty()) {
             return emptyList()
         }

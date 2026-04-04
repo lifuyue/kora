@@ -122,6 +122,7 @@ interface ChatRepository {
         chatId: String?,
         text: String,
         attachments: List<AttachmentDraftUiModel> = emptyList(),
+        selectedKnowledgeReference: ChatKnowledgeReferenceUiModel? = null,
     ): String
 
     suspend fun stopStreaming(

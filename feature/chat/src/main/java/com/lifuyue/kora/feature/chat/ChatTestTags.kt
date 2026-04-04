@@ -25,6 +25,14 @@ object ChatTestTags {
     const val CHAT_SETTINGS_BUTTON = "chat_settings_button"
     const val CHAT_ATTACHMENT_TRIGGER_BUTTON = "chat_attachment_trigger_button"
     const val CHAT_PRIMARY_ACTION_BUTTON = "chat_primary_action_button"
+    const val CHAT_SELECTED_KNOWLEDGE_PILL = "chat_selected_knowledge_pill"
+    const val CHAT_SELECTED_KNOWLEDGE_CLEAR = "chat_selected_knowledge_clear"
+    const val KNOWLEDGE_PICKER_SHEET = "knowledge_picker_sheet"
+    const val KNOWLEDGE_PICKER_TITLE = "knowledge_picker_title"
+    const val KNOWLEDGE_PICKER_SEARCH = "knowledge_picker_search"
+    const val KNOWLEDGE_PICKER_SEARCH_CLEAR = "knowledge_picker_search_clear"
+    const val KNOWLEDGE_PICKER_BACK = "knowledge_picker_back"
+    const val KNOWLEDGE_PICKER_OPEN_MANAGER = "knowledge_picker_open_manager"
     const val CHAT_DRAWER = "chat_drawer"
     const val CHAT_DRAWER_NEW_CHAT = "chat_drawer_new_chat"
     const val CHAT_DRAWER_KNOWLEDGE = "chat_drawer_knowledge"
@@ -50,6 +58,10 @@ object ChatTestTags {
     fun messageRegenerateAction(messageId: String): String = "message_regenerate_$messageId"
 
     fun messageError(messageId: String): String = "message_error_$messageId"
+
+    fun knowledgeDataset(datasetId: String): String = "knowledge_dataset_$datasetId"
+
+    fun knowledgeCollection(collectionId: String): String = "knowledge_collection_$collectionId"
 
     fun citationSummary(messageId: String): String = "${CITATION_SUMMARY_PREFIX}$messageId"
 
